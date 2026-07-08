@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FRAG-S1-001 — Descriptor Report</title>
+  <style>
+:root {
+  --bg:       #0f1117;
+  --surface:  #1a1d2e;
+  --border:   #2d3250;
+  --accent:   #7c83fd;
+  --text:     #e2e8f0;
+  --muted:    #94a3b8;
+  --success:  #4ade80;
+  --warning:  #fbbf24;
+  --danger:   #f87171;
+  --radius:   8px;
+  --gap:      16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 32px;
+}
+
+.report { max-width: 960px; margin: 0 auto; }
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--gap);
+  margin-bottom: 24px;
+}
+.header h1 { font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
+.header .meta { color: var(--muted); font-size: 11px; text-align: right; }
+
+/* ── Section ── */
+.section { margin-bottom: 28px; }
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Stat grid ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--gap);
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.stat-value { font-size: 18px; color: var(--text); font-weight: 600; }
+.stat-unit  { font-size: 11px; color: var(--muted); margin-left: 4px; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Badge ── */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.badge-computed { background: #14532d; color: var(--success); }
+.badge-pseudo   { background: #451a03; color: var(--warning); }
+
+/* ── Table ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.data-table th {
+  background: #12152a;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  text-align: left;
+}
+.data-table td {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+.data-table tr:hover td { background: #1f2340; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Two-col curvature ── */
+.curv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+.curv-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.curv-card .scale-label {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.curv-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+}
+.curv-row:last-child { border-bottom: none; }
+.curv-key  { color: var(--muted); }
+.curv-val  { font-variant-numeric: tabular-nums; }
+
+/* ── Normal arrows ── */
+.normal-arrow {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: var(--accent);
+}
+
+/* ── Watertight indicator ── */
+.wt-yes { color: var(--success); }
+.wt-no  { color: var(--warning); }
+</style>
+</head>
+<body>
+<div class="report">
+
+  <div class="header">
+    <div>
+      <h1>FRAG-S1-001</h1>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px">
+        Study 2 Descriptor Pipeline · v0.2
+      </div>
+    </div>
+    <div class="meta">
+      2026-07-08T12:16:23.661979+00:00<br>
+      geometry descriptors
+    </div>
+  </div>
+
+  
+<div class="section">
+  <div class="section-title">Bounding &amp; Volume <span class="badge badge-computed">computed</span></div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">OBB Dimensions</div>
+      <div class="stat-value" style="font-size:14px">288.6 × 131.2 × 71.5</div>
+      <div class="stat-sub">mm (L × W × H)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Volume</div>
+      <div class="stat-value">0.001494<span class="stat-unit"> m³</span></div>
+      <div class="stat-sub">1494321 mm³</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Convexity Ratio</div>
+      <div class="stat-value">1.0000</div>
+      <div class="stat-sub">vol / hull vol</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mass Estimate <span class="badge badge-pseudo">pseudo</span></div>
+      <div class="stat-value">3.586<span class="stat-unit"> kg</span></div>
+      <div class="stat-sub">@ 2400 kg/m³ concrete</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mesh Integrity</div>
+      <div class="stat-value" style="font-size:13px"><span class="wt-no">✗ open mesh</span></div>
+      <div class="stat-sub">affects volume accuracy</div>
+    </div>
+  </div>
+</div>
+  
+<div class="section">
+  <div class="section-title">Planar Regions — RANSAC (8 found)</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th class="num">Area</th>
+        <th class="num">Inlier %</th>
+        <th class="num">Fit RMS</th>
+        <th class="num">Normal (x, y, z)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td class="num">0.0261 m²</td>
+        <td class="num">10.1%</td>
+        <td class="num">1.535 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (0.053, 0.967, 0.249)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td class="num">0.0234 m²</td>
+        <td class="num">14.0%</td>
+        <td class="num">1.710 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (0.065, 0.963, 0.261)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td class="num">0.0231 m²</td>
+        <td class="num">4.2%</td>
+        <td class="num">1.651 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (-0.139, 0.990, 0.028)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td class="num">0.0172 m²</td>
+        <td class="num">15.8%</td>
+        <td class="num">1.580 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (0.034, 0.999, 0.033)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td class="num">0.0147 m²</td>
+        <td class="num">16.0%</td>
+        <td class="num">1.406 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (0.186, 0.006, 0.983)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td class="num">0.0121 m²</td>
+        <td class="num">7.3%</td>
+        <td class="num">1.102 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (0.009, 0.998, -0.060)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td class="num">0.0104 m²</td>
+        <td class="num">8.4%</td>
+        <td class="num">1.394 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (-0.313, 0.030, 0.949)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td class="num">0.0079 m²</td>
+        <td class="num">8.2%</td>
+        <td class="num">1.485 mm</td>
+        <td class="num" style="color:var(--muted);font-size:11px">
+          (-0.327, 0.945, -0.025)
+        </td>
+        <td><span class="badge badge-computed">computed</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+  
+<div class="section">
+  <div class="section-title">Curvature — Multi-scale <span class="badge badge-computed">computed</span></div>
+  <div class="curv-grid">
+    
+    <div class="curv-card">
+      <div class="scale-label">Fine <span style="color:var(--muted);font-weight:400">r = 20.0 mm</span></div>
+      <div class="curv-row"><span class="curv-key">Mean</span><span class="curv-val">0.70318 rad</span></div>
+      <div class="curv-row"><span class="curv-key">Std</span><span class="curv-val">0.15661 rad</span></div>
+      <div class="curv-row"><span class="curv-key">P25</span><span class="curv-val">0.58919 rad</span></div>
+      <div class="curv-row"><span class="curv-key">P75</span><span class="curv-val">0.81524 rad</span></div>
+    </div>
+    
+    <div class="curv-card">
+      <div class="scale-label">Coarse <span style="color:var(--muted);font-weight:400">r = 60.0 mm</span></div>
+      <div class="curv-row"><span class="curv-key">Mean</span><span class="curv-val">0.61729 rad</span></div>
+      <div class="curv-row"><span class="curv-key">Std</span><span class="curv-val">0.08336 rad</span></div>
+      <div class="curv-row"><span class="curv-key">P25</span><span class="curv-val">0.56046 rad</span></div>
+      <div class="curv-row"><span class="curv-key">P75</span><span class="curv-val">0.67507 rad</span></div>
+    </div>
+  </div>
+</div>
+
+  <div style="margin-top:40px;color:var(--border);font-size:10px;text-align:right">
+    Generated by Study2_Descriptor_Pipeline v0.2
+  </div>
+
+</div>
+</body>
+</html>

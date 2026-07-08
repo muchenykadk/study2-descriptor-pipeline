@@ -1,0 +1,8 @@
+numpy
+scipy
+trimesh
+open3d
+scikit-image
+anthropic
+python-dotenv
+jsonschema

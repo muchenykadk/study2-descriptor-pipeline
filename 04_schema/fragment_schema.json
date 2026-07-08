@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fragment",
+  "description": "Data requirements schema for irregular concrete fragments (Study 1 gap analysis). Every value carries a data_status: computed | measured | pseudo | ai-annotated.",
+  "type": "object",
+  "required": ["fragment_id", "geometric", "surface", "procedural"],
+  "properties": {
+    "fragment_id": { "type": "string", "pattern": "^FRAG-S1-\\d{3}$" },
+    "data_status_default": { "enum": ["computed", "measured", "pseudo", "ai-annotated"] },
+    "geometric": {
+      "type": "object",
+      "properties": {
+        "obb_dims_mm": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "volume_m3": { "type": "number" },
+        "convexity": { "type": "number" },
+        "mass_kg_est": { "type": "number" },
+        "planar_regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "region_id": { "type": "string" },
+              "area_m2": { "type": "number" },
+              "fit_rms_mm": { "type": "number" },
+              "normal": { "type": "array", "items": { "type": "number" } }
+            }
+          }
+        },
+        "curvature_stats": { "type": "object" }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "properties": {
+        "roughness_coarse_rms_mm": { "type": "number" },
+        "roughness_fine_rms_mm": { "type": "number" },
+        "colour_entropy": { "type": "number" },
+        "region_labels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "region_id": { "type": "string" },
+              "labels": { "type": "array", "items": { "type": "string" } },
+              "confidence": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "structural": {
+      "type": "object",
+      "properties": {
+        "rebar_present": { "type": "boolean" },
+        "concrete_class_assumed": { "type": "string" },
+        "integrity_note": { "type": "string" }
+      }
+    },
+    "procedural": {
+      "type": "object",
+      "properties": {
+        "connection_strategy": { "enum": ["direct_bolt", "adaptive_bracket", "no_drill", "gravity_only"] },
+        "handling_class": { "enum": ["manual", "two_person", "excavator"] },
+        "design_assignment": { "enum": ["show_face", "seat_face", "buried", "unassigned"] }
+      }
+    },
+    "composite": { "type": "object" }
+  }
+}

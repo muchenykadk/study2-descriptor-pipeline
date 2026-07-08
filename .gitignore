@@ -1,0 +1,25 @@
+# Environment / secrets
+env/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large binary outputs (tracked by git-lfs instead)
+05_output/ai_cache/
+05_output/renders/
+
+# Rhino / Grasshopper autosave
+*.bak
+*.rhl
+
+# Blender temp
+*.blend1

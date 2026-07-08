@@ -37,22 +37,33 @@ def bounding_descriptors(mesh: trimesh.Trimesh) -> dict:
     """
     Oriented bounding box, volume, convexity ratio, estimated mass.
 
-    Mass is pseudo until the fragment is physically weighed;
-    flagged mass_data_status: 'pseudo' so real data can replace it.
+    Convexity requires a watertight mesh — reported as None for open meshes.
+    Volume falls back to convex hull when mesh is open; flagged via volume_source.
+    Mass is pseudo until the fragment is physically weighed.
     """
     mesh = _center_mesh(mesh)
     obb = mesh.bounding_box_oriented
-    vol = float(mesh.volume) if mesh.is_watertight else float(mesh.convex_hull.volume)
+    watertight = bool(mesh.is_watertight)
     hull_vol = float(mesh.convex_hull.volume)
+
+    if watertight:
+        vol = float(mesh.volume)
+        convexity = round(vol / hull_vol, 4) if hull_vol > 0 else None
+        vol_source = "mesh"
+    else:
+        vol = hull_vol          # best available estimate for open mesh
+        convexity = None        # meaningless when vol == hull_vol
+        vol_source = "convex_hull"
 
     return {
         "obb_dims_mm": sorted(obb.primitive.extents.tolist(), reverse=True),
         "volume_mm3": round(vol, 1),
         "volume_m3": round(vol * 1e-9, 6),
-        "convexity": round(vol / hull_vol, 4) if hull_vol > 0 else None,
+        "volume_source": vol_source,
+        "convexity": convexity,
         "mass_kg_est": round(vol * 1e-9 * 2400.0, 3),
         "mass_data_status": "pseudo",
-        "watertight": bool(mesh.is_watertight),
+        "watertight": watertight,
         "data_status": "computed",
     }
 
@@ -145,33 +156,45 @@ def planar_regions(
 def curvature_stats(
     mesh: trimesh.Trimesh,
     radius_mm: float = 20.0,
-    n_samples: int = 30_000,
+    n_samples: int = 10_000,
 ) -> dict:
     """
-    Multi-scale curvature via local normal deviation (Open3D).
+    Multi-scale curvature via local normal deviation.
 
-    Two radii separate fine surface texture (radius_mm) from coarse
-    fracture topology (radius_mm * 3). Returns percentile summary per scale.
+    Speed: uses scipy KDTree.query_ball_point() — one C call finds all
+    neighbourhoods at once, vs. Open3D's per-point Python→C++ round-trip.
+    n_samples reduced to 10k (from 30k); still statistically robust at fragment scale.
+
+    Two scales:
+      fine   (radius_mm)     — surface texture, roughness of concrete face
+      coarse (radius_mm × 3) — overall form curvature of the fragment
     """
+    from scipy.spatial import KDTree as _KDTree
+
     mesh = _center_mesh(mesh)
-    pcd = _to_o3d_pcd(mesh, n_samples)
+    pcd  = _to_o3d_pcd(mesh, n_samples)
+
+    # Estimate normals once at coarse radius (sufficient for both scales)
+    pcd.estimate_normals(
+        search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius_mm * 3, max_nn=30)
+    )
+    pts     = np.asarray(pcd.points)
+    normals = np.asarray(pcd.normals)
+
+    # Build scipy KDTree once — reused for both radius queries
+    tree = _KDTree(pts)
 
     results = {}
     for label, r in [("fine_mm", radius_mm), ("coarse_mm", radius_mm * 3)]:
-        pcd.estimate_normals(
-            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=r, max_nn=30)
-        )
-        tree = o3d.geometry.KDTreeFlann(pcd)
-        normals = np.asarray(pcd.normals)
-        pts = np.asarray(pcd.points)
-        curvs = []
+        # Batch query: all neighbourhoods found in one C call
+        neighbors_list = tree.query_ball_point(pts, r)
 
-        for i in range(len(pts)):
-            k, idx, _ = tree.search_radius_vector_3d(pcd.points[i], r)
-            if k < 3:
+        curvs = []
+        for idx in neighbors_list:
+            if len(idx) < 3:
                 continue
-            local_n = normals[list(idx)]
-            mean_n = local_n.mean(axis=0)
+            local_n  = normals[idx]
+            mean_n   = local_n.mean(axis=0)
             norm_len = np.linalg.norm(mean_n)
             if norm_len < 1e-8:
                 continue
@@ -183,9 +206,9 @@ def curvature_stats(
             c = np.array(curvs)
             results[label] = {
                 "mean_rad": round(float(c.mean()), 5),
-                "std_rad": round(float(c.std()), 5),
-                "p25_rad": round(float(np.percentile(c, 25)), 5),
-                "p75_rad": round(float(np.percentile(c, 75)), 5),
+                "std_rad":  round(float(c.std()),  5),
+                "p25_rad":  round(float(np.percentile(c, 25)), 5),
+                "p75_rad":  round(float(np.percentile(c, 75)), 5),
                 "radius_mm": r,
             }
         else:

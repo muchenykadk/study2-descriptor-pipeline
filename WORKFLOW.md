@@ -77,9 +77,20 @@ Save to: `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_texture.png`
 
 ## Step 3 — Run the Python pipeline (Phase 2: geometry)
 
-```bash
-cd Study2_Descriptor_Pipeline
-pip install -r env/requirements.txt   # first time only
+**First time setup — create and activate the virtual environment:**
+```powershell
+python -m venv env\venv
+env\venv\Scripts\activate
+pip install -r env/requirements.txt
+```
+
+**Every subsequent session — activate before running anything:**
+```powershell
+env\venv\Scripts\activate
+```
+
+Then run the pipeline:
+```powershell
 python 03_src/run_pipeline.py FRAG-S1-001
 ```
 

@@ -27,8 +27,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
+import numpy as np
 import trimesh
 from descriptors.geometry import bounding_descriptors, planar_regions, curvature_stats
+from report import generate_report, open_report
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -76,6 +78,40 @@ def run_phase2(frag_id: str, mesh: trimesh.Trimesh) -> dict:
         "bounding": bounding,
         "planarity": planes,
         "curvature": curv,
+    }
+
+
+def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000) -> dict:
+    """
+    Sample mesh surface and assign each point to its nearest planar region.
+    Returns compact structure for the Three.js viewer embedded in the HTML report.
+    Points normalised to [-1, 1] for stable camera setup.
+    """
+    if not planes:
+        return {"points": [], "n_regions": 0}
+
+    points, _ = trimesh.sample.sample_surface(mesh, n_points)
+    region_ids = np.full(len(points), -1, dtype=int)
+    best_dist  = np.full(len(points), np.inf)
+
+    for i, plane in enumerate(planes):
+        a, b, c, d = plane["plane_abcd"]
+        normal    = np.array([a, b, c], dtype=float)
+        distances = np.abs(points @ normal + d)
+        mask = (distances < 5.0) & (distances < best_dist)
+        region_ids[mask] = i
+        best_dist[mask]  = distances[mask]
+
+    centroid = points.mean(axis=0)
+    pts_c    = points - centroid
+    scale    = float(np.abs(pts_c).max()) or 1.0
+    pts_n    = pts_c / scale
+
+    return {
+        "points":    [[round(float(x), 4), round(float(y), 4), round(float(z), 4), int(r)]
+                      for (x, y, z), r in zip(pts_n, region_ids)],
+        "n_regions": len(planes),
+        "scale_mm":  round(scale, 1),
     }
 
 
@@ -136,8 +172,18 @@ Examples:
     # ── Save ─────────────────────────────────────────────────────────────────
     out_path = save_output(args.frag_id, descriptors, output_dir)
     print(f"\n  Saved → {out_path.relative_to(REPO_ROOT)}")
-    print(f"\n  Next step: open the JSON and verify the numbers,")
-    print(f"  then commit: git commit -m 'feat: add geometry descriptors {args.frag_id}'")
+
+    # ── Report ───────────────────────────────────────────────────────────────
+    print("  Building viewer data ...", end=" ", flush=True)
+    viewer_data = build_viewer_data(mesh, descriptors.get("planarity", []))
+    print(f"{len(viewer_data['points'])} points assigned")
+
+    report_path = generate_report(descriptors, output_dir, viewer_data)
+    print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
+    open_report(report_path)
+
+    print(f"\n  Next step: verify numbers in the report,")
+    print(f"  then commit: git commit -m 'data: geometry descriptors {args.frag_id}'")
     print()
 
 

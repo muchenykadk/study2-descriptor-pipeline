@@ -1,7 +1,7 @@
 {
   "fragment_id": "FRAG-S1-001",
   "pipeline_version": "v0.2",
-  "computed_at": "2026-07-08T12:42:08.652956+00:00",
+  "computed_at": "2026-07-09T09:49:01.729788+00:00",
   "bounding": {
     "obb_dims_mm": [
       288.5978286129162,
@@ -20,162 +20,162 @@
   "planarity": [
     {
       "plane_abcd": [
-        0.067709,
-        0.937562,
-        0.341163,
-        -13.956891
+        0.006153,
+        0.998082,
+        0.061599,
+        9.10867
       ],
       "normal_xyz": [
-        0.0677,
-        0.9376,
-        0.3412
+        0.0062,
+        0.9981,
+        0.0616
       ],
-      "inlier_count": 2524,
-      "inlier_fraction": 0.05,
-      "area_m2_est": 0.026466,
-      "fit_rms_mm": 1.362,
+      "inlier_count": 2210,
+      "inlier_fraction": 0.044,
+      "area_m2_est": 0.025948,
+      "fit_rms_mm": 1.705,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        -0.029085,
-        0.997977,
-        0.056532,
-        15.337497
+        0.071385,
+        0.948233,
+        0.30945,
+        -15.322649
       ],
       "normal_xyz": [
-        -0.0291,
-        0.998,
-        0.0565
+        0.0714,
+        0.9482,
+        0.3094
       ],
-      "inlier_count": 2897,
-      "inlier_fraction": 0.058,
-      "area_m2_est": 0.026134,
-      "fit_rms_mm": 1.688,
+      "inlier_count": 2985,
+      "inlier_fraction": 0.06,
+      "area_m2_est": 0.025656,
+      "fit_rms_mm": 1.192,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        0.056288,
-        0.94247,
-        0.329517,
-        -18.146631
+        0.073224,
+        0.952552,
+        0.295436,
+        -19.893528
       ],
       "normal_xyz": [
-        0.0563,
-        0.9425,
-        0.3295
+        0.0732,
+        0.9526,
+        0.2954
       ],
-      "inlier_count": 7212,
+      "inlier_count": 7176,
       "inlier_fraction": 0.144,
-      "area_m2_est": 0.025584,
-      "fit_rms_mm": 1.704,
+      "area_m2_est": 0.02466,
+      "fit_rms_mm": 1.71,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        -0.020213,
-        0.999561,
-        0.021644,
-        22.819375
+        -0.029497,
+        0.995863,
+        0.085941,
+        18.944153
       ],
       "normal_xyz": [
-        -0.0202,
-        0.9996,
-        0.0216
+        -0.0295,
+        0.9959,
+        0.0859
       ],
-      "inlier_count": 3783,
-      "inlier_fraction": 0.076,
-      "area_m2_est": 0.02126,
-      "fit_rms_mm": 1.622,
+      "inlier_count": 3713,
+      "inlier_fraction": 0.074,
+      "area_m2_est": 0.02465,
+      "fit_rms_mm": 1.737,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        0.061091,
-        0.946984,
-        0.31542,
-        -24.991821
+        0.078511,
+        0.950091,
+        0.301933,
+        -26.0936
       ],
       "normal_xyz": [
-        0.0611,
-        0.947,
-        0.3154
+        0.0785,
+        0.9501,
+        0.3019
       ],
-      "inlier_count": 6532,
-      "inlier_fraction": 0.131,
-      "area_m2_est": 0.020513,
-      "fit_rms_mm": 1.595,
+      "inlier_count": 6141,
+      "inlier_fraction": 0.123,
+      "area_m2_est": 0.019605,
+      "fit_rms_mm": 1.603,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        0.004329,
-        0.999909,
-        0.012773,
-        29.63252
+        0.006841,
+        0.999694,
+        0.023787,
+        29.323616
       ],
       "normal_xyz": [
-        0.0043,
-        0.9999,
-        0.0128
+        0.0068,
+        0.9997,
+        0.0238
       ],
-      "inlier_count": 7299,
-      "inlier_fraction": 0.146,
-      "area_m2_est": 0.016882,
-      "fit_rms_mm": 1.459,
+      "inlier_count": 7470,
+      "inlier_fraction": 0.149,
+      "area_m2_est": 0.017356,
+      "fit_rms_mm": 1.496,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        0.186835,
-        0.13181,
-        0.973508,
-        40.351442
+        0.186939,
+        0.080143,
+        0.979097,
+        41.224624
       ],
       "normal_xyz": [
-        0.1868,
-        0.1318,
-        0.9735
+        0.1869,
+        0.0801,
+        0.9791
       ],
-      "inlier_count": 8257,
-      "inlier_fraction": 0.165,
-      "area_m2_est": 0.015186,
-      "fit_rms_mm": 1.128,
+      "inlier_count": 8202,
+      "inlier_fraction": 0.164,
+      "area_m2_est": 0.015023,
+      "fit_rms_mm": 1.143,
       "data_status": "computed"
     },
     {
       "plane_abcd": [
-        -0.310631,
-        0.041369,
-        0.94963,
-        -49.971013
+        -0.300854,
+        0.003679,
+        0.953663,
+        -48.628012
       ],
       "normal_xyz": [
-        -0.3106,
-        0.0414,
-        0.9496
+        -0.3009,
+        0.0037,
+        0.9537
       ],
-      "inlier_count": 4184,
-      "inlier_fraction": 0.084,
-      "area_m2_est": 0.010969,
-      "fit_rms_mm": 1.355,
+      "inlier_count": 4536,
+      "inlier_fraction": 0.091,
+      "area_m2_est": 0.011157,
+      "fit_rms_mm": 1.463,
       "data_status": "computed"
     }
   ],
   "curvature": {
     "fine_mm": {
-      "mean_rad": 0.72749,
-      "std_rad": 0.18001,
-      "p25_rad": 0.6007,
-      "p75_rad": 0.85301,
+      "mean_rad": 0.77346,
+      "std_rad": 0.19878,
+      "p25_rad": 0.63021,
+      "p75_rad": 0.91757,
       "radius_mm": 20.0
     },
     "coarse_mm": {
-      "mean_rad": 0.63038,
-      "std_rad": 0.09697,
-      "p25_rad": 0.55883,
-      "p75_rad": 0.70533,
+      "mean_rad": 0.66937,
+      "std_rad": 0.09107,
+      "p25_rad": 0.60184,
+      "p75_rad": 0.73855,
       "radius_mm": 60.0
     },
     "data_status": "computed"

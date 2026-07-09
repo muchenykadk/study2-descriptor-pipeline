@@ -30,7 +30,7 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 import numpy as np
 import trimesh
 from descriptors.geometry import bounding_descriptors, planar_regions, curvature_stats
-from report import generate_report, open_report
+from report import generate_report, open_report, update_inventory
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -178,11 +178,19 @@ Examples:
     viewer_data = build_viewer_data(mesh, descriptors.get("planarity", []))
     print(f"{len(viewer_data['points'])} points assigned")
 
+    # Save viewer data separately so index.html can embed it
+    viewer_json_path = output_dir / f"{args.frag_id}_viewer.json"
+    with open(viewer_json_path, "w", encoding="utf-8") as f:
+        json.dump(viewer_data, f)
+
     report_path = generate_report(descriptors, output_dir, viewer_data)
     print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
-    open_report(report_path)
 
-    print(f"\n  Next step: verify numbers in the report,")
+    index_path = update_inventory(output_dir, highlight_id=args.frag_id)
+    print(f"  Index  → {index_path.relative_to(REPO_ROOT)}")
+    open_report(index_path)
+
+    print(f"\n  Next step: verify numbers in the inventory,")
     print(f"  then commit: git commit -m 'data: geometry descriptors {args.frag_id}'")
     print()
 

@@ -623,3 +623,590 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None) -> P
 def open_report(path: Path) -> None:
     """Open the HTML report in the system default browser."""
     webbrowser.open(path.as_uri())
+
+
+# ── Collective inventory interface ────────────────────────────────────────────
+
+_INDEX_CSS = """
+:root {
+  --bg:      #0f1117;
+  --surface: #1a1d2e;
+  --border:  #2d3250;
+  --accent:  #7c83fd;
+  --text:    #e2e8f0;
+  --muted:   #94a3b8;
+  --hover:   #1f2340;
+  --radius:  8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'SF Mono','Cascadia Code','Fira Mono',monospace;
+  font-size: 13px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topbar h1 { font-size: 15px; color: var(--accent); letter-spacing: 0.05em; }
+.topbar .count { font-size: 11px; color: var(--muted); }
+
+/* ── Two-panel layout ── */
+.panels {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Viewer in detail panel ── */
+#viewer-wrap {
+  position: relative;
+  background: #0a0c14;
+  border-bottom: 1px solid var(--border);
+  height: 280px;
+  flex-shrink: 0;
+  display: none;
+}
+#idx-canvas { display: block; width: 100%; height: 100%; }
+.viewer-hint-idx {
+  position: absolute;
+  bottom: 8px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: var(--muted); font-size: 10px;
+  padding: 2px 8px; border-radius: 99px;
+  pointer-events: none; white-space: nowrap;
+}
+#viewer-legend-idx {
+  display: none;
+  flex-wrap: wrap; gap: 6px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+/* ── Left: fragment list ── */
+.frag-list {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 8px;
+}
+.frag-item {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+  transition: background 0.1s;
+}
+.frag-item:hover { background: var(--hover); }
+.frag-item.active {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+.frag-id {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.frag-id span { font-size: 12px; font-weight: 600; color: var(--text); }
+.grade-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+.frag-dims { font-size: 11px; color: var(--muted); }
+.frag-meta { font-size: 10px; color: #4b5563; margin-top: 2px; }
+
+/* ── Right: detail panel ── */
+.detail-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+.detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ── Detail sections ── */
+.detail-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-header h2 { font-size: 18px; color: var(--accent); letter-spacing: 0.05em; }
+.detail-header .open-link {
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+}
+.detail-header .open-link:hover { color: var(--text); border-color: var(--accent); }
+
+.dsection { margin-bottom: 24px; }
+.dsection-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.stat-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  min-width: 130px;
+}
+.chip-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.chip-val   { font-size: 15px; font-weight: 600; }
+.chip-sub   { font-size: 10px; color: var(--muted); }
+
+.roughness-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.rgrade-code  { font-size: 24px; font-weight: 700; }
+.rgrade-label { font-size: 13px; font-weight: 600; }
+.rgrade-desc  { font-size: 11px; color: var(--muted); }
+.rgrade-nums  { margin-left: auto; font-size: 11px; color: var(--muted); text-align: right; }
+
+.mesh-warn {
+  background: #2d1b00;
+  border: 1px solid #92400e;
+  border-left: 3px solid #fbbf24;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fde68a;
+  margin-bottom: 12px;
+}
+
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 12px;
+}
+.dtable th {
+  background: #12152a;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 7px 10px;
+  text-align: left;
+}
+.dtable td { padding: 7px 10px; border-top: 1px solid var(--border); }
+.dtable tr:hover td { background: var(--hover); }
+.nr { text-align: right; font-variant-numeric: tabular-nums; }
+.rdot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+"""
+
+_INDEX_JS = """
+const REGION_COLORS = [
+  '#7c83fd','#4ade80','#fbbf24','#f87171',
+  '#60a5fa','#c084fc','#fb923c','#34d399'
+];
+
+const ROUGHNESS_GRADES = {
+  S:  { label: 'Smooth',     color: '#4ade80' },
+  M:  { label: 'Moderate',   color: '#a3e635' },
+  R:  { label: 'Rough',      color: '#fbbf24' },
+  VR: { label: 'Very Rough', color: '#f87171' },
+};
+
+const DESC_MAP = {
+  S:  'Cast / cut face — original formwork surface',
+  M:  'Lightly textured — mild fracture or weathering',
+  R:  'Fractured surface — typical demolition break',
+  VR: 'Heavy fracture, spall, or aggregate exposure',
+};
+
+function getGrade(coarse_mean) {
+  if (coarse_mean === null || coarse_mean === undefined) return null;
+  if (coarse_mean < 0.25) return 'S';
+  if (coarse_mean < 0.45) return 'M';
+  if (coarse_mean < 0.65) return 'R';
+  return 'VR';
+}
+
+function fmt(v, d, unit) {
+  if (v === null || v === undefined) return '—';
+  return v.toFixed(d) + (unit ? ' ' + unit : '');
+}
+
+function renderList(fragments, selectedId) {
+  const list = document.getElementById('frag-list');
+  list.innerHTML = '';
+  fragments.forEach(function(f) {
+    const b = f.bounding || {};
+    const dims = (b.obb_dims_mm || []).map(function(d){ return d.toFixed(0); }).join(' × ');
+    const curv = f.curvature || {};
+    const coarse = curv.coarse_mm || {};
+    const code = getGrade(coarse.mean_rad);
+    const g = code ? ROUGHNESS_GRADES[code] : null;
+
+    const item = document.createElement('div');
+    item.className = 'frag-item' + (f.fragment_id === selectedId ? ' active' : '');
+    item.dataset.id = f.fragment_id;
+    item.innerHTML =
+      '<div class="frag-id">' +
+        '<span>' + f.fragment_id + '</span>' +
+        (g ? '<span class="grade-pill" style="background:' + g.color + '22;color:' + g.color + '">' + code + '</span>' : '') +
+      '</div>' +
+      '<div class="frag-dims">' + dims + ' mm</div>' +
+      '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>';
+    item.addEventListener('click', function() { selectFragment(f.fragment_id); });
+    list.appendChild(item);
+  });
+}
+
+function renderDetail(fragment) {
+  const panel = document.getElementById('detail-content');
+  if (!fragment) {
+    panel.innerHTML = '<div class="detail-empty">← select a fragment</div>';
+    return;
+  }
+
+  const b = fragment.bounding || {};
+  const regions = fragment.planarity || [];
+  const curv = fragment.curvature || {};
+  const coarse = curv.coarse_mm || {};
+  const fine   = curv.fine_mm   || {};
+  const code = getGrade(coarse.mean_rad);
+  const g = code ? ROUGHNESS_GRADES[code] : null;
+  const watertight = b.watertight;
+  const reportFile = fragment.fragment_id + '_report.html';
+
+  // mesh warning
+  const warnHtml = watertight ? '' :
+    '<div class="mesh-warn">⚠ Open mesh — volume uses convex hull; convexity N/A. Close in Blender for accurate values.</div>';
+
+  // bounding chips
+  const dims = (b.obb_dims_mm || []).map(function(d){ return d.toFixed(1); }).join(' × ');
+  const convHtml = b.convexity !== null && b.convexity !== undefined
+    ? '<div class="chip-val">' + b.convexity.toFixed(4) + '</div>'
+    : '<div class="chip-val" style="color:var(--muted);font-style:italic;font-size:12px">N/A</div><div class="chip-sub">open mesh</div>';
+
+  // roughness
+  const roughHtml = g ? (
+    '<div class="roughness-row">' +
+    '<div class="rgrade-code" style="color:' + g.color + '">' + code + '</div>' +
+    '<div><div class="rgrade-label" style="color:' + g.color + '">' + g.label + '</div>' +
+    '<div class="rgrade-desc">' + DESC_MAP[code] + '</div></div>' +
+    '<div class="rgrade-nums">' +
+    '<span>Fine (r=20mm) &nbsp;' + fmt(fine.mean_rad, 5) + ' rad</span>' +
+    '<span>Coarse (r=60mm) &nbsp;' + fmt(coarse.mean_rad, 5) + ' rad</span>' +
+    '</div></div>'
+  ) : '<p style="color:var(--muted)">Curvature not available.</p>';
+
+  // regions table rows
+  let regionRows = '';
+  regions.forEach(function(r, i) {
+    const color = REGION_COLORS[i % REGION_COLORS.length];
+    const nx = (r.normal_xyz || [0,0,0]);
+    regionRows +=
+      '<tr><td><span class="rdot" style="background:' + color + '"></span>' + (i+1) + '</td>' +
+      '<td class="nr">' + (r.area_m2_est !== null ? r.area_m2_est.toFixed(4) + ' m²' : '—') + '</td>' +
+      '<td class="nr">' + (r.inlier_fraction * 100).toFixed(1) + '%</td>' +
+      '<td class="nr">' + r.fit_rms_mm.toFixed(3) + ' mm</td>' +
+      '<td class="nr" style="color:var(--muted);font-size:11px">(' + nx[0].toFixed(3) + ', ' + nx[1].toFixed(3) + ', ' + nx[2].toFixed(3) + ')</td>' +
+      '</tr>';
+  });
+
+  const date = (fragment.computed_at || '').slice(0, 10);
+
+  panel.innerHTML =
+    '<div class="detail-header">' +
+      '<div><h2>' + fragment.fragment_id + '</h2>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:3px">processed ' + date + ' · ' + (fragment.pipeline_version || '') + '</div></div>' +
+      '<a class="open-link" href="' + reportFile + '" target="_blank">Open 3D Report ↗</a>' +
+    '</div>' +
+
+    warnHtml +
+
+    '<div class="dsection">' +
+      '<div class="dsection-title">Bounding &amp; Volume</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat-chip"><div class="chip-label">OBB Dimensions</div><div class="chip-val" style="font-size:12px">' + dims + '</div><div class="chip-sub">mm (L × W × H)</div></div>' +
+        '<div class="stat-chip"><div class="chip-label">Volume</div><div class="chip-val">' + fmt(b.volume_m3, 6) + '</div><div class="chip-sub">m³ (' + (b.volume_source || 'mesh') + ')</div></div>' +
+        '<div class="stat-chip"><div class="chip-label">Convexity</div>' + convHtml + '</div>' +
+        '<div class="stat-chip"><div class="chip-label">Mass (pseudo)</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2400 kg/m³</div></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="dsection">' +
+      '<div class="dsection-title">Surface Roughness</div>' +
+      roughHtml +
+    '</div>' +
+
+    '<div class="dsection">' +
+      '<div class="dsection-title">Planar Regions — RANSAC (' + regions.length + ' found)</div>' +
+      '<table class="dtable"><thead><tr>' +
+        '<th>#</th><th class="nr">Area</th><th class="nr">Coverage</th><th class="nr">Fit RMS</th><th class="nr">Normal (x, y, z)</th>' +
+      '</tr></thead><tbody>' + regionRows + '</tbody></table>' +
+    '</div>';
+}
+
+// ── Three.js viewer ──────────────────────────────────────────────────────────
+
+var THREE_STATE = null;
+
+function ensureViewer() {
+  if (THREE_STATE) return;
+  var wrap = document.getElementById('viewer-wrap');
+  var W = wrap.clientWidth, H = 280;
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0c14);
+
+  var camera = new THREE.PerspectiveCamera(45, W / H, 0.001, 100);
+  var renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('idx-canvas'), antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+
+  var theta = 0.4, phi = 1.1, radius = 3.0;
+  var isDragging = false, lastX = 0, lastY = 0;
+
+  function updateCamera() {
+    camera.position.set(
+      radius * Math.sin(phi) * Math.sin(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.cos(theta)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+  updateCamera();
+
+  var canvas = renderer.domElement;
+  canvas.style.cursor = 'grab';
+  canvas.addEventListener('mousedown', function(e) { isDragging=true; lastX=e.clientX; lastY=e.clientY; canvas.style.cursor='grabbing'; });
+  window.addEventListener('mouseup',   function()  { isDragging=false; canvas.style.cursor='grab'; });
+  window.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    theta -= (e.clientX-lastX)*0.008;
+    phi    = Math.max(0.08, Math.min(Math.PI-0.08, phi+(e.clientY-lastY)*0.008));
+    lastX=e.clientX; lastY=e.clientY;
+    updateCamera();
+  });
+  canvas.addEventListener('wheel', function(e) {
+    radius = Math.max(0.8, Math.min(8.0, radius+e.deltaY*0.003));
+    updateCamera(); e.preventDefault();
+  }, { passive: false });
+
+  function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+  animate();
+
+  window.addEventListener('resize', function() {
+    var w = wrap.clientWidth;
+    camera.aspect = w/H; camera.updateProjectionMatrix(); renderer.setSize(w, H);
+  });
+
+  THREE_STATE = { scene: scene, camera: camera, renderer: renderer, updateCamera: updateCamera, cloud: null };
+}
+
+function loadPointCloud(points, regions) {
+  if (!THREE_STATE) return;
+  var state = THREE_STATE;
+
+  if (state.cloud) { state.scene.remove(state.cloud); state.cloud.geometry.dispose(); state.cloud = null; }
+  if (!points || !points.length) return;
+
+  var positions = [], colors = [];
+  var col = new THREE.Color();
+  for (var i = 0; i < points.length; i++) {
+    var p = points[i];
+    positions.push(p[0], p[1], p[2]);
+    col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    colors.push(col.r, col.g, col.b);
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
+  var mat = new THREE.PointsMaterial({ size: 0.018, vertexColors: true, sizeAttenuation: true });
+  state.cloud = new THREE.Points(geo, mat);
+  state.scene.add(state.cloud);
+
+  // Update legend
+  var leg = document.getElementById('viewer-legend-idx');
+  var html = '';
+  for (var j = 0; j < regions.length; j++) {
+    var area = regions[j].area_m2_est !== null ? regions[j].area_m2_est.toFixed(4)+' m²' : '—';
+    html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:' + REGION_COLORS[j % REGION_COLORS.length] + ';display:inline-block"></span>' +
+            'R'+(j+1)+' · '+area+'</span>';
+  }
+  html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:#3d4455;display:inline-block"></span>unclassified</span>';
+  leg.innerHTML = html;
+}
+
+// ── Fragment list & detail ────────────────────────────────────────────────────
+
+var allFragments = [];
+var viewerMap    = {};
+var selectedId   = null;
+
+function selectFragment(id) {
+  selectedId = id;
+  location.hash = id;
+  renderList(allFragments, selectedId);
+  var frag = allFragments.find(function(f){ return f.fragment_id === id; }) || null;
+  renderDetail(frag);
+
+  // Update 3D viewer
+  var vd = viewerMap[id];
+  if (vd && vd.points && vd.points.length) {
+    document.getElementById('viewer-wrap').style.display = 'block';
+    document.getElementById('viewer-legend-idx').style.display = 'flex';
+    ensureViewer();
+    loadPointCloud(vd.points, frag ? (frag.planarity || []) : []);
+  } else {
+    document.getElementById('viewer-wrap').style.display = 'none';
+    document.getElementById('viewer-legend-idx').style.display = 'none';
+  }
+}
+
+function init(fragments, vmap) {
+  allFragments = fragments.slice().sort(function(a, b) {
+    return a.fragment_id.localeCompare(b.fragment_id);
+  });
+  viewerMap = vmap || {};
+  document.getElementById('count').textContent = allFragments.length + ' fragment' + (allFragments.length !== 1 ? 's' : '');
+  var hash  = location.hash.replace('#', '');
+  var first = hash || (allFragments[0] ? allFragments[0].fragment_id : null);
+  renderList(allFragments, first);
+  renderDetail(allFragments.find(function(f){ return f.fragment_id === first; }) || null);
+  if (first) { selectedId = first; selectFragment(first); }
+}
+"""
+
+
+def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
+    """
+    Scan all *_geometry.json files in output_dir and regenerate index.html.
+    Called automatically after every pipeline run.
+
+    Parameters
+    ----------
+    output_dir   : folder containing *_geometry.json files
+    highlight_id : fragment ID to open on load (defaults to the most recent)
+
+    Returns
+    -------
+    Path to the generated index.html.
+    """
+    fragments = []
+    for json_path in sorted(output_dir.glob("*_geometry.json")):
+        try:
+            with open(json_path, encoding="utf-8") as f:
+                fragments.append(json.load(f))
+        except Exception:
+            pass
+
+    viewer_map = {}
+    for vpath in sorted(output_dir.glob("*_viewer.json")):
+        frag_id = vpath.stem.replace("_viewer", "")
+        try:
+            with open(vpath, encoding="utf-8") as f:
+                viewer_map[frag_id] = json.load(f)
+        except Exception:
+            pass
+
+    fragment_json = json.dumps(fragments)
+    viewer_json   = json.dumps(viewer_map)
+    hash_init     = f'"{highlight_id}"' if highlight_id else "null"
+    count         = len(fragments)
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study 2 — Fragment Inventory ({count})</title>
+  <style>{_INDEX_CSS}</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Study 2 — Fragment Inventory</h1>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="panels">
+  <div class="frag-list" id="frag-list"></div>
+  <div class="detail-panel" id="detail-panel">
+    <div id="viewer-wrap">
+      <canvas id="idx-canvas"></canvas>
+      <div class="viewer-hint-idx">drag to rotate · scroll to zoom</div>
+    </div>
+    <div id="viewer-legend-idx"></div>
+    <div id="detail-content">
+      <div class="detail-empty">← select a fragment</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+{_INDEX_JS}
+init({fragment_json}, {viewer_json});
+</script>
+</body>
+</html>"""
+
+    index_path = output_dir / "index.html"
+    index_path.write_text(html, encoding="utf-8")
+    return index_path

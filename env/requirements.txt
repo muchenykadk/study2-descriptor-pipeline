@@ -3,6 +3,8 @@ scipy
 trimesh
 open3d
 scikit-image
+Pillow
 anthropic
+openai
 python-dotenv
 jsonschema

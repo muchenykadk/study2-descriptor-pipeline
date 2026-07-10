@@ -11,7 +11,10 @@ Usage (called automatically by run_pipeline.py):
     open_report(report_path)
 """
 
+import http.server
 import json
+import socket
+import threading
 import webbrowser
 from pathlib import Path
 
@@ -337,43 +340,62 @@ def _bounding_section(b: dict) -> str:
 
 
 def _viewer_section(regions: list, viewer_data: dict,
-                    glb_rel_path: str = "", texture_rel_path: str = "") -> str:
+                    glb_rel_path: str = "",
+                    feat_tex_rels: dict = None) -> str:
+    """
+    Build the 3D viewer section HTML + embedded Three.js script.
+
+    feat_tex_rels : {"all": rel_path, "<label>": rel_path, ...}
+                    produced by build_feature_textures() in feature_texture.py
+    """
+    feat_tex_rels = feat_tex_rels or {}
     if not viewer_data or not viewer_data.get("points"):
         return ""
 
     point_json  = json.dumps(viewer_data["points"])
     color_mode  = viewer_data.get("color_mode", "region")
-    n_regions   = viewer_data.get("n_regions", len(regions))
     scale_mm    = viewer_data.get("scale_mm", "?")
 
-    # Legend items
+    # ── RANSAC region legend (point cloud mode) ──────────────────────────────
     legend_items = ""
     for i, region in enumerate(regions):
-        color = REGION_COLORS[i % len(REGION_COLORS)]
-        area  = region.get("area_m2_est")
+        color    = REGION_COLORS[i % len(REGION_COLORS)]
+        area     = region.get("area_m2_est")
         area_str = f"{area:.4f} m²" if area else "—"
-        legend_items += f"""
-    <div class="legend-item">
-      <div class="legend-dot" style="background:{color}"></div>
-      Region {i+1} · {area_str}
-    </div>"""
-    legend_items += """
-    <div class="legend-item">
-      <div class="legend-dot" style="background:#3d4455"></div>
-      Unclassified
-    </div>"""
+        legend_items += (
+            f'<div class="legend-item">'
+            f'<div class="legend-dot" style="background:{color}"></div>'
+            f'Region {i+1} · {area_str}</div>'
+        )
+    legend_items += (
+        '<div class="legend-item">'
+        '<div class="legend-dot" style="background:#3d4455"></div>Unclassified</div>'
+    )
 
-    has_scan_js    = "true" if color_mode == "scan" else "false"
-    # Legend hidden initially when GLB mesh is shown by default
-    legend_display = "display:none"
-    # Scan/region toggle — hidden initially (shown when switching to point cloud)
-    toggle_btn = (
-        '<button id="color-toggle" style="display:none;position:absolute;top:8px;right:8px;'
-        'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
-        'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
-    ) if color_mode == "scan" else ""
+    has_scan_js = "true" if color_mode == "scan" else "false"
 
-    # Mesh/Cloud toggle — only when GLB exists
+    # ── Feature chip buttons ──────────────────────────────────────────────────
+    # One chip per detected label (all labels except "all" key)
+    label_keys  = [k for k in feat_tex_rels if k != "all"]
+    chips_html  = ""
+    if feat_tex_rels and label_keys:
+        chips_html = '<div id="feat-chips" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px">'
+        chips_html += (
+            '<button onclick="window.activateFeature(\'all\')" data-feat="all" '
+            'style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;'
+            'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button>'
+        )
+        for lbl in label_keys:
+            col = _LABEL_COLORS.get(lbl, "#b0b8d0")
+            chips_html += (
+                f'<button onclick="window.activateFeature(\'{lbl}\')" data-feat="{lbl}" '
+                f'style="background:#1e2030;border:1px solid {col};color:{col};'
+                f'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">'
+                f'{lbl.replace("_", " ")}</button>'
+            )
+        chips_html += "</div>"
+
+    # ── Overlay buttons inside canvas ─────────────────────────────────────────
     if glb_rel_path:
         mesh_toggle_btn = (
             '<button id="mesh-toggle" onclick="window.toggleMeshMode()" '
@@ -381,58 +403,141 @@ def _viewer_section(regions: list, viewer_data: dict,
             'border:1px solid #7c83fd;color:#7c83fd;font-size:10px;'
             'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Point Cloud</button>'
         )
-        gltf_script_tag = '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>'
+        feature_main_btn = (
+            '<button id="feature-btn" onclick="window.toggleFeaturePanel()" '
+            'style="position:absolute;top:8px;right:8px;background:#1e2030;'
+            'border:1px solid #fbbf24;color:#fbbf24;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Feature Map</button>'
+        ) if feat_tex_rels else ""
+        scan_toggle_btn = (
+            '<button id="color-toggle" style="display:none;position:absolute;top:8px;right:8px;'
+            'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
+        ) if color_mode == "scan" else ""
+        gltf_script_tag = (
+            '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/'
+            'examples/js/loaders/GLTFLoader.js"></script>'
+        )
+
+        # ── Serialise texture map for JS ─────────────────────────────────────
+        feat_tex_js = json.dumps(feat_tex_rels)   # {"all": "path", "staining": "path", ...}
+
         glb_js = f"""
 
-  // ── GLB textured mesh (default view) ─────────────────────────────────────────
-  var meshGroup = null;
+  // ── GLB textured mesh ─────────────────────────────────────────────────────
+  var meshGroup   = null;
   var showMeshMode = true;
+  var featTextures = {{}};       // label → THREE.Texture  (loaded async)
+  var activeFeat   = null;      // currently active feature label or null
 
   (function loadGLB() {{
     var loader = new THREE.GLTFLoader();
     loader.load('{glb_rel_path}', function (gltf) {{
       meshGroup = gltf.scene;
-      // normalize: centre at origin, scale to fit [-1,1]
       var box    = new THREE.Box3().setFromObject(meshGroup);
       var center = box.getCenter(new THREE.Vector3());
       var size   = box.getSize(new THREE.Vector3());
-      var maxDim = Math.max(size.x, size.y, size.z);
-      var s = 2.0 / maxDim;
+      var s = 2.0 / Math.max(size.x, size.y, size.z);
       meshGroup.scale.setScalar(s);
       meshGroup.position.copy(center).negate().multiplyScalar(s);
       scene.add(meshGroup);
-      cloud.visible = false;   // hide point cloud: mesh is default
+      cloud.visible = false;
     }}, undefined, function (err) {{
-      console.warn('GLB load failed — showing point cloud instead', err);
+      console.warn('GLB load failed — falling back to point cloud', err);
       cloud.visible = true;
-      showMeshMode = false;
-      var leg = document.getElementById('viewer-legend');
-      if (leg) leg.style.display = '{'' if color_mode == "region" else "display:none"}';
-      var ctBtn = document.getElementById('color-toggle');
-      if (ctBtn && {has_scan_js}) ctBtn.style.display = '';
+      showMeshMode  = false;
+      var fBtn = document.getElementById('feature-btn');
+      if (fBtn) fBtn.style.display = 'none';
     }});
   }})();
 
+  // ── Pre-load all feature textures ─────────────────────────────────────────
+  (function loadFeatTextures() {{
+    var paths = {feat_tex_js};
+    var tl = new THREE.TextureLoader();
+    Object.keys(paths).forEach(function (label) {{
+      tl.load(paths[label], function (tex) {{
+        tex.flipY = false;
+        tex.encoding = THREE.sRGBEncoding;
+        featTextures[label] = tex;
+      }}, undefined, function () {{
+        console.warn('Feature texture not found:', label, paths[label]);
+      }});
+    }});
+  }})();
+
+  // Apply a texture to all mesh materials; pass null to restore originals
+  function _applyMeshTex(tex) {{
+    if (!meshGroup) return;
+    meshGroup.traverse(function (child) {{
+      if (child.isMesh && child.material) {{
+        var mat = child.material;
+        if (mat._origMap === undefined) mat._origMap = mat.map;
+        mat.map = tex !== null ? tex : mat._origMap;
+        mat.needsUpdate = true;
+      }}
+    }});
+  }}
+
+  // ── Feature chip activation ───────────────────────────────────────────────
+  window.activateFeature = function (label) {{
+    var tex = featTextures[label] || null;
+    if (!tex) {{ console.warn('Texture not ready:', label); return; }}
+    activeFeat = label;
+    _applyMeshTex(tex);
+    // Update chip styles
+    document.querySelectorAll('#feat-chips button').forEach(function (b) {{
+      var isActive = b.dataset.feat === label;
+      b.style.background = isActive ? '#2d3250' : '#1e2030';
+      b.style.fontWeight  = isActive ? 'bold' : 'normal';
+    }});
+  }};
+
+  // ── Feature panel toggle (top-right button) ───────────────────────────────
+  var featurePanelOpen = false;
+  window.toggleFeaturePanel = function () {{
+    featurePanelOpen = !featurePanelOpen;
+    var chips = document.getElementById('feat-chips');
+    var btn   = document.getElementById('feature-btn');
+    if (chips) chips.style.display = featurePanelOpen ? 'flex' : 'none';
+    if (btn)   btn.textContent     = featurePanelOpen ? 'Hide Features' : 'Feature Map';
+    if (featurePanelOpen) {{
+      // Default to combined "all" on first open
+      if (!activeFeat) window.activateFeature('all');
+    }} else {{
+      // Restore original texture when closing
+      activeFeat = null;
+      _applyMeshTex(null);
+      document.querySelectorAll('#feat-chips button').forEach(function (b) {{
+        b.style.background = '#1e2030';
+        b.style.fontWeight  = 'normal';
+      }});
+    }}
+  }};
+
+  // ── Mesh / Point Cloud toggle ─────────────────────────────────────────────
   window.toggleMeshMode = function () {{
     if (!meshGroup) return;
-    showMeshMode = !showMeshMode;
+    showMeshMode  = !showMeshMode;
     meshGroup.visible = showMeshMode;
-    cloud.visible = !showMeshMode;
+    cloud.visible     = !showMeshMode;
     document.getElementById('mesh-toggle').textContent = showMeshMode ? 'Point Cloud' : 'Textured Mesh';
-    var leg = document.getElementById('viewer-legend');
-    if (leg) leg.style.display = (!showMeshMode && curMode === 'region') ? '' : 'none';
+    // Close feature panel when switching to point cloud
+    if (!showMeshMode && featurePanelOpen) window.toggleFeaturePanel();
+    var leg   = document.getElementById('viewer-legend');
+    if (leg)  leg.style.display = (!showMeshMode && curMode === 'region') ? '' : 'none';
     var ctBtn = document.getElementById('color-toggle');
     if (ctBtn) ctBtn.style.display = (!showMeshMode && {has_scan_js}) ? '' : 'none';
+    var fBtn  = document.getElementById('feature-btn');
+    if (fBtn)  fBtn.style.display = showMeshMode && {json.dumps(bool(feat_tex_rels))}.toString() === 'true' ? '' : 'none';
   }};
 """
     else:
-        mesh_toggle_btn = ""
-        gltf_script_tag = ""
-        glb_js = ""
-        # No GLB — show legend if region mode
-        legend_display = "display:none" if color_mode == "scan" else ""
-        # Show scan/region toggle in its normal state
-        toggle_btn = (
+        mesh_toggle_btn  = ""
+        feature_main_btn = ""
+        gltf_script_tag  = ""
+        glb_js           = ""
+        scan_toggle_btn  = (
             '<button id="color-toggle" style="position:absolute;top:8px;right:8px;'
             'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
             'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
@@ -445,10 +550,11 @@ def _viewer_section(regions: list, viewer_data: dict,
     <canvas id="three-canvas"></canvas>
     <div class="viewer-hint">drag to rotate &nbsp;·&nbsp; scroll to zoom</div>
     {mesh_toggle_btn}
-    {toggle_btn}
+    {feature_main_btn}
+    {scan_toggle_btn}
   </div>
-  <div class="viewer-legend" id="viewer-legend" style="{legend_display}">{legend_items}
-  </div>
+  <div class="viewer-legend" id="viewer-legend" style="display:none">{legend_items}</div>
+  {chips_html}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -463,19 +569,23 @@ def _viewer_section(regions: list, viewer_data: dict,
 
   var container = document.querySelector('.viewer-wrap');
   var W = container.clientWidth, H = 420;
-
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0c14);
-
+  // Lights — required for MeshStandardMaterial (GLTF default); without these the mesh renders black
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  var _key = new THREE.DirectionalLight(0xffffff, 0.85);
+  _key.position.set(1.5, 2.5, 2.0);
+  scene.add(_key);
+  var _fill = new THREE.DirectionalLight(0xffffff, 0.25);
+  _fill.position.set(-1.5, 0.5, -1.5);
+  scene.add(_fill);
   var camera = new THREE.PerspectiveCamera(45, W / H, 0.001, 100);
   camera.position.set(0, 1.2, 2.8);
-
   var renderer = new THREE.WebGLRenderer({{ canvas: document.getElementById('three-canvas'), antialias: true }});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(W, H);
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
-  // Build both color arrays once — swap on toggle
-  // Point format: [x, y, z, region_id]  or  [x, y, z, region_id, R, G, B]
   var positions = [], scanColors = [], regionColors = [];
   var col = new THREE.Color();
   for (var i = 0; i < POINT_DATA.length; i++) {{
@@ -487,7 +597,7 @@ def _viewer_section(regions: list, viewer_data: dict,
     col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
     regionColors.push(col.r, col.g, col.b);
   }}
-  var geo = new THREE.BufferGeometry();
+  var geo  = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(
     (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors, 3));
@@ -495,68 +605,49 @@ def _viewer_section(regions: list, viewer_data: dict,
   var cloud = new THREE.Points(geo, mat);
   scene.add(cloud);
 
-  // Scan/region color toggle (point cloud only)
-  var btn = document.getElementById('color-toggle');
-  if (btn) btn.addEventListener('click', function () {{
+  var scanBtn = document.getElementById('color-toggle');
+  if (scanBtn) scanBtn.addEventListener('click', function () {{
     curMode = curMode === 'scan' ? 'region' : 'scan';
     var arr = (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors;
     cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
-    btn.textContent = curMode === 'scan' ? 'Show Regions' : 'Show Scan';
+    scanBtn.textContent = curMode === 'scan' ? 'Show Regions' : 'Show Scan';
     var leg = document.getElementById('viewer-legend');
     if (leg) leg.style.display = curMode === 'region' ? '' : 'none';
   }});
 
-  // Manual orbit controls
-  var theta = 0.4, phi = 1.1, radius = 3.0;
-  var isDragging = false, lastX = 0, lastY = 0;
-
+  var theta = 0.4, phi = 1.1, radius = 3.0, isDragging = false, lastX = 0, lastY = 0;
   function updateCamera() {{
     camera.position.set(
       radius * Math.sin(phi) * Math.sin(theta),
       radius * Math.cos(phi),
-      radius * Math.sin(phi) * Math.cos(theta)
-    );
+      radius * Math.sin(phi) * Math.cos(theta));
     camera.lookAt(0, 0, 0);
   }}
   updateCamera();
-
-  var canvas = renderer.domElement;
-  canvas.style.cursor = 'grab';
-  canvas.addEventListener('mousedown', function (e) {{
-    isDragging = true; lastX = e.clientX; lastY = e.clientY;
-    canvas.style.cursor = 'grabbing';
-  }});
-  window.addEventListener('mouseup', function () {{
-    isDragging = false; canvas.style.cursor = 'grab';
-  }});
+  var cvs = renderer.domElement;
+  cvs.style.cursor = 'grab';
+  cvs.addEventListener('mousedown',   function (e) {{ isDragging = true;  lastX = e.clientX; lastY = e.clientY; cvs.style.cursor = 'grabbing'; }});
+  window.addEventListener('mouseup',  function ()  {{ isDragging = false; cvs.style.cursor = 'grab'; }});
   window.addEventListener('mousemove', function (e) {{
     if (!isDragging) return;
     theta -= (e.clientX - lastX) * 0.008;
     phi    = Math.max(0.08, Math.min(Math.PI - 0.08, phi + (e.clientY - lastY) * 0.008));
-    lastX  = e.clientX; lastY = e.clientY;
+    lastX = e.clientX; lastY = e.clientY;
     updateCamera();
   }});
-  canvas.addEventListener('wheel', function (e) {{
+  cvs.addEventListener('wheel', function (e) {{
     radius = Math.max(0.8, Math.min(8.0, radius + e.deltaY * 0.003));
-    updateCamera();
-    e.preventDefault();
+    updateCamera(); e.preventDefault();
   }}, {{ passive: false }});
-
   function animate() {{ requestAnimationFrame(animate); renderer.render(scene, camera); }}
   animate();
-
   window.addEventListener('resize', function () {{
     var w = container.clientWidth;
-    camera.aspect = w / H;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, H);
+    camera.aspect = w / H; camera.updateProjectionMatrix(); renderer.setSize(w, H);
   }});
 
-  // ── Region highlight — called by planar region table row clicks ───────────
-  var curHighlight = null;
-  var hlCol = new THREE.Color();
+  var curHighlight = null, hlCol = new THREE.Color();
   window.highlightRegion = function (regionId) {{
-    // clicking the same row again → deselect
     if (curHighlight === regionId) {{
       curHighlight = null;
       var restore = (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors;
@@ -568,11 +659,7 @@ def _viewer_section(regions: list, viewer_data: dict,
     var arr = [];
     for (var j = 0; j < POINT_DATA.length; j++) {{
       var p = POINT_DATA[j];
-      if (p[3] === regionId) {{
-        hlCol.set(COLORS[regionId % COLORS.length]);
-      }} else {{
-        hlCol.setStyle('#111318');
-      }}
+      hlCol.set(p[3] === regionId ? COLORS[regionId % COLORS.length] : '#111318');
       arr.push(hlCol.r, hlCol.g, hlCol.b);
     }}
     cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
@@ -798,23 +885,28 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
 # ── Main entry points ─────────────────────────────────────────────────────────
 
 def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
-                    glb_path: Path = None, texture_path: Path = None) -> Path:
+                    glb_path: Path = None, texture_path: Path = None,
+                    feature_texture_paths: dict = None) -> Path:
     """
     Build a self-contained HTML descriptor report and write it to output_dir.
 
     Parameters
     ----------
-    data         : output of run_phase2() — keys: fragment_id, bounding, planarity, curvature
-    output_dir   : where to write the HTML file (same folder as the JSON)
-    viewer_data  : output of build_viewer_data() — point cloud for Three.js viewer
-    glb_path     : optional Path to the textured .glb — shown in the 3D viewer
-    texture_path : optional Path to the texture PNG — shown in the vision section
+    data                  : output of run_phase2()
+    output_dir            : where to write the HTML file
+    viewer_data           : output of build_viewer_data() — point cloud for Three.js
+    glb_path              : optional Path to the textured .glb — 3D viewer default
+    texture_path          : optional Path to texture PNG — shown in vision section
+    feature_texture_paths : dict from build_feature_textures():
+                            {"all": Path, "<label>": Path, ...}
 
     Returns
     -------
     Path to the generated HTML file.
     """
     import os as _os
+    feature_texture_paths = feature_texture_paths or {}
+
     frag_id   = data.get("fragment_id", "unknown")
     version   = data.get("pipeline_version", "")
     timestamp = data.get("computed_at", "")
@@ -823,19 +915,20 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     curvature = data.get("curvature", {})
     vision    = data.get("vision", {})
 
-    # Compute relative paths from output_dir to asset files
-    glb_rel = (
-        _os.path.relpath(glb_path, output_dir).replace("\\", "/")
-        if glb_path and glb_path.exists() else ""
-    )
-    tex_rel = (
-        _os.path.relpath(texture_path, output_dir).replace("\\", "/")
-        if texture_path and texture_path.exists() else ""
-    )
+    def _rel(p):
+        return _os.path.relpath(p, output_dir).replace("\\", "/") if p and Path(p).exists() else ""
+
+    glb_rel = _rel(glb_path)
+    tex_rel = _rel(texture_path)
+
+    # Build relative paths for all feature textures
+    feat_tex_rels = {k: _rel(v) for k, v in feature_texture_paths.items() if _rel(v)}
 
     banner_html    = _mesh_banner(bounding)
     bounding_html  = _bounding_section(bounding)
-    viewer_html    = _viewer_section(regions, viewer_data or {}, glb_rel_path=glb_rel)
+    viewer_html    = _viewer_section(regions, viewer_data or {},
+                                     glb_rel_path=glb_rel,
+                                     feat_tex_rels=feat_tex_rels)
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
     vision_html    = _vision_section(vision, texture_rel_path=tex_rel)
@@ -886,8 +979,42 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
 
 
 def open_report(path: Path) -> None:
-    """Open the HTML report in the system default browser."""
-    webbrowser.open(path.as_uri())
+    """
+    Serve the output folder via a local HTTP server and open the report.
+
+    Chrome blocks XMLHttpRequest on file:// URLs even within the same directory,
+    which prevents Three.js from loading the GLB mesh.  Serving via HTTP avoids
+    this restriction entirely and makes all assets (GLB, PNGs) load correctly.
+    """
+    serve_dir = path.parent
+
+    # Find a free ephemeral port
+    with socket.socket() as _s:
+        _s.bind(("", 0))
+        port = _s.getsockname()[1]
+
+    class _Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(serve_dir), **kwargs)
+
+        def log_message(self, fmt, *args):  # silence access log spam
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", port), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    url = f"http://127.0.0.1:{port}/{path.name}"
+    print(f"\n  Report served at: {url}")
+    webbrowser.open(url)
+
+    print("  (Keep this terminal open while viewing — server exits when you press Enter)")
+    try:
+        input()
+    except (KeyboardInterrupt, EOFError):
+        pass
+    finally:
+        server.shutdown()
 
 
 # ── Collective inventory interface ────────────────────────────────────────────
@@ -1512,13 +1639,13 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Study 2 — Fragment Inventory ({count})</title>
+  <title>Material Inventory ({count})</title>
   <style>{_INDEX_CSS}</style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>Study 2 — Fragment Inventory</h1>
+  <h1>Material Inventory</h1>
   <span class="count" id="count"></span>
 </div>
 

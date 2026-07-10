@@ -32,8 +32,10 @@ import open3d as o3d
 import trimesh
 from descriptors.geometry import (bounding_descriptors, bounding_descriptors_pcd,
                                    planar_regions, curvature_stats)
+from descriptors.feature_texture import build_feature_textures
 from report import generate_report, open_report, update_inventory
 from ai.vision_client import classify_texture
+from ai.texture_segmentation import classify_texture_grid
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -319,6 +321,24 @@ Examples:
             print(f"  ⚠ No texture PNG found at {texture_path}")
             print(f"  Run Blender export script first, then re-run with --phase3")
 
+    # ── Phase 3B: spatial feature localization ───────────────────────────────
+    feature_texture_paths: dict = {}   # {"all": Path, "staining": Path, ...}
+    if args.phase3 and descriptors.get("vision"):
+        texture_path_3b = processed_dir / args.frag_id / f"{args.frag_id}_texture.png"
+        if texture_path_3b.exists():
+            print("\n  ── Phase 3B: spatial feature localization ──")
+            grid_data = classify_texture_grid(texture_path_3b)
+            descriptors["vision"]["grid_classification"] = grid_data
+            feature_texture_paths = build_feature_textures(
+                texture_path_3b,
+                grid_data["grid_n"],
+                grid_data["cells"],
+                output_dir,
+                args.frag_id,
+            )
+        else:
+            print("  ⚠ Phase 3B skipped: texture PNG not found")
+
     # ── Save ─────────────────────────────────────────────────────────────────
     out_path = save_output(args.frag_id, descriptors, output_dir)
     print(f"\n  Saved → {out_path.relative_to(REPO_ROOT)}")
@@ -337,13 +357,27 @@ Examples:
     with open(viewer_json_path, "w", encoding="utf-8") as f:
         json.dump(viewer_data, f)
 
+    import shutil as _shutil
     frag_input_dir = processed_dir / args.frag_id
-    glb_path     = frag_input_dir / f"{args.frag_id}.glb"
-    texture_path = frag_input_dir / f"{args.frag_id}_texture.png"
+    texture_path   = frag_input_dir / f"{args.frag_id}_texture.png"
+
+    # Copy GLB into output_dir so the HTML and the mesh are same-origin.
+    # Browsers block file:// requests that cross directories, so a relative
+    # path like ../../01_input/... silently fails in Chrome.
+    glb_src  = frag_input_dir / f"{args.frag_id}.glb"
+    glb_path = None
+    if glb_src.exists():
+        glb_copy = output_dir / glb_src.name
+        if not glb_copy.exists() or glb_copy.stat().st_mtime < glb_src.stat().st_mtime:
+            _shutil.copy2(glb_src, glb_copy)
+            print(f"  Copied GLB → {glb_copy.relative_to(REPO_ROOT)}")
+        glb_path = glb_copy
+
     report_path = generate_report(
         descriptors, output_dir, viewer_data,
-        glb_path=glb_path if glb_path.exists() else None,
+        glb_path=glb_path,
         texture_path=texture_path if texture_path.exists() else None,
+        feature_texture_paths=feature_texture_paths,
     )
     print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
 

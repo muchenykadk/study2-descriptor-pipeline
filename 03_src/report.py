@@ -206,6 +206,7 @@ body {
   border-top: 1px solid var(--border);
 }
 .data-table tr:hover td { background: #1f2340; }
+.data-table tr.row-active td { background: rgba(124,131,253,0.18); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .region-dot {
   display: inline-block;
@@ -335,13 +336,15 @@ def _bounding_section(b: dict) -> str:
 </div>"""
 
 
-def _viewer_section(regions: list, viewer_data: dict) -> str:
+def _viewer_section(regions: list, viewer_data: dict,
+                    glb_rel_path: str = "", texture_rel_path: str = "") -> str:
     if not viewer_data or not viewer_data.get("points"):
         return ""
 
-    point_json = json.dumps(viewer_data["points"])
-    n_regions  = viewer_data.get("n_regions", len(regions))
-    scale_mm   = viewer_data.get("scale_mm", "?")
+    point_json  = json.dumps(viewer_data["points"])
+    color_mode  = viewer_data.get("color_mode", "region")
+    n_regions   = viewer_data.get("n_regions", len(regions))
+    scale_mm    = viewer_data.get("scale_mm", "?")
 
     # Legend items
     legend_items = ""
@@ -360,23 +363,103 @@ def _viewer_section(regions: list, viewer_data: dict) -> str:
       Unclassified
     </div>"""
 
+    has_scan_js    = "true" if color_mode == "scan" else "false"
+    # Legend hidden initially when GLB mesh is shown by default
+    legend_display = "display:none"
+    # Scan/region toggle — hidden initially (shown when switching to point cloud)
+    toggle_btn = (
+        '<button id="color-toggle" style="display:none;position:absolute;top:8px;right:8px;'
+        'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
+        'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
+    ) if color_mode == "scan" else ""
+
+    # Mesh/Cloud toggle — only when GLB exists
+    if glb_rel_path:
+        mesh_toggle_btn = (
+            '<button id="mesh-toggle" onclick="window.toggleMeshMode()" '
+            'style="position:absolute;top:8px;left:8px;background:#1e2030;'
+            'border:1px solid #7c83fd;color:#7c83fd;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Point Cloud</button>'
+        )
+        gltf_script_tag = '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>'
+        glb_js = f"""
+
+  // ── GLB textured mesh (default view) ─────────────────────────────────────────
+  var meshGroup = null;
+  var showMeshMode = true;
+
+  (function loadGLB() {{
+    var loader = new THREE.GLTFLoader();
+    loader.load('{glb_rel_path}', function (gltf) {{
+      meshGroup = gltf.scene;
+      // normalize: centre at origin, scale to fit [-1,1]
+      var box    = new THREE.Box3().setFromObject(meshGroup);
+      var center = box.getCenter(new THREE.Vector3());
+      var size   = box.getSize(new THREE.Vector3());
+      var maxDim = Math.max(size.x, size.y, size.z);
+      var s = 2.0 / maxDim;
+      meshGroup.scale.setScalar(s);
+      meshGroup.position.copy(center).negate().multiplyScalar(s);
+      scene.add(meshGroup);
+      cloud.visible = false;   // hide point cloud: mesh is default
+    }}, undefined, function (err) {{
+      console.warn('GLB load failed — showing point cloud instead', err);
+      cloud.visible = true;
+      showMeshMode = false;
+      var leg = document.getElementById('viewer-legend');
+      if (leg) leg.style.display = '{'' if color_mode == "region" else "display:none"}';
+      var ctBtn = document.getElementById('color-toggle');
+      if (ctBtn && {has_scan_js}) ctBtn.style.display = '';
+    }});
+  }})();
+
+  window.toggleMeshMode = function () {{
+    if (!meshGroup) return;
+    showMeshMode = !showMeshMode;
+    meshGroup.visible = showMeshMode;
+    cloud.visible = !showMeshMode;
+    document.getElementById('mesh-toggle').textContent = showMeshMode ? 'Point Cloud' : 'Textured Mesh';
+    var leg = document.getElementById('viewer-legend');
+    if (leg) leg.style.display = (!showMeshMode && curMode === 'region') ? '' : 'none';
+    var ctBtn = document.getElementById('color-toggle');
+    if (ctBtn) ctBtn.style.display = (!showMeshMode && {has_scan_js}) ? '' : 'none';
+  }};
+"""
+    else:
+        mesh_toggle_btn = ""
+        gltf_script_tag = ""
+        glb_js = ""
+        # No GLB — show legend if region mode
+        legend_display = "display:none" if color_mode == "scan" else ""
+        # Show scan/region toggle in its normal state
+        toggle_btn = (
+            '<button id="color-toggle" style="position:absolute;top:8px;right:8px;'
+            'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
+        ) if color_mode == "scan" else ""
+
     return f"""
 <div class="section">
-  <div class="section-title">3D Region Viewer <span style="font-size:10px;color:#3d4455;text-transform:none;letter-spacing:0">— drag to rotate · scroll to zoom · scale {scale_mm} mm</span></div>
+  <div class="section-title">3D Viewer <span style="font-size:10px;color:#3d4455;text-transform:none;letter-spacing:0">— drag to rotate · scroll to zoom · scale {scale_mm} mm</span></div>
   <div class="viewer-wrap">
     <canvas id="three-canvas"></canvas>
     <div class="viewer-hint">drag to rotate &nbsp;·&nbsp; scroll to zoom</div>
+    {mesh_toggle_btn}
+    {toggle_btn}
   </div>
-  <div class="viewer-legend">{legend_items}
+  <div class="viewer-legend" id="viewer-legend" style="{legend_display}">{legend_items}
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+{gltf_script_tag}
 <script>
 (function () {{
-  var POINT_DATA = {point_json};
-  var COLORS = {json.dumps(REGION_COLORS)};
+  var POINT_DATA   = {point_json};
+  var HAS_SCAN     = {has_scan_js};
+  var COLORS       = {json.dumps(REGION_COLORS)};
   var UNCLASSIFIED = '#3d4455';
+  var curMode      = '{color_mode}';
 
   var container = document.querySelector('.viewer-wrap');
   var W = container.clientWidth, H = 420;
@@ -391,20 +474,37 @@ def _viewer_section(regions: list, viewer_data: dict) -> str:
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(W, H);
 
-  // Build point cloud
-  var positions = [], colors = [];
+  // Build both color arrays once — swap on toggle
+  // Point format: [x, y, z, region_id]  or  [x, y, z, region_id, R, G, B]
+  var positions = [], scanColors = [], regionColors = [];
   var col = new THREE.Color();
   for (var i = 0; i < POINT_DATA.length; i++) {{
     var p = POINT_DATA[i];
     positions.push(p[0], p[1], p[2]);
+    if (HAS_SCAN && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
+    else col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
+    scanColors.push(col.r, col.g, col.b);
     col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
-    colors.push(col.r, col.g, col.b);
+    regionColors.push(col.r, col.g, col.b);
   }}
   var geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
-  var mat = new THREE.PointsMaterial({{ size: 0.018, vertexColors: true, sizeAttenuation: true }});
-  scene.add(new THREE.Points(geo, mat));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(
+    (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors, 3));
+  var mat   = new THREE.PointsMaterial({{ size: 0.018, vertexColors: true, sizeAttenuation: true }});
+  var cloud = new THREE.Points(geo, mat);
+  scene.add(cloud);
+
+  // Scan/region color toggle (point cloud only)
+  var btn = document.getElementById('color-toggle');
+  if (btn) btn.addEventListener('click', function () {{
+    curMode = curMode === 'scan' ? 'region' : 'scan';
+    var arr = (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors;
+    cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+    btn.textContent = curMode === 'scan' ? 'Show Regions' : 'Show Scan';
+    var leg = document.getElementById('viewer-legend');
+    if (leg) leg.style.display = curMode === 'region' ? '' : 'none';
+  }});
 
   // Manual orbit controls
   var theta = 0.4, phi = 1.1, radius = 3.0;
@@ -451,6 +551,36 @@ def _viewer_section(regions: list, viewer_data: dict) -> str:
     camera.updateProjectionMatrix();
     renderer.setSize(w, H);
   }});
+
+  // ── Region highlight — called by planar region table row clicks ───────────
+  var curHighlight = null;
+  var hlCol = new THREE.Color();
+  window.highlightRegion = function (regionId) {{
+    // clicking the same row again → deselect
+    if (curHighlight === regionId) {{
+      curHighlight = null;
+      var restore = (curMode === 'scan' && HAS_SCAN) ? scanColors : regionColors;
+      cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(restore, 3));
+      document.querySelectorAll('.region-row').forEach(function (r) {{ r.classList.remove('row-active'); }});
+      return;
+    }}
+    curHighlight = regionId;
+    var arr = [];
+    for (var j = 0; j < POINT_DATA.length; j++) {{
+      var p = POINT_DATA[j];
+      if (p[3] === regionId) {{
+        hlCol.set(COLORS[regionId % COLORS.length]);
+      }} else {{
+        hlCol.setStyle('#111318');
+      }}
+      arr.push(hlCol.r, hlCol.g, hlCol.b);
+    }}
+    cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+    document.querySelectorAll('.region-row').forEach(function (r) {{
+      r.classList.toggle('row-active', parseInt(r.dataset.regionId) === regionId);
+    }});
+  }};
+{glb_js}
 }})();
 </script>"""
 
@@ -471,7 +601,7 @@ def _planar_section(regions: list) -> str:
         rms   = f"{r.get('fit_rms_mm', 0):.3f} mm"
         nx, ny, nz = (r.get("normal_xyz") or [0, 0, 0])
         rows += f"""
-      <tr>
+      <tr class="region-row" data-region-id="{i}" onclick="highlightRegion({i})" style="cursor:pointer">
         <td><span class="region-dot" style="background:{color}"></span>{i+1}</td>
         <td class="num">{area}</td>
         <td class="num">{frac}</td>
@@ -547,34 +677,168 @@ def _curvature_section(curv: dict) -> str:
 </div>"""
 
 
+# ── Vision section ───────────────────────────────────────────────────────────
+
+_LABEL_COLORS = {
+    "formwork_imprint":  "#60a5fa",
+    "fracture_surface":  "#f87171",
+    "exposed_aggregate": "#fbbf24",
+    "rebar_visible":     "#f97316",
+    "weathered":         "#a3e635",
+    "staining":          "#c084fc",
+    "original_finish":   "#34d399",
+}
+
+# Ordered taxonomy list — must match vision_client.py TAXONOMY
+TAXONOMY = list(_LABEL_COLORS.keys())
+
+def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
+    if not vision or vision.get("parse_error"):
+        return ""
+
+    dominant   = vision.get("dominant_label", "—")
+    dom_color  = _LABEL_COLORS.get(dominant, "#b0b8d0")
+    labels     = vision.get("labels_present", [])
+    coverage   = vision.get("label_coverage", {})
+    cracks     = vision.get("cracks", {})
+    aggregate  = vision.get("aggregate", {})
+    condition  = vision.get("surface_condition", "—")
+    color_note = vision.get("color_notes", "")
+    reuse_note = vision.get("reuse_notes", "")
+    confidence = vision.get("confidence", "—")
+    provider   = vision.get("provider", "")
+    model      = vision.get("model", "")
+    n_runs     = vision.get("n_runs", "—")
+
+    condition_color = {"good": "#4ade80", "moderate": "#fbbf24", "poor": "#f87171"}.get(condition, "#b0b8d0")
+    conf_color      = {"high": "#4ade80", "medium": "#fbbf24", "low": "#f87171"}.get(confidence, "#b0b8d0")
+
+    # Coverage bars
+    bars = ""
+    for label in TAXONOMY:
+        pct = coverage.get(label, 0)
+        if pct == 0:
+            continue
+        col = _LABEL_COLORS.get(label, "#b0b8d0")
+        bars += f"""
+    <div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+        <span style="color:{col}">{label.replace('_',' ')}</span>
+        <span style="color:var(--muted)">{pct}%</span>
+      </div>
+      <div style="background:#1e2030;border-radius:3px;height:6px">
+        <div style="background:{col};width:{pct}%;height:6px;border-radius:3px"></div>
+      </div>
+    </div>"""
+
+    crack_html = ""
+    if cracks.get("present"):
+        crack_html = f"""
+    <div class="stat-card" style="border-color:#f87171">
+      <div class="stat-label">Cracks</div>
+      <div class="stat-value" style="font-size:14px;color:#f87171">{cracks.get('pattern','—')}</div>
+      <div class="stat-sub">{cracks.get('coverage_pct', 0)}% surface coverage</div>
+    </div>"""
+
+    agg_html = ""
+    if aggregate.get("visible"):
+        agg_html = f"""
+    <div class="stat-card">
+      <div class="stat-label">Aggregate</div>
+      <div class="stat-value" style="font-size:14px">{aggregate.get('estimated_size','—')}</div>
+      <div class="stat-sub">size class</div>
+    </div>"""
+
+    # Texture image preview
+    texture_html = ""
+    if texture_rel_path:
+        texture_html = f"""
+  <div style="margin-bottom:16px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Texture Map</div>
+    <img src="{texture_rel_path}" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14" alt="Fragment texture map">
+  </div>"""
+
+    return f"""
+<div class="section">
+  <div class="section-title">Surface Vision Analysis
+    <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">
+      — {provider}/{model} · {n_runs}× majority vote
+    </span>
+  </div>
+
+  {texture_html}
+
+  <div class="stat-row" style="margin-bottom:16px">
+    <div class="stat-card">
+      <div class="stat-label">Dominant Surface</div>
+      <div class="stat-value" style="font-size:14px;color:{dom_color}">{dominant.replace('_',' ')}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Surface Condition</div>
+      <div class="stat-value" style="font-size:16px;color:{condition_color}">{condition}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Confidence</div>
+      <div class="stat-value" style="font-size:16px;color:{conf_color}">{confidence}</div>
+    </div>
+    {crack_html}
+    {agg_html}
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Surface Coverage</div>
+    {bars}
+  </div>
+
+  {"<div class='stat-sub' style='margin-bottom:8px'><b style='color:var(--fg)'>Color:</b> " + color_note + "</div>" if color_note else ""}
+  {"<div class='stat-sub'><b style='color:var(--fg)'>Reuse notes:</b> " + reuse_note + "</div>" if reuse_note else ""}
+</div>"""
+
+
 # ── Main entry points ─────────────────────────────────────────────────────────
 
-def generate_report(data: dict, output_dir: Path, viewer_data: dict = None) -> Path:
+def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
+                    glb_path: Path = None, texture_path: Path = None) -> Path:
     """
     Build a self-contained HTML descriptor report and write it to output_dir.
 
     Parameters
     ----------
-    data        : output of run_phase2() — keys: fragment_id, bounding, planarity, curvature
-    output_dir  : where to write the HTML file (same folder as the JSON)
-    viewer_data : output of build_viewer_data() — point cloud for Three.js viewer
+    data         : output of run_phase2() — keys: fragment_id, bounding, planarity, curvature
+    output_dir   : where to write the HTML file (same folder as the JSON)
+    viewer_data  : output of build_viewer_data() — point cloud for Three.js viewer
+    glb_path     : optional Path to the textured .glb — shown in the 3D viewer
+    texture_path : optional Path to the texture PNG — shown in the vision section
 
     Returns
     -------
     Path to the generated HTML file.
     """
+    import os as _os
     frag_id   = data.get("fragment_id", "unknown")
     version   = data.get("pipeline_version", "")
     timestamp = data.get("computed_at", "")
     bounding  = data.get("bounding", {})
     regions   = data.get("planarity", [])
     curvature = data.get("curvature", {})
+    vision    = data.get("vision", {})
+
+    # Compute relative paths from output_dir to asset files
+    glb_rel = (
+        _os.path.relpath(glb_path, output_dir).replace("\\", "/")
+        if glb_path and glb_path.exists() else ""
+    )
+    tex_rel = (
+        _os.path.relpath(texture_path, output_dir).replace("\\", "/")
+        if texture_path and texture_path.exists() else ""
+    )
 
     banner_html    = _mesh_banner(bounding)
     bounding_html  = _bounding_section(bounding)
-    viewer_html    = _viewer_section(regions, viewer_data or {})
+    viewer_html    = _viewer_section(regions, viewer_data or {}, glb_rel_path=glb_rel)
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
+    vision_html    = _vision_section(vision, texture_rel_path=tex_rel)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -605,6 +869,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None) -> P
   {viewer_html}
   {planarity_html}
   {curvature_html}
+  {vision_html}
 
   <div style="margin-top:40px;color:var(--border);font-size:10px;text-align:right">
     Generated by Study2_Descriptor_Pipeline {version}
@@ -845,6 +1110,7 @@ body {
 }
 .dtable td { padding: 7px 10px; border-top: 1px solid var(--border); }
 .dtable tr:hover td { background: var(--hover); }
+.dtable tr.row-active-idx td { background: rgba(124,131,253,0.18); }
 .nr { text-align: right; font-variant-numeric: tabular-nums; }
 .rdot {
   display: inline-block;
@@ -959,7 +1225,7 @@ function renderDetail(fragment) {
     const color = REGION_COLORS[i % REGION_COLORS.length];
     const nx = (r.normal_xyz || [0,0,0]);
     regionRows +=
-      '<tr><td><span class="rdot" style="background:' + color + '"></span>' + (i+1) + '</td>' +
+      '<tr class="region-row-idx" data-region-id="' + i + '" onclick="highlightRegionIdx(' + i + ')" style="cursor:pointer"><td><span class="rdot" style="background:' + color + '"></span>' + (i+1) + '</td>' +
       '<td class="nr">' + (r.area_m2_est !== null ? r.area_m2_est.toFixed(4) + ' m²' : '—') + '</td>' +
       '<td class="nr">' + (r.inlier_fraction * 100).toFixed(1) + '%</td>' +
       '<td class="nr">' + r.fit_rms_mm.toFixed(3) + ' mm</td>' +
@@ -1058,27 +1324,93 @@ function ensureViewer() {
   THREE_STATE = { scene: scene, camera: camera, renderer: renderer, updateCamera: updateCamera, cloud: null };
 }
 
-function loadPointCloud(points, regions) {
+function toggleIdxColors() {
+  if (!THREE_STATE || !THREE_STATE.cloud) return;
+  var state   = THREE_STATE;
+  state.curMode = state.curMode === 'scan' ? 'region' : 'scan';
+  // clear any active highlight when switching color mode
+  state.curHighlight = null;
+  document.querySelectorAll('.region-row-idx').forEach(function(r) { r.classList.remove('row-active-idx'); });
+  var arr = state.curMode === 'scan' ? state.scanColArr : state.regionColArr;
+  state.cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+  var btn = document.getElementById('color-toggle-idx');
+  if (btn) btn.textContent = state.curMode === 'scan' ? 'Show Regions' : 'Show Scan';
+  var leg = document.getElementById('viewer-legend-idx');
+  if (leg) leg.style.display = state.curMode === 'region' ? 'flex' : 'none';
+}
+
+function highlightRegionIdx(regionId) {
+  if (!THREE_STATE || !THREE_STATE.cloud) return;
+  var state = THREE_STATE;
+  var points = state.lastPoints;
+  if (!points) return;
+
+  // clicking the same row again → deselect
+  if (state.curHighlight === regionId) {
+    state.curHighlight = null;
+    var restore = state.curMode === 'scan' ? state.scanColArr : state.regionColArr;
+    state.cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(restore, 3));
+    document.querySelectorAll('.region-row-idx').forEach(function(r) { r.classList.remove('row-active-idx'); });
+    return;
+  }
+  state.curHighlight = regionId;
+  var col2 = new THREE.Color();
+  var arr = [];
+  for (var j = 0; j < points.length; j++) {
+    var p = points[j];
+    if (p[3] === regionId) {
+      col2.set(REGION_COLORS[regionId % REGION_COLORS.length]);
+    } else {
+      col2.setStyle('#111318');
+    }
+    arr.push(col2.r, col2.g, col2.b);
+  }
+  state.cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+  document.querySelectorAll('.region-row-idx').forEach(function(r) {
+    r.classList.toggle('row-active-idx', parseInt(r.dataset.regionId) === regionId);
+  });
+}
+
+function loadPointCloud(points, regions, colorMode) {
   if (!THREE_STATE) return;
   var state = THREE_STATE;
+  colorMode = colorMode || 'region';
+  var hasScan = (colorMode === 'scan');
 
   if (state.cloud) { state.scene.remove(state.cloud); state.cloud.geometry.dispose(); state.cloud = null; }
   if (!points || !points.length) return;
 
-  var positions = [], colors = [];
+  // Build both color arrays once — toggle swaps buffer without re-parsing
+  var positions = [], scanColArr = [], regionColArr = [];
   var col = new THREE.Color();
   for (var i = 0; i < points.length; i++) {
     var p = points[i];
     positions.push(p[0], p[1], p[2]);
+    if (hasScan && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
+    else col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    scanColArr.push(col.r, col.g, col.b);
     col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
-    colors.push(col.r, col.g, col.b);
+    regionColArr.push(col.r, col.g, col.b);
   }
   var geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(
+    hasScan ? scanColArr : regionColArr, 3));
   var mat = new THREE.PointsMaterial({ size: 0.018, vertexColors: true, sizeAttenuation: true });
   state.cloud = new THREE.Points(geo, mat);
   state.scene.add(state.cloud);
+
+  // Store for toggle and highlight
+  state.scanColArr   = scanColArr;
+  state.regionColArr = regionColArr;
+  state.lastPoints   = points;
+  state.hasScan      = hasScan;
+  state.curMode      = colorMode;
+  state.curHighlight = null;
+
+  // Toggle button — only visible when scan colors exist
+  var btn = document.getElementById('color-toggle-idx');
+  if (btn) { btn.style.display = hasScan ? '' : 'none'; btn.textContent = 'Show Regions'; }
 
   // Update legend
   var leg = document.getElementById('viewer-legend-idx');
@@ -1112,7 +1444,12 @@ function selectFragment(id) {
     document.getElementById('viewer-wrap').style.display = 'block';
     document.getElementById('viewer-legend-idx').style.display = 'flex';
     ensureViewer();
-    loadPointCloud(vd.points, frag ? (frag.planarity || []) : []);
+    // reset any active row highlight from previous fragment
+    document.querySelectorAll('.region-row-idx').forEach(function(r) { r.classList.remove('row-active-idx'); });
+    var cm = vd.color_mode || 'region';
+    loadPointCloud(vd.points, frag ? (frag.planarity || []) : [], cm);
+    // legend only makes sense in region mode
+    document.getElementById('viewer-legend-idx').style.display = cm === 'region' ? 'flex' : 'none';
   } else {
     document.getElementById('viewer-wrap').style.display = 'none';
     document.getElementById('viewer-legend-idx').style.display = 'none';
@@ -1191,6 +1528,7 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
     <div id="viewer-wrap">
       <canvas id="idx-canvas"></canvas>
       <div class="viewer-hint-idx">drag to rotate · scroll to zoom</div>
+      <button id="color-toggle-idx" onclick="toggleIdxColors()" style="display:none;position:absolute;top:8px;right:8px;background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>
     </div>
     <div id="viewer-legend-idx"></div>
     <div id="detail-content">

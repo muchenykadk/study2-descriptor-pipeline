@@ -1,0 +1,305 @@
+{
+  "fragment_id": "FRAG-S1-002",
+  "input_type": "point_cloud",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-07-13T13:55:33.580095+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      976.1,
+      919.9,
+      723.5
+    ],
+    "volume_mm3": 336511883.5,
+    "volume_m3": 0.336512,
+    "volume_source": "convex_hull",
+    "convexity": null,
+    "mass_kg_est": 807.629,
+    "mass_data_status": "pseudo",
+    "watertight": null,
+    "input_type": "point_cloud",
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.049043,
+        0.9885,
+        0.143051,
+        -135.365171
+      ],
+      "normal_xyz": [
+        -0.049,
+        0.9885,
+        0.1431
+      ],
+      "inlier_count": 7710,
+      "inlier_fraction": 0.154,
+      "area_m2_est": 0.513295,
+      "fit_rms_mm": 1.644,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        -0.110753,
+        0.97976,
+        0.166742,
+        -100.991349
+      ],
+      "normal_xyz": [
+        -0.1108,
+        0.9798,
+        0.1667
+      ],
+      "inlier_count": 2146,
+      "inlier_fraction": 0.043,
+      "area_m2_est": 0.507251,
+      "fit_rms_mm": 1.736,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        -0.078936,
+        0.983094,
+        0.165211,
+        -117.667053
+      ],
+      "normal_xyz": [
+        -0.0789,
+        0.9831,
+        0.1652
+      ],
+      "inlier_count": 1597,
+      "inlier_fraction": 0.032,
+      "area_m2_est": 0.503292,
+      "fit_rms_mm": 1.673,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        0.005327,
+        0.988949,
+        0.148157,
+        -130.533985
+      ],
+      "normal_xyz": [
+        0.0053,
+        0.9889,
+        0.1482
+      ],
+      "inlier_count": 2978,
+      "inlier_fraction": 0.06,
+      "area_m2_est": 0.463002,
+      "fit_rms_mm": 1.619,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        -0.081592,
+        0.980958,
+        0.176253,
+        -127.429979
+      ],
+      "normal_xyz": [
+        -0.0816,
+        0.981,
+        0.1763
+      ],
+      "inlier_count": 1707,
+      "inlier_fraction": 0.034,
+      "area_m2_est": 0.449373,
+      "fit_rms_mm": 1.634,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        -0.024308,
+        0.972596,
+        -0.231226,
+        205.9343
+      ],
+      "normal_xyz": [
+        -0.0243,
+        0.9726,
+        -0.2312
+      ],
+      "inlier_count": 5424,
+      "inlier_fraction": 0.108,
+      "area_m2_est": 0.41526,
+      "fit_rms_mm": 1.33,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        0.058002,
+        0.939241,
+        -0.338322,
+        166.778457
+      ],
+      "normal_xyz": [
+        0.058,
+        0.9392,
+        -0.3383
+      ],
+      "inlier_count": 1590,
+      "inlier_fraction": 0.032,
+      "area_m2_est": 0.413753,
+      "fit_rms_mm": 1.671,
+      "data_status": "computed"
+    },
+    {
+      "plane_abcd": [
+        0.99849,
+        0.033068,
+        0.043866,
+        368.328892
+      ],
+      "normal_xyz": [
+        0.9985,
+        0.0331,
+        0.0439
+      ],
+      "inlier_count": 3393,
+      "inlier_fraction": 0.068,
+      "area_m2_est": 0.155561,
+      "fit_rms_mm": 1.316,
+      "data_status": "computed"
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.65846,
+      "std_rad": 0.5436,
+      "p25_rad": 0.03479,
+      "p75_rad": 1.15161,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.84039,
+      "std_rad": 0.33637,
+      "p25_rad": 0.66268,
+      "p75_rad": 1.06581,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "fracture_surface",
+    "labels_present": [
+      "exposed_aggregate",
+      "fracture_surface",
+      "staining",
+      "weathered"
+    ],
+    "label_coverage": {
+      "fracture_surface": 43,
+      "exposed_aggregate": 30,
+      "weathered": 20,
+      "staining": 10
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "network",
+      "coverage_pct": 30
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominant grey with orange and black staining, some carbonation visible",
+    "reuse_notes": "The presence of exposed aggregate and moderate surface condition suggests potential for reuse in non-structural applications. Staining may require cleaning.",
+    "confidence": "high",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-002\\FRAG-S1-002_texture.png",
+    "data_status": "computed",
+    "grid_classification": {
+      "grid_n": 8,
+      "cells": [
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "weathered",
+          "weathered",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "weathered"
+        ],
+        [
+          "weathered",
+          "weathered",
+          "staining",
+          "staining",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered"
+        ],
+        [
+          "weathered",
+          "exposed_aggregate",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered"
+        ],
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered"
+        ],
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered"
+        ],
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          "weathered",
+          "weathered",
+          "weathered",
+          "exposed_aggregate"
+        ],
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered"
+        ]
+      ]
+    }
+  }
+}

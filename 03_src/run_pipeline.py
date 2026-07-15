@@ -4,13 +4,13 @@ Study 2 Descriptor Pipeline — main entry point.
 
 Usage
 -----
-Phase 2 (geometry only — run after every Blender export):
+Full pipeline — geometry + AI classification (default):
     python 03_src/run_pipeline.py FRAG-S1-001
 
-Phase 3 (geometry + AI classification — run after Phase 2 looks correct):
-    python 03_src/run_pipeline.py FRAG-S1-001 --phase3
+Geometry only — skip AI (faster, no API key needed):
+    python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only
 
-See WORKFLOW.md for when to run each phase.
+See WORKFLOW.md for full workflow instructions.
 
 Output
 ------
@@ -50,12 +50,14 @@ def _scale_check(max_dim_mm: float) -> None:
 
 def load_input(frag_id: str, processed_dir: Path):
     """
-    Load OBJ mesh or PLY point cloud.
-    PLY takes priority if both exist.
+    Load geometry for analysis. Priority: PLY → GLB → OBJ (fallback).
+    PLY is preferred for point-cloud-based scanners.
+    GLB is the primary Blender export and is preferred over OBJ.
     Returns (source, input_type) where input_type is 'mesh' or 'point_cloud'.
     """
     frag_dir  = processed_dir / frag_id
     ply_path  = frag_dir / f"{frag_id}.ply"
+    glb_path  = frag_dir / f"{frag_id}.glb"
     obj_path  = frag_dir / f"{frag_id}.obj"
 
     if ply_path.exists():
@@ -80,6 +82,14 @@ def load_input(frag_id: str, processed_dir: Path):
         _scale_check(max_dim)
         return pcd, "point_cloud"
 
+    elif glb_path.exists():
+        mesh = trimesh.load(str(glb_path), force="mesh")
+        print(f"  Loaded GLB: {len(mesh.vertices):,} vertices · {len(mesh.faces):,} faces")
+        print(f"  Watertight: {mesh.is_watertight}")
+        max_dim = float(max(mesh.bounding_box_oriented.primitive.extents))
+        _scale_check(max_dim)
+        return mesh, "mesh"
+
     elif obj_path.exists():
         mesh = trimesh.load(str(obj_path), force="mesh")
         print(f"  Loaded OBJ: {len(mesh.vertices):,} vertices · {len(mesh.faces):,} faces")
@@ -90,7 +100,7 @@ def load_input(frag_id: str, processed_dir: Path):
 
     else:
         print(f"\n  ERROR: no input found in {frag_dir}")
-        print(f"  Expected: {frag_id}.ply  or  {frag_id}.obj")
+        print(f"  Expected: {frag_id}.ply  or  {frag_id}.glb")
         sys.exit(1)
 
 
@@ -257,14 +267,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python 03_src/run_pipeline.py FRAG-S1-001
-  python 03_src/run_pipeline.py FRAG-S1-001 --phase3
+  python 03_src/run_pipeline.py FRAG-S1-001                    # full pipeline
+  python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only    # geometry only, no AI
         """
     )
     parser.add_argument("frag_id", help="Fragment ID, e.g. FRAG-S1-001")
     parser.add_argument(
-        "--phase3", action="store_true",
-        help="Also run Phase 3 AI classification (requires ANTHROPIC_API_KEY in env/.env)"
+        "--geometry-only", action="store_true",
+        help="Skip Phase 3 AI classification — geometry descriptors only"
     )
     parser.add_argument(
         "--input-dir",
@@ -282,7 +292,30 @@ Examples:
         help="RANSAC inlier distance threshold in mm (default: 3.0). "
              "Increase for noisier scans; decrease for cleaner meshes."
     )
+    parser.add_argument(
+        "--serve", action="store_true",
+        help="Skip all calculations — just open the existing report in the browser."
+    )
     args = parser.parse_args()
+    # Phase 3 runs by default unless --geometry-only is set
+    args.phase3 = not args.geometry_only
+
+    # ── Serve-only shortcut ───────────────────────────────────────────────────
+    if args.serve:
+        output_dir = Path(args.output_dir)
+        report_path = output_dir / f"{args.frag_id}_report.html"
+        index_path  = output_dir / "index.html"
+        if not report_path.exists():
+            print(f"\n  No report found at {report_path}")
+            print(f"  Run without --serve first to generate it.")
+            sys.exit(1)
+        # Open the inventory (main page) via HTTP so all links inside it
+        # also resolve to http:// — GLB and feature textures load correctly.
+        entry = index_path if index_path.exists() else report_path
+        print(f"\n  Serving inventory at http://127.0.0.1:PORT/{entry.name} ...")
+        print(f"  (Click 'Open 3D Report' for {args.frag_id} from there)")
+        open_report(entry)
+        return
 
     processed_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
@@ -373,10 +406,21 @@ Examples:
             print(f"  Copied GLB → {glb_copy.relative_to(REPO_ROOT)}")
         glb_path = glb_copy
 
+    # Copy texture PNG into output_dir so it is same-origin as the report.
+    # The original lives in 01_input/... which is unreachable when the server
+    # is rooted at 05_output/descriptors/.
+    texture_copy = None
+    if texture_path.exists():
+        tex_dest = output_dir / texture_path.name
+        if not tex_dest.exists() or tex_dest.stat().st_mtime < texture_path.stat().st_mtime:
+            _shutil.copy2(texture_path, tex_dest)
+            print(f"  Copied texture → {tex_dest.relative_to(REPO_ROOT)}")
+        texture_copy = tex_dest
+
     report_path = generate_report(
         descriptors, output_dir, viewer_data,
         glb_path=glb_path,
-        texture_path=texture_path if texture_path.exists() else None,
+        texture_path=texture_copy,
         feature_texture_paths=feature_texture_paths,
     )
     print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
@@ -385,8 +429,8 @@ Examples:
     print(f"  Index  → {index_path.relative_to(REPO_ROOT)}")
     open_report(index_path)
 
-    print(f"\n  Next step: verify numbers in the inventory,")
-    print(f"  then commit: git commit -m 'data: geometry descriptors {args.frag_id}'")
+    print(f"\n  Next step: verify output in the inventory,")
+    print(f"  then commit: git commit -m 'data: descriptors {args.frag_id}'")
     print()
 
 

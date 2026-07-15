@@ -1,0 +1,48 @@
+{
+  "_comment": "Surface feature taxonomy for AI vision classification. Edit labels here — no code changes needed.",
+  "_note": "Do NOT change label IDs between pipeline runs — it breaks comparability across fragments. Add new labels at the end. Rename only if reprocessing all fragments.",
+  "labels": [
+    {
+      "id": "formwork_imprint",
+      "color": "#60a5fa",
+      "description": "Original cast face; smooth, shows mould texture or release agent",
+      "subtypes": ["timber_formwork", "steel_formwork", "plastic_formwork", "prefab_mould", "unknown"]
+    },
+    {
+      "id": "fracture_surface",
+      "color": "#f87171",
+      "description": "Internal concrete exposed by demolition break; rough",
+      "subtypes": ["matrix_fracture", "aggregate_pullout", "aggregate_split", "bond_failure", "unknown"]
+    },
+    {
+      "id": "exposed_aggregate",
+      "color": "#fbbf24",
+      "description": "Coarse aggregate (gravel/stone) visible at surface",
+      "subtypes": ["gravel_rounded", "crushed_stone", "limestone", "granite", "recycled_aggregate", "unknown"]
+    },
+    {
+      "id": "rebar_visible",
+      "color": "#f97316",
+      "description": "Steel reinforcement bar exposed",
+      "subtypes": ["round_bar", "deformed_bar", "mesh", "stirrup", "anchor_bolt", "unknown"]
+    },
+    {
+      "id": "weathered",
+      "color": "#a3e635",
+      "description": "Carbonated, eroded, or surface-degraded concrete",
+      "subtypes": ["carbonation", "spalling", "erosion", "efflorescence", "freeze_thaw_damage", "unknown"]
+    },
+    {
+      "id": "staining",
+      "color": "#c084fc",
+      "description": "Rust, moss, oil, paint, or other contamination",
+      "subtypes": ["rust", "moss_algae", "oil_grease", "paint", "efflorescence", "soot", "unknown"]
+    },
+    {
+      "id": "original_finish",
+      "color": "#34d399",
+      "description": "Intentional architectural finish (tile, plaster, render)",
+      "subtypes": ["ceramic_tile", "stone_tile", "mosaic", "paint", "plaster", "render", "screed", "unknown"]
+    }
+  ]
+}

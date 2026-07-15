@@ -14,9 +14,33 @@ Usage (called automatically by run_pipeline.py):
 import http.server
 import json
 import socket
+import sys
 import threading
 import webbrowser
 from pathlib import Path
+
+# ── Taxonomy import ───────────────────────────────────────────────────────────
+# Ensure 03_src/ is on sys.path so ai.taxonomy is importable even when
+# report.py is imported before run_pipeline.py sets up sys.path.
+_SRC_DIR = Path(__file__).resolve().parent
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+try:
+    from ai.taxonomy import TAXONOMY, LABEL_COLORS as _LABEL_COLORS, LABEL_DESCRIPTIONS
+except ImportError:
+    # Absolute fallback — should never happen in normal usage
+    _LABEL_COLORS = {
+        "formwork_imprint":  "#60a5fa",
+        "fracture_surface":  "#f87171",
+        "exposed_aggregate": "#fbbf24",
+        "rebar_visible":     "#f97316",
+        "weathered":         "#a3e635",
+        "staining":          "#c084fc",
+        "original_finish":   "#34d399",
+    }
+    TAXONOMY = list(_LABEL_COLORS.keys())
+    LABEL_DESCRIPTIONS = {k: "" for k in TAXONOMY}
 
 
 # ── Roughness grading standard ────────────────────────────────────────────────
@@ -375,24 +399,39 @@ def _viewer_section(regions: list, viewer_data: dict,
     has_scan_js = "true" if color_mode == "scan" else "false"
 
     # ── Feature chip buttons ──────────────────────────────────────────────────
-    # One chip per detected label (all labels except "all" key)
-    label_keys  = [k for k in feat_tex_rels if k != "all"]
-    chips_html  = ""
-    if feat_tex_rels and label_keys:
+    # Show ALL taxonomy labels. Detected labels (with feature texture) are
+    # coloured and clickable. Undetected labels are dimmed with a tooltip.
+    detected_labels = [k for k in feat_tex_rels if k != "all"]
+    chips_html = ""
+    if feat_tex_rels:
         chips_html = '<div id="feat-chips" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px">'
-        chips_html += (
-            '<button onclick="window.activateFeature(\'all\')" data-feat="all" '
-            'style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;'
-            'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button>'
-        )
-        for lbl in label_keys:
-            col = _LABEL_COLORS.get(lbl, "#b0b8d0")
+        if detected_labels:
             chips_html += (
-                f'<button onclick="window.activateFeature(\'{lbl}\')" data-feat="{lbl}" '
-                f'style="background:#1e2030;border:1px solid {col};color:{col};'
-                f'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">'
-                f'{lbl.replace("_", " ")}</button>'
+                '<button onclick="window.activateFeature(\'all\')" data-feat="all" '
+                'style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;'
+                'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button>'
             )
+        for lbl in TAXONOMY:
+            col  = _LABEL_COLORS.get(lbl, "#b0b8d0")
+            desc = LABEL_DESCRIPTIONS.get(lbl, "")
+            if lbl in feat_tex_rels:
+                # Detected — clickable, coloured
+                chips_html += (
+                    f'<button onclick="window.activateFeature(\'{lbl}\')" data-feat="{lbl}" '
+                    f'title="{desc}" '
+                    f'style="background:#1e2030;border:1px solid {col};color:{col};'
+                    f'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">'
+                    f'{lbl.replace("_", " ")}</button>'
+                )
+            else:
+                # Not detected — dimmed, non-interactive
+                chips_html += (
+                    f'<span title="not detected — {desc}" '
+                    f'style="background:#13151f;border:1px solid #252836;color:#3d4455;'
+                    f'font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;'
+                    f'text-decoration:line-through">'
+                    f'{lbl.replace("_", " ")}</span>'
+                )
         chips_html += "</div>"
 
     # ── Overlay buttons inside canvas ─────────────────────────────────────────
@@ -765,19 +804,7 @@ def _curvature_section(curv: dict) -> str:
 
 
 # ── Vision section ───────────────────────────────────────────────────────────
-
-_LABEL_COLORS = {
-    "formwork_imprint":  "#60a5fa",
-    "fracture_surface":  "#f87171",
-    "exposed_aggregate": "#fbbf24",
-    "rebar_visible":     "#f97316",
-    "weathered":         "#a3e635",
-    "staining":          "#c084fc",
-    "original_finish":   "#34d399",
-}
-
-# Ordered taxonomy list — must match vision_client.py TAXONOMY
-TAXONOMY = list(_LABEL_COLORS.keys())
+# _LABEL_COLORS and TAXONOMY are imported from ai.taxonomy at the top of this file.
 
 def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
     if not vision or vision.get("parse_error"):
@@ -800,22 +827,40 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
     condition_color = {"good": "#4ade80", "moderate": "#fbbf24", "poor": "#f87171"}.get(condition, "#b0b8d0")
     conf_color      = {"high": "#4ade80", "medium": "#fbbf24", "low": "#f87171"}.get(confidence, "#b0b8d0")
 
-    # Coverage bars
+    # Coverage bars with subtype + notes
+    label_details = vision.get("label_details", {})
     bars = ""
     for label in TAXONOMY:
         pct = coverage.get(label, 0)
         if pct == 0:
             continue
-        col = _LABEL_COLORS.get(label, "#b0b8d0")
+        col    = _LABEL_COLORS.get(label, "#b0b8d0")
+        detail = label_details.get(label, {})
+        subtype = detail.get("subtype", "")
+        notes   = detail.get("notes", "")
+        subtype_html = ""
+        if subtype and subtype != "unknown":
+            subtype_html = (
+                f'<span style="background:{col}22;color:{col};font-size:9px;'
+                f'padding:1px 6px;border-radius:10px;margin-left:6px;'
+                f'font-weight:600;letter-spacing:0.04em">'
+                f'{subtype.replace("_", " ")}</span>'
+            )
+        notes_html = (
+            f'<div style="font-size:10px;color:var(--muted);margin-top:3px;'
+            f'font-style:italic;padding-left:2px">{notes}</div>'
+            if notes else ""
+        )
         bars += f"""
-    <div style="margin-bottom:6px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
-        <span style="color:{col}">{label.replace('_',' ')}</span>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px">
+        <span style="color:{col}">{label.replace('_',' ')}{subtype_html}</span>
         <span style="color:var(--muted)">{pct}%</span>
       </div>
       <div style="background:#1e2030;border-radius:3px;height:6px">
         <div style="background:{col};width:{pct}%;height:6px;border-radius:3px"></div>
       </div>
+      {notes_html}
     </div>"""
 
     crack_html = ""
@@ -1589,7 +1634,7 @@ function init(fragments, vmap) {
   });
   viewerMap = vmap || {};
   document.getElementById('count').textContent = allFragments.length + ' fragment' + (allFragments.length !== 1 ? 's' : '');
-  var hash  = location.hash.replace('#', '');
+  var hash  = location.hash.replace('#', '') || {hash_init};
   var first = hash || (allFragments[0] ? allFragments[0].fragment_id : null);
   renderList(allFragments, first);
   renderDetail(allFragments.find(function(f){ return f.fragment_id === first; }) || null);

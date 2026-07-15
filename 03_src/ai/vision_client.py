@@ -24,30 +24,7 @@ import os
 from collections import Counter
 from pathlib import Path
 
-# ── Surface taxonomy ──────────────────────────────────────────────────────────
-#
-# Fixed labels used across all fragments. Do not change between runs — adding
-# or removing labels breaks comparability.
-#
-# Label              Description
-# ─────────────────  ──────────────────────────────────────────────────────────
-# formwork_imprint   Original cast face; smooth, shows mould texture or release
-# fracture_surface   Internal concrete exposed by demolition break; rough
-# exposed_aggregate  Coarse aggregate (gravel/stone) visible at surface
-# rebar_visible      Steel reinforcement bar exposed
-# weathered          Carbonated, eroded, or surface-degraded concrete
-# staining           Rust, moss, oil, paint, or other contamination
-# original_finish    Intentional architectural finish (tile, plaster, render)
-
-TAXONOMY = [
-    "formwork_imprint",
-    "fracture_surface",
-    "exposed_aggregate",
-    "rebar_visible",
-    "weathered",
-    "staining",
-    "original_finish",
-]
+from .taxonomy import TAXONOMY, LABEL_SUBTYPES  # noqa: F401 — re-exported for importers
 
 CACHE_DIR = Path(__file__).resolve().parents[2] / "05_output" / "ai_cache"
 
@@ -58,6 +35,15 @@ You are a materials scientist specialising in demolition concrete characterisati
 for architectural upcycling research. You analyse texture images of concrete
 fragment surfaces and return structured descriptors in JSON format only.\
 """
+
+def _build_taxonomy_block() -> str:
+    """Build the taxonomy section of the prompt, including subtype options per label."""
+    lines = []
+    for label in TAXONOMY:
+        subtypes = LABEL_SUBTYPES.get(label, ["unknown"])
+        lines.append(f"  - {label}  [{' | '.join(subtypes)}]")
+    return "\n".join(lines)
+
 
 _USER_TEMPLATE = """\
 The attached image is a UV texture map of a demolition concrete fragment.
@@ -71,6 +57,12 @@ this structure — no extra keys, no markdown, no explanation:
   "labels_present": ["<label>", ...],
   "label_coverage": {{
     "<label>": <0-100 integer percent of visible surface>
+  }},
+  "label_details": {{
+    "<label_from_labels_present>": {{
+      "subtype": "<one value from that label's subtype list>",
+      "notes": "<one concise sentence: specific material, colour, condition, approximate size if visible>"
+    }}
   }},
   "cracks": {{
     "present": <true|false>,
@@ -87,9 +79,14 @@ this structure — no extra keys, no markdown, no explanation:
   "confidence": "<high | medium | low>"
 }}
 
-Taxonomy (use ONLY these labels):
+Rules:
+- label_details must contain an entry for every label in labels_present.
+- subtype must be chosen from the options listed for that label below.
+- If the subtype cannot be determined from the image, use "unknown".
+
+Taxonomy with subtype options (use ONLY these labels and subtypes):
 {taxonomy}
-""".format(taxonomy="\n".join(f"  - {t}" for t in TAXONOMY))
+""".format(taxonomy=_build_taxonomy_block())
 
 
 # ── Image encoding ────────────────────────────────────────────────────────────
@@ -240,7 +237,7 @@ def _majority_label(results: list[dict]) -> str:
 def _merge_runs(results: list[dict]) -> dict:
     """
     Merge N independent run results into one consensus dict.
-    Numeric fields are averaged; dominant_label uses majority vote.
+    Numeric fields are averaged; dominant_label and subtypes use majority vote.
     """
     valid = [r for r in results if not r.get("parse_error")]
     if not valid:
@@ -270,6 +267,28 @@ def _merge_runs(results: list[dict]) -> dict:
     crack_pcts = [r.get("cracks", {}).get("coverage_pct", 0) for r in valid]
     if "cracks" in merged:
         merged["cracks"]["coverage_pct"] = round(sum(crack_pcts) / len(crack_pcts))
+
+    # Merge label_details: majority vote on subtype, first-run notes
+    merged_details: dict[str, dict] = {}
+    for label in merged["labels_present"]:
+        subtype_votes = []
+        first_notes = ""
+        for r in valid:
+            detail = r.get("label_details", {}).get(label, {})
+            st = detail.get("subtype", "unknown")
+            if st:
+                subtype_votes.append(st)
+            if not first_notes:
+                first_notes = detail.get("notes", "")
+        majority_subtype = (
+            Counter(subtype_votes).most_common(1)[0][0]
+            if subtype_votes else "unknown"
+        )
+        merged_details[label] = {
+            "subtype": majority_subtype,
+            "notes":   first_notes,
+        }
+    merged["label_details"] = merged_details
 
     merged["n_runs"]  = len(valid)
     merged["n_total"] = len(results)

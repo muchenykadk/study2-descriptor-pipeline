@@ -1,7 +1,7 @@
 """
 Blender export script — Study 2 Descriptor Pipeline
 ====================================================
-Exports OBJ, GLB, and texture PNG for one fragment in one run.
+Exports GLB and texture PNG for one fragment in one run.
 
 How to use
 ----------
@@ -14,9 +14,8 @@ How to use
 Files created
 -------------
 01_input/meshes/processed/FRAG-S1-XXX/
-    FRAG-S1-XXX.obj          ← geometry for Python pipeline
-    FRAG-S1-XXX.glb          ← Rhino import (texture embedded)
-    FRAG-S1-XXX_texture.png  ← texture for AI vision analysis
+    FRAG-S1-XXX.glb          ← mesh + UV (pipeline geometry input + 3D viewer)
+    FRAG-S1-XXX_texture.png  ← rebaked albedo (AI vision analysis)
 
 After export
 ------------
@@ -57,36 +56,7 @@ print(f"   Object    : {obj_active.name}")
 print(f"   Unit scale: {unit_scale}  →  export scale ×{scale_to_mm:.1f} (to mm)")
 print(f"   To        : {out_dir}\n")
 
-# ── 1. Export OBJ (geometry for Python pipeline) ──────────────────────────────
-
-obj_path = os.path.join(out_dir, f"{FRAG_ID}.obj")
-try:
-    # Blender 3.3+ new exporter
-    bpy.ops.wm.obj_export(
-        filepath=obj_path,
-        export_selected_objects=True,
-        export_uv=True,
-        export_normals=True,
-        export_triangulated_mesh=True,
-        forward_axis='NEGATIVE_Z',
-        up_axis='Y',
-        global_scale=scale_to_mm,
-    )
-except AttributeError:
-    # Blender < 3.3 legacy exporter
-    bpy.ops.export_scene.obj(
-        filepath=obj_path,
-        use_selection=True,
-        use_uvs=True,
-        use_normals=True,
-        use_triangles=True,
-        axis_forward='-Z',
-        axis_up='Y',
-        global_scale=scale_to_mm,
-    )
-print(f"✓ OBJ     → {obj_path}")
-
-# ── 2. Export GLB (Rhino import, texture embedded) ────────────────────────────
+# ── 1. Export GLB (pipeline geometry input + 3D viewer) ──────────────────────
 
 glb_path = os.path.join(out_dir, f"{FRAG_ID}.glb")
 bpy.ops.export_scene.gltf(
@@ -100,7 +70,7 @@ bpy.ops.export_scene.gltf(
 )
 print(f"✓ GLB     → {glb_path}")
 
-# ── 3. Save texture PNG (AI vision analysis) ──────────────────────────────────
+# ── 2. Save texture PNG (AI vision analysis) ──────────────────────────────────
 #
 # Searches all nodes including inside node groups (e.g. Blender's BASE COLOR
 # group). Picks the image with the largest pixel count if multiple are found

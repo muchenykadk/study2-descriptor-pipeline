@@ -8,19 +8,19 @@ Keep this open alongside Blender and Rhino during active work sessions.
 ## Tool map
 
 ```
-Polycam / Metashape / RealityCapture   → raw scan (.obj + texture PNG)
-Blender                                → clean mesh, re-bake texture, export
-Python (run_pipeline.py)               → geometry + AI descriptors → JSON
-Rhino / Grasshopper                    → design queries, annotation (annotate.gh), figures
+Scaniverse (iPad Pro)   → raw scan (.glb — fused geometry + baked texture)
+Blender                 → clean mesh, UV unwrap, texture rebake → .glb + _texture.png
+Python (run_pipeline.py)→ geometry + AI descriptors → JSON + HTML report
+Rhino / Grasshopper     → design queries, annotation (annotate.gh), figures
 ```
 
 ---
 
 ## Step 1 — Photogrammetry capture (on site)
 
-Use **Polycam** (iOS, LiDAR recommended), Metashape, or RealityCapture.
+Use **Scaniverse** on iPad Pro (LiDAR-assisted photogrammetry).  
+Select **Medium Object** scan mode. Export as `.glb` (textured mesh).
 
-Export as: `.obj` + texture PNG (or `.glb` — both work).  
 Save the raw export untouched to:
 ```
 01_input/photogrammetry/raw_exports/FRAG-S1-###/
@@ -34,7 +34,7 @@ Naming: keep the original export filename here. Do not rename raw files.
 
 ## Step 2 — Blender: clean mesh + export
 
-Open the raw `.obj` from `raw_exports/FRAG-S1-###/`.
+Open the raw `.glb` from `raw_exports/FRAG-S1-###/`.
 
 ### Cleaning checklist
 - [ ] Remove isolated vertices and floating faces
@@ -53,21 +53,18 @@ If you deleted faces, merged vertices, or decimated heavily:
 - [ ] Bake: select cleaned mesh first (active), shift-click original scan, Bake type = Diffuse, uncheck Direct/Indirect, enable Selected to Active, Ray Distance ~5 mm
 - [ ] Save the baked texture PNG
 
-### Export — run all three exports from Blender
+### Export — run the Blender script (automates both exports)
 
-**1. OBJ** (for Python analysis):
-File → Export → Wavefront (.obj)  
-Settings: Forward = -Z, Up = Y · Scale = 1.0 · ✓ UVs · ✓ Normals · ✓ Triangulate  
-Save to: `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###.obj`
+Open `02_blender/export_fragment.py` in the Blender Scripting tab.  
+Set `FRAG_ID` at the top, select the cleaned mesh, click Run Script (▶).
 
-**2. GLB** (for Rhino):
-File → Export → glTF 2.0 (.glb)  
-Format = Binary (.glb) · ✓ UVs · ✓ Normals · ✓ Materials · ✓ Images (include)  
-Save to: `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###.glb`
+This produces:
+- `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###.glb` — mesh + UV (pipeline input + 3D viewer)
+- `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_texture.png` — rebaked albedo (AI analysis)
 
-**3. Texture PNG** (for vision API):
-Image Editor → Image → Save As  
-Save to: `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_texture.png`
+> Manual export alternative if the script fails:  
+> **GLB**: File → Export → glTF 2.0 · Format = Binary (.glb) · ✓ UVs · ✓ Normals · ✓ Materials  
+> **PNG**: Image Editor → Image → Save As → `FRAG-S1-###_texture.png`
 
 > **Git:** commit after Blender exports:  
 > `git commit -m "feat: add processed mesh FRAG-S1-001"`  
@@ -75,7 +72,7 @@ Save to: `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_texture.png`
 
 ---
 
-## Step 3 — Run the Python pipeline (Phase 2: geometry)
+## Step 3 — Run the Python pipeline
 
 **First time setup — create and activate the virtual environment:**
 ```powershell
@@ -89,36 +86,27 @@ pip install -r env/requirements.txt
 env\venv\Scripts\activate
 ```
 
-Then run the pipeline:
+**Run the full pipeline** (geometry + AI classification):
 ```powershell
 python 03_src/run_pipeline.py FRAG-S1-001
 ```
 
-Output: `05_output/descriptors/FRAG-S1-001_geometry.json`
-
-The terminal prints a summary (OBB dimensions, mass estimate, planar regions found).  
-Check the numbers look physically plausible before continuing.
-
-> **Git:** commit new descriptor output:  
-> `git commit -m "feat: add geometry descriptors FRAG-S1-001"`
-
----
-
-## Step 4 — Run Phase 3: AI classification (vision API)
-
-Requires `.env` with `ANTHROPIC_API_KEY` set (copy `env/.env.example` → `env/.env`).
-
-```bash
-python 03_src/run_pipeline.py FRAG-S1-001 --phase3
+Geometry only (faster, no API key needed):
+```powershell
+python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only
 ```
 
-Output: adds AI fields to `05_output/descriptors/FRAG-S1-001_geometry.json`  
-AI fields include: `rebar`, `surface_origin_type`, `defect_presence`, `weathering_severity`  
-Each field contains `ai_value`, `ai_reasoning`, `human_value` (null until reviewed), `data_status`.
+Output: `05_output/descriptors/FRAG-S1-001_geometry.json` + HTML report  
+The terminal prints OBB dimensions, mass estimate, planar regions, and AI feature labels.
+
+Requires `env/.env` with `OPENAI_API_KEY` for AI classification (copy `env/.env.example` → `env/.env`).
+
+> **Git:** commit after running:  
+> `git commit -m "data: descriptors FRAG-S1-001"`
 
 ---
 
-## Step 5 — Human annotation (review AI output)
+## Step 4 — Human annotation (review AI output)
 
 Open the JSON file directly:
 ```

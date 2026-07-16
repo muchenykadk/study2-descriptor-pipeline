@@ -11,25 +11,38 @@ How to use
 4. Select the cleaned mesh object in the viewport
 5. Click Run Script (▶)
 
+Fragment ID format
+------------------
+FRAG-S1-{ARCHETYPE}-{###}
+
+Archetype codes (assigned at physical inspection):
+    FS  Floor Slab        RS  Roof Slab        BM  Beam
+    CO  Column            WL  Load-bearing Wall WP  Partition Wall
+    LT  Lintel            ST  Stair             BL  Balcony
+    FP  Facade Panel      FD  Foundation        UN  Unidentified
+
+Examples: FRAG-S1-FS-003, FRAG-S1-CO-001, FRAG-S1-BM-001
+
 Files created
 -------------
-01_input/meshes/processed/FRAG-S1-XXX/
-    FRAG-S1-XXX.glb          ← mesh + UV (pipeline geometry input + 3D viewer)
-    FRAG-S1-XXX_texture.png  ← rebaked albedo (AI vision analysis)
+01_input/meshes/processed/FRAG-S1-{ARCHETYPE}-{###}/
+    FRAG-S1-{ARCHETYPE}-{###}.glb          ← mesh + UV (geometry input + 3D viewer)
+    FRAG-S1-{ARCHETYPE}-{###}_texture.png  ← rebaked albedo (AI vision analysis)
 
 After export
 ------------
 Run the pipeline from PowerShell:
     env\\venv\\Scripts\\activate
-    python 03_src/run_pipeline.py FRAG-S1-XXX
+    python 03_src/run_pipeline.py FRAG-S1-FS-003
 """
 
 import bpy
 import os
 
 # ── Configuration — change this for each new fragment ────────────────────────
-
-FRAG_ID = "FRAG-S1-002"
+# Format: FRAG-S1-{ARCHETYPE}-{###}
+# Assign archetype at physical inspection (see docstring for codes).
+FRAG_ID = "FRAG-S1-FS-003"
 
 REPO_ROOT = r"C:\Users\muche\Documents\Austria\Research\Research Concrete upcycling\Study2_Descriptor_Pipeline"
 

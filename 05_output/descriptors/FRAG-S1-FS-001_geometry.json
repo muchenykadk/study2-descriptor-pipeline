@@ -1,5 +1,5 @@
 {
-  "fragment_id": "FRAG-S1-001",
+  "fragment_id": "FRAG-S1-FS-001",
   "pipeline_version": "v0.2",
   "computed_at": "2026-07-09T09:49:01.729788+00:00",
   "bounding": {
@@ -179,5 +179,7 @@
       "radius_mm": 60.0
     },
     "data_status": "computed"
-  }
+  },
+  "archetype": "FS",
+  "archetype_label": "Floor Slab"
 }

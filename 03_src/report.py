@@ -952,13 +952,15 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     import os as _os
     feature_texture_paths = feature_texture_paths or {}
 
-    frag_id   = data.get("fragment_id", "unknown")
-    version   = data.get("pipeline_version", "")
-    timestamp = data.get("computed_at", "")
-    bounding  = data.get("bounding", {})
-    regions   = data.get("planarity", [])
-    curvature = data.get("curvature", {})
-    vision    = data.get("vision", {})
+    frag_id        = data.get("fragment_id", "unknown")
+    archetype_code = data.get("archetype", "")
+    archetype_label= data.get("archetype_label", "")
+    version        = data.get("pipeline_version", "")
+    timestamp      = data.get("computed_at", "")
+    bounding       = data.get("bounding", {})
+    regions        = data.get("planarity", [])
+    curvature      = data.get("curvature", {})
+    vision         = data.get("vision", {})
 
     def _rel(p):
         return _os.path.relpath(p, output_dir).replace("\\", "/") if p and Path(p).exists() else ""
@@ -992,6 +994,9 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
   <div class="header">
     <div>
       <h1>{frag_id}</h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        {f'<span style="background:#1e293b;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--accent);font-weight:600;letter-spacing:0.06em">{archetype_code}</span><span style="color:var(--muted);font-size:11px">{archetype_label}</span>' if archetype_code else ''}
+      </div>
       <div style="color:var(--muted);font-size:11px;margin-top:4px">
         Study 2 Descriptor Pipeline · {version}
       </div>
@@ -1340,11 +1345,13 @@ function renderList(fragments, selectedId) {
     const item = document.createElement('div');
     item.className = 'frag-item' + (f.fragment_id === selectedId ? ' active' : '');
     item.dataset.id = f.fragment_id;
+    const archCode = f.archetype || '';
     item.innerHTML =
       '<div class="frag-id">' +
         '<span>' + f.fragment_id + '</span>' +
         (g ? '<span class="grade-pill" style="background:' + g.color + '22;color:' + g.color + '">' + code + '</span>' : '') +
       '</div>' +
+      (archCode ? '<div style="font-size:10px;color:var(--accent);margin-bottom:2px;letter-spacing:0.04em">' + archCode + ' · ' + (f.archetype_label || '') + '</div>' : '') +
       '<div class="frag-dims">' + dims + ' mm</div>' +
       '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>';
     item.addEventListener('click', function() { selectFragment(f.fragment_id); });
@@ -1407,9 +1414,12 @@ function renderDetail(fragment) {
 
   const date = (fragment.computed_at || '').slice(0, 10);
 
+  const detailArch = fragment.archetype || '';
+  const detailArchLabel = fragment.archetype_label || '';
   panel.innerHTML =
     '<div class="detail-header">' +
       '<div><h2>' + fragment.fragment_id + '</h2>' +
+      (detailArch ? '<div style="display:inline-flex;align-items:center;gap:8px;margin-top:5px"><span style="background:#1e293b;border:1px solid #2d3250;border-radius:4px;padding:2px 8px;font-size:11px;color:#7c83fd;font-weight:600;letter-spacing:0.06em">' + detailArch + '</span><span style="font-size:11px;color:var(--muted)">' + detailArchLabel + '</span></div>' : '') +
       '<div style="font-size:11px;color:var(--muted);margin-top:3px">processed ' + date + ' · ' + (fragment.pipeline_version || '') + '</div></div>' +
       '<a class="open-link" href="' + reportFile + '" target="_blank">Open 3D Report ↗</a>' +
     '</div>' +

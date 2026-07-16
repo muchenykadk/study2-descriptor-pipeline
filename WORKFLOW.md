@@ -28,7 +28,7 @@ Save the raw export untouched to:
 Naming: keep the original export filename here. Do not rename raw files.
 
 > **Git:** after dropping in a new raw export, run `git add` and commit:  
-> `git commit -m "feat: add raw scan FRAG-S1-001"`
+> `git commit -m "feat: add raw scan FRAG-S1-FS-001"`
 
 ---
 
@@ -67,7 +67,7 @@ This produces:
 > **PNG**: Image Editor → Image → Save As → `FRAG-S1-###_texture.png`
 
 > **Git:** commit after Blender exports:  
-> `git commit -m "feat: add processed mesh FRAG-S1-001"`  
+> `git commit -m "feat: add processed mesh FRAG-S1-FS-001"`  
 > Note: GLB and PNG are tracked by git-lfs (see `.gitattributes`).
 
 ---
@@ -88,21 +88,21 @@ env\venv\Scripts\activate
 
 **Run the full pipeline** (geometry + AI classification):
 ```powershell
-python 03_src/run_pipeline.py FRAG-S1-001
+python 03_src/run_pipeline.py FRAG-S1-FS-001
 ```
 
 Geometry only (faster, no API key needed):
 ```powershell
-python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only
+python 03_src/run_pipeline.py FRAG-S1-FS-001 --geometry-only
 ```
 
-Output: `05_output/descriptors/FRAG-S1-001_geometry.json` + HTML report  
+Output: `05_output/descriptors/FRAG-S1-FS-001_geometry.json` + HTML report  
 The terminal prints OBB dimensions, mass estimate, planar regions, and AI feature labels.
 
 Requires `env/.env` with `OPENAI_API_KEY` for AI classification (copy `env/.env.example` → `env/.env`).
 
 > **Git:** commit after running:  
-> `git commit -m "data: descriptors FRAG-S1-001"`
+> `git commit -m "data: descriptors FRAG-S1-FS-001"`
 
 ---
 
@@ -110,7 +110,7 @@ Requires `env/.env` with `OPENAI_API_KEY` for AI classification (copy `env/.env.
 
 Open the JSON file directly:
 ```
-05_output/descriptors/FRAG-S1-001_geometry.json
+05_output/descriptors/FRAG-S1-FS-001_geometry.json
 ```
 For each AI-classified field, fill in `human_value` and `human_notes`, set `data_status` to `"human_reviewed"`.
 
@@ -120,7 +120,7 @@ For each AI-classified field, fill in `human_value` and `human_notes`, set `data
 > The data model does not change; only the interface changes.
 
 > **Git:** commit after reviewing:  
-> `git commit -m "annotation: human review FRAG-S1-001"`
+> `git commit -m "annotation: human review FRAG-S1-FS-001"`
 
 ---
 

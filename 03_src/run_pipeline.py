@@ -5,16 +5,31 @@ Study 2 Descriptor Pipeline — main entry point.
 Usage
 -----
 Full pipeline — geometry + AI classification (default):
-    python 03_src/run_pipeline.py FRAG-S1-001
+    python 03_src/run_pipeline.py FRAG-S1-FS-001
 
 Geometry only — skip AI (faster, no API key needed):
-    python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only
+    python 03_src/run_pipeline.py FRAG-S1-FS-001 --geometry-only
+
+Batch — process all unanalyzed fragments automatically:
+    python 03_src/run_pipeline.py --batch
+
+Batch geometry only:
+    python 03_src/run_pipeline.py --batch --geometry-only
+
+Force re-run even if output already exists:
+    python 03_src/run_pipeline.py FRAG-S1-FS-002 --force
+    python 03_src/run_pipeline.py --batch --force
+
+Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
+    Archetype codes: FS=Floor Slab  RS=Roof Slab  BM=Beam  CO=Column
+                     WL=Load-bearing Wall  WP=Partition Wall  LT=Lintel
+                     ST=Stair  BL=Balcony  FP=Facade Panel  FD=Foundation  UN=Unidentified
 
 See WORKFLOW.md for full workflow instructions.
 
 Output
 ------
-05_output/descriptors/FRAG-S1-001_geometry.json
+05_output/descriptors/FRAG-S1-FS-001_geometry.json
 """
 
 import argparse
@@ -39,6 +54,33 @@ from ai.texture_segmentation import classify_texture_grid
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
+
+_ARCHETYPE_LABELS: dict[str, str] = {
+    "FS": "Floor Slab",
+    "RS": "Roof Slab",
+    "BM": "Beam",
+    "CO": "Column",
+    "WL": "Load-bearing Wall",
+    "WP": "Partition Wall",
+    "LT": "Lintel",
+    "ST": "Stair",
+    "BL": "Balcony",
+    "FP": "Facade Panel",
+    "FD": "Foundation",
+    "UN": "Unidentified",
+}
+
+def _parse_archetype(frag_id: str) -> tuple[str, str]:
+    """
+    Parse archetype code and label from FRAG-S1-{ARCHETYPE}-{###}.
+    Returns (code, label), e.g. ("FS", "Floor Slab").
+    Falls back to ("UN", "Unidentified") for legacy 3-part IDs.
+    """
+    parts = frag_id.split("-")
+    code  = parts[2] if len(parts) == 4 else "UN"
+    label = _ARCHETYPE_LABELS.get(code, "Unidentified")
+    return code, label
+
 
 def _scale_check(max_dim_mm: float) -> None:
     if max_dim_mm < 50:
@@ -128,8 +170,11 @@ def run_phase2(frag_id: str, mesh: trimesh.Trimesh,
     curv = curvature_stats(mesh)
     print("done")
     _print_phase2_summary(bounding, planes, curv)
+    arch_code, arch_label = _parse_archetype(frag_id)
     return {
         "fragment_id":      frag_id,
+        "archetype":        arch_code,
+        "archetype_label":  arch_label,
         "input_type":       "mesh",
         "pipeline_version": "v0.2",
         "computed_at":      datetime.now(timezone.utc).isoformat(),
@@ -152,8 +197,11 @@ def run_phase2_pcd(frag_id: str, pcd: o3d.geometry.PointCloud,
     curv = curvature_stats(pcd)
     print("done")
     _print_phase2_summary(bounding, planes, curv)
+    arch_code, arch_label = _parse_archetype(frag_id)
     return {
         "fragment_id":      frag_id,
+        "archetype":        arch_code,
+        "archetype_label":  arch_label,
         "input_type":       "point_cloud",
         "pipeline_version": "v0.2",
         "computed_at":      datetime.now(timezone.utc).isoformat(),
@@ -259,6 +307,136 @@ def save_output(frag_id: str, data: dict, output_dir: Path) -> Path:
     return out_path
 
 
+# ── single-fragment runner ────────────────────────────────────────────────────
+
+def run_single(frag_id: str, args: argparse.Namespace,
+               processed_dir: Path, output_dir: Path,
+               open_browser: bool = True) -> None:
+    """Run the full pipeline for one fragment."""
+    import shutil as _shutil
+
+    print(f"\n{'='*50}")
+    print(f"  Fragment: {frag_id}")
+    print(f"{'='*50}")
+
+    # ── Load ─────────────────────────────────────────────────────────────────
+    print("\n  Loading input ...")
+    source, input_type = load_input(frag_id, processed_dir)
+
+    # ── Phase 2 ──────────────────────────────────────────────────────────────
+    print(f"  RANSAC threshold: {args.ransac_threshold} mm")
+    if input_type == "point_cloud":
+        descriptors = run_phase2_pcd(frag_id, source, args.ransac_threshold)
+    else:
+        descriptors = run_phase2(frag_id, source, args.ransac_threshold)
+
+    # ── Phase 3 (optional) ───────────────────────────────────────────────────
+    if args.phase3:
+        print("\n  ── Phase 3: vision feature extraction ──")
+        texture_path = processed_dir / frag_id / f"{frag_id}_texture.png"
+        if not texture_path.exists():
+            texture_path = processed_dir / frag_id / f"{frag_id}_texture.jpg"
+        if texture_path.exists():
+            print(f"  Texture: {texture_path.name}")
+            vision = classify_texture(texture_path, n_votes=3)
+            descriptors["vision"] = vision
+            print(f"  Dominant label : {vision.get('dominant_label', '?')}")
+            print(f"  Labels present : {', '.join(vision.get('labels_present', []))}")
+            print(f"  Surface cond.  : {vision.get('surface_condition', '?')}")
+            print(f"  Confidence     : {vision.get('confidence', '?')}")
+        else:
+            print(f"  ⚠ No texture PNG found at {texture_path}")
+            print(f"  Run Blender export script first, then re-run with --phase3")
+
+    # ── Phase 3B: spatial feature localization ───────────────────────────────
+    feature_texture_paths: dict = {}
+    if args.phase3 and descriptors.get("vision"):
+        texture_path_3b = processed_dir / frag_id / f"{frag_id}_texture.png"
+        if texture_path_3b.exists():
+            print("\n  ── Phase 3B: spatial feature localization ──")
+            grid_data = classify_texture_grid(texture_path_3b)
+            descriptors["vision"]["grid_classification"] = grid_data
+            feature_texture_paths = build_feature_textures(
+                texture_path_3b,
+                grid_data["grid_n"],
+                grid_data["cells"],
+                output_dir,
+                frag_id,
+            )
+        else:
+            print("  ⚠ Phase 3B skipped: texture PNG not found")
+
+    # ── Save ─────────────────────────────────────────────────────────────────
+    out_path = save_output(frag_id, descriptors, output_dir)
+    print(f"\n  Saved → {out_path.relative_to(REPO_ROOT)}")
+
+    # ── Report ───────────────────────────────────────────────────────────────
+    print("  Building viewer data ...", end=" ", flush=True)
+    planes = descriptors.get("planarity", [])
+    if input_type == "point_cloud":
+        viewer_data = build_viewer_data_pcd(source, planes)
+    else:
+        viewer_data = build_viewer_data(source, planes)
+    print(f"{len(viewer_data['points'])} points packed  ({viewer_data['color_mode']} colors)")
+
+    viewer_json_path = output_dir / f"{frag_id}_viewer.json"
+    with open(viewer_json_path, "w", encoding="utf-8") as f:
+        json.dump(viewer_data, f)
+
+    frag_input_dir = processed_dir / frag_id
+    texture_path   = frag_input_dir / f"{frag_id}_texture.png"
+
+    glb_src  = frag_input_dir / f"{frag_id}.glb"
+    glb_path = None
+    if glb_src.exists():
+        glb_copy = output_dir / glb_src.name
+        if not glb_copy.exists() or glb_copy.stat().st_mtime < glb_src.stat().st_mtime:
+            _shutil.copy2(glb_src, glb_copy)
+            print(f"  Copied GLB → {glb_copy.relative_to(REPO_ROOT)}")
+        glb_path = glb_copy
+
+    texture_copy = None
+    if texture_path.exists():
+        tex_dest = output_dir / texture_path.name
+        if not tex_dest.exists() or tex_dest.stat().st_mtime < texture_path.stat().st_mtime:
+            _shutil.copy2(texture_path, tex_dest)
+            print(f"  Copied texture → {tex_dest.relative_to(REPO_ROOT)}")
+        texture_copy = tex_dest
+
+    report_path = generate_report(
+        descriptors, output_dir, viewer_data,
+        glb_path=glb_path,
+        texture_path=texture_copy,
+        feature_texture_paths=feature_texture_paths,
+    )
+    print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
+
+    index_path = update_inventory(output_dir, highlight_id=frag_id)
+    print(f"  Index  → {index_path.relative_to(REPO_ROOT)}")
+
+    if open_browser:
+        open_report(index_path)
+        print(f"\n  Next step: verify output in the inventory,")
+        print(f"  then commit: git commit -m 'data: descriptors {frag_id}'")
+        print()
+
+
+def _discover_fragments(processed_dir: Path) -> list[str]:
+    """Return sorted list of fragment IDs that have at least one input file."""
+    _EXTENSIONS = {".ply", ".glb", ".obj"}
+    ids = []
+    if not processed_dir.exists():
+        return ids
+    for frag_dir in sorted(processed_dir.iterdir()):
+        if not frag_dir.is_dir():
+            continue
+        frag_id = frag_dir.name
+        has_input = any((frag_dir / f"{frag_id}{ext}").exists() for ext in _EXTENSIONS)
+        if has_input:
+            ids.append(frag_id)
+    return ids
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -267,11 +445,30 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python 03_src/run_pipeline.py FRAG-S1-001                    # full pipeline
-  python 03_src/run_pipeline.py FRAG-S1-001 --geometry-only    # geometry only, no AI
+  python 03_src/run_pipeline.py FRAG-S1-FS-001                    # full pipeline
+  python 03_src/run_pipeline.py FRAG-S1-FS-001 --geometry-only    # geometry only, no AI
+  python 03_src/run_pipeline.py --batch                           # all unanalyzed fragments
+  python 03_src/run_pipeline.py --batch --force                   # re-run all fragments
+  python 03_src/run_pipeline.py FRAG-S1-FS-002 --force            # re-run one fragment
+
+Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
+  FS=Floor Slab  RS=Roof Slab  BM=Beam  CO=Column
+  WL=Load-bearing Wall  WP=Partition Wall  LT=Lintel
+  ST=Stair  BL=Balcony  FP=Facade Panel  FD=Foundation  UN=Unidentified
         """
     )
-    parser.add_argument("frag_id", help="Fragment ID, e.g. FRAG-S1-001")
+    parser.add_argument(
+        "frag_id", nargs="?",
+        help="Fragment ID, e.g. FRAG-S1-FS-001. Omit when using --batch."
+    )
+    parser.add_argument(
+        "--batch", action="store_true",
+        help="Process all fragments in the input directory that have not yet been analyzed."
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-run even if _geometry.json already exists (useful after clearing cache)."
+    )
     parser.add_argument(
         "--geometry-only", action="store_true",
         help="Skip Phase 3 AI classification — geometry descriptors only"
@@ -297,141 +494,74 @@ Examples:
         help="Skip all calculations — just open the existing report in the browser."
     )
     args = parser.parse_args()
-    # Phase 3 runs by default unless --geometry-only is set
     args.phase3 = not args.geometry_only
+
+    # ── Validation ────────────────────────────────────────────────────────────
+    if args.batch and args.frag_id:
+        parser.error("Provide either a fragment ID or --batch, not both.")
+    if not args.batch and not args.frag_id and not args.serve:
+        parser.error("Provide a fragment ID or use --batch.")
 
     # ── Serve-only shortcut ───────────────────────────────────────────────────
     if args.serve:
         output_dir = Path(args.output_dir)
-        report_path = output_dir / f"{args.frag_id}_report.html"
+        frag_id    = args.frag_id or ""
+        report_path = output_dir / f"{frag_id}_report.html"
         index_path  = output_dir / "index.html"
-        if not report_path.exists():
+        if frag_id and not report_path.exists():
             print(f"\n  No report found at {report_path}")
             print(f"  Run without --serve first to generate it.")
             sys.exit(1)
-        # Open the inventory (main page) via HTTP so all links inside it
-        # also resolve to http:// — GLB and feature textures load correctly.
         entry = index_path if index_path.exists() else report_path
         print(f"\n  Serving inventory at http://127.0.0.1:PORT/{entry.name} ...")
-        print(f"  (Click 'Open 3D Report' for {args.frag_id} from there)")
+        if frag_id:
+            print(f"  (Click 'Open 3D Report' for {frag_id} from there)")
         open_report(entry)
         return
 
     processed_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
+    output_dir    = Path(args.output_dir)
 
-    print(f"\n{'='*50}")
-    print(f"  Fragment: {args.frag_id}")
-    print(f"{'='*50}")
+    # ── Batch mode ────────────────────────────────────────────────────────────
+    if args.batch:
+        all_frags = _discover_fragments(processed_dir)
+        if not all_frags:
+            print(f"\n  No fragments found in {processed_dir}")
+            sys.exit(0)
 
-    # ── Load ─────────────────────────────────────────────────────────────────
-    print("\n  Loading input ...")
-    source, input_type = load_input(args.frag_id, processed_dir)
-
-    # ── Phase 2 ──────────────────────────────────────────────────────────────
-    print(f"  RANSAC threshold: {args.ransac_threshold} mm")
-    if input_type == "point_cloud":
-        descriptors = run_phase2_pcd(args.frag_id, source, args.ransac_threshold)
-    else:
-        descriptors = run_phase2(args.frag_id, source, args.ransac_threshold)
-
-    # ── Phase 3 (optional) ───────────────────────────────────────────────────
-    if args.phase3:
-        print("\n  ── Phase 3: vision feature extraction ──")
-        texture_path = processed_dir / args.frag_id / f"{args.frag_id}_texture.png"
-        if not texture_path.exists():
-            # try JPG fallback
-            texture_path = processed_dir / args.frag_id / f"{args.frag_id}_texture.jpg"
-        if texture_path.exists():
-            print(f"  Texture: {texture_path.name}")
-            vision = classify_texture(texture_path, n_votes=3)
-            descriptors["vision"] = vision
-            print(f"  Dominant label : {vision.get('dominant_label', '?')}")
-            print(f"  Labels present : {', '.join(vision.get('labels_present', []))}")
-            print(f"  Surface cond.  : {vision.get('surface_condition', '?')}")
-            print(f"  Confidence     : {vision.get('confidence', '?')}")
+        if args.force:
+            queue = all_frags
         else:
-            print(f"  ⚠ No texture PNG found at {texture_path}")
-            print(f"  Run Blender export script first, then re-run with --phase3")
+            queue = [
+                fid for fid in all_frags
+                if not (output_dir / f"{fid}_geometry.json").exists()
+            ]
 
-    # ── Phase 3B: spatial feature localization ───────────────────────────────
-    feature_texture_paths: dict = {}   # {"all": Path, "staining": Path, ...}
-    if args.phase3 and descriptors.get("vision"):
-        texture_path_3b = processed_dir / args.frag_id / f"{args.frag_id}_texture.png"
-        if texture_path_3b.exists():
-            print("\n  ── Phase 3B: spatial feature localization ──")
-            grid_data = classify_texture_grid(texture_path_3b)
-            descriptors["vision"]["grid_classification"] = grid_data
-            feature_texture_paths = build_feature_textures(
-                texture_path_3b,
-                grid_data["grid_n"],
-                grid_data["cells"],
-                output_dir,
-                args.frag_id,
-            )
-        else:
-            print("  ⚠ Phase 3B skipped: texture PNG not found")
+        if not queue:
+            print(f"\n  All {len(all_frags)} fragment(s) already analyzed.")
+            print(f"  Use --force to re-run them.")
+            sys.exit(0)
 
-    # ── Save ─────────────────────────────────────────────────────────────────
-    out_path = save_output(args.frag_id, descriptors, output_dir)
-    print(f"\n  Saved → {out_path.relative_to(REPO_ROOT)}")
+        skipped = [f for f in all_frags if f not in queue]
+        print(f"\n  Batch mode: {len(queue)} fragment(s) to process"
+              + (f"  ({len(skipped)} already done, skipping)" if skipped else ""))
+        for fid in skipped:
+            print(f"    skip  {fid}  (output exists)")
+        for fid in queue:
+            print(f"    queue {fid}")
 
-    # ── Report ───────────────────────────────────────────────────────────────
-    print("  Building viewer data ...", end=" ", flush=True)
-    planes = descriptors.get("planarity", [])
-    if input_type == "point_cloud":
-        viewer_data = build_viewer_data_pcd(source, planes)
-    else:
-        viewer_data = build_viewer_data(source, planes)
-    print(f"{len(viewer_data['points'])} points packed  ({viewer_data['color_mode']} colors)")
+        last_fid = queue[-1]
+        for fid in queue:
+            run_single(fid, args, processed_dir, output_dir,
+                       open_browser=(fid == last_fid))
 
-    # Save viewer data separately so index.html can embed it
-    viewer_json_path = output_dir / f"{args.frag_id}_viewer.json"
-    with open(viewer_json_path, "w", encoding="utf-8") as f:
-        json.dump(viewer_data, f)
+        print(f"\n  Batch complete. {len(queue)} fragment(s) processed.")
+        print(f"  Commit: git add 05_output/ && git commit -m 'data: batch descriptors'")
+        print()
+        return
 
-    import shutil as _shutil
-    frag_input_dir = processed_dir / args.frag_id
-    texture_path   = frag_input_dir / f"{args.frag_id}_texture.png"
-
-    # Copy GLB into output_dir so the HTML and the mesh are same-origin.
-    # Browsers block file:// requests that cross directories, so a relative
-    # path like ../../01_input/... silently fails in Chrome.
-    glb_src  = frag_input_dir / f"{args.frag_id}.glb"
-    glb_path = None
-    if glb_src.exists():
-        glb_copy = output_dir / glb_src.name
-        if not glb_copy.exists() or glb_copy.stat().st_mtime < glb_src.stat().st_mtime:
-            _shutil.copy2(glb_src, glb_copy)
-            print(f"  Copied GLB → {glb_copy.relative_to(REPO_ROOT)}")
-        glb_path = glb_copy
-
-    # Copy texture PNG into output_dir so it is same-origin as the report.
-    # The original lives in 01_input/... which is unreachable when the server
-    # is rooted at 05_output/descriptors/.
-    texture_copy = None
-    if texture_path.exists():
-        tex_dest = output_dir / texture_path.name
-        if not tex_dest.exists() or tex_dest.stat().st_mtime < texture_path.stat().st_mtime:
-            _shutil.copy2(texture_path, tex_dest)
-            print(f"  Copied texture → {tex_dest.relative_to(REPO_ROOT)}")
-        texture_copy = tex_dest
-
-    report_path = generate_report(
-        descriptors, output_dir, viewer_data,
-        glb_path=glb_path,
-        texture_path=texture_copy,
-        feature_texture_paths=feature_texture_paths,
-    )
-    print(f"  Report → {report_path.relative_to(REPO_ROOT)}")
-
-    index_path = update_inventory(output_dir, highlight_id=args.frag_id)
-    print(f"  Index  → {index_path.relative_to(REPO_ROOT)}")
-    open_report(index_path)
-
-    print(f"\n  Next step: verify output in the inventory,")
-    print(f"  then commit: git commit -m 'data: descriptors {args.frag_id}'")
-    print()
+    # ── Single fragment ───────────────────────────────────────────────────────
+    run_single(args.frag_id, args, processed_dir, output_dir, open_browser=True)
 
 
 if __name__ == "__main__":

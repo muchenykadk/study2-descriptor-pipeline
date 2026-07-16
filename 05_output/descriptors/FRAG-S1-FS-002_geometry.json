@@ -1,5 +1,5 @@
 {
-  "fragment_id": "FRAG-S1-002",
+  "fragment_id": "FRAG-S1-FS-002",
   "input_type": "point_cloud",
   "pipeline_version": "v0.2",
   "computed_at": "2026-07-13T13:55:33.580095+00:00",
@@ -214,7 +214,7 @@
     "n_total": 3,
     "provider": "openai",
     "model": "gpt-4o",
-    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-002\\FRAG-S1-002_texture.png",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-002\\FRAG-S1-FS-002_texture.png",
     "data_status": "computed",
     "grid_classification": {
       "grid_n": 8,
@@ -301,5 +301,7 @@
         ]
       ]
     }
-  }
+  },
+  "archetype": "FS",
+  "archetype_label": "Floor Slab"
 }

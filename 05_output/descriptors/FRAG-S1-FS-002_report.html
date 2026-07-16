@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FRAG-S1-002 — Descriptor Report</title>
+  <title>FRAG-S1-FS-002 — Descriptor Report</title>
   <style>
 :root {
   --bg:       #0f1117;
@@ -216,7 +216,7 @@ body {
 
   <div class="header">
     <div>
-      <h1>FRAG-S1-002</h1>
+      <h1>FRAG-S1-FS-002</h1>
       <div style="color:var(--muted);font-size:11px;margin-top:4px">
         Study 2 Descriptor Pipeline · v0.2
       </div>
@@ -392,7 +392,7 @@ body {
 
   (function loadGLB() {
     var loader = new THREE.GLTFLoader();
-    loader.load('FRAG-S1-002.glb', function (gltf) {
+    loader.load('FRAG-S1-FS-002.glb', function (gltf) {
       meshGroup = gltf.scene;
       var box    = new THREE.Box3().setFromObject(meshGroup);
       var center = box.getCenter(new THREE.Vector3());
@@ -413,7 +413,7 @@ body {
 
   // ── Pre-load all feature textures ─────────────────────────────────────────
   (function loadFeatTextures() {
-    var paths = {"all": "FRAG-S1-002_feature_map.png", "exposed_aggregate": "FRAG-S1-002_feat_exposed_aggregate.png", "staining": "FRAG-S1-002_feat_staining.png", "weathered": "FRAG-S1-002_feat_weathered.png"};
+    var paths = {"all": "FRAG-S1-FS-002_feature_map.png", "exposed_aggregate": "FRAG-S1-FS-002_feat_exposed_aggregate.png", "staining": "FRAG-S1-FS-002_feat_staining.png", "weathered": "FRAG-S1-FS-002_feat_weathered.png"};
     var tl = new THREE.TextureLoader();
     Object.keys(paths).forEach(function (label) {
       tl.load(paths[label], function (tex) {
@@ -596,7 +596,7 @@ body {
   
   <div style="margin-bottom:16px">
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Texture Map</div>
-    <img src="../../01_input/meshes/processed/FRAG-S1-002/FRAG-S1-002_texture.png" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14" alt="Fragment texture map">
+    <img src="../../01_input/meshes/processed/FRAG-S1-FS-002/FRAG-S1-FS-002_texture.png" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14" alt="Fragment texture map">
   </div>
 
   <div class="stat-row" style="margin-bottom:16px">

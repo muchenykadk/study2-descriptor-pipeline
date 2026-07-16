@@ -113,19 +113,47 @@ def _save_image(image, path):
     image.file_format  = orig_format
     image.filepath_raw = orig_filepath
 
+def _find_base_color_image(mat):
+    """
+    Return the image plugged into Base Color of the Principled BSDF, if any.
+    This avoids accidentally exporting a normal map or roughness texture.
+    """
+    if not (mat and mat.use_nodes):
+        return None
+    for node in mat.node_tree.nodes:
+        if node.type == 'BSDF_PRINCIPLED':
+            bc_input = node.inputs.get("Base Color")
+            if bc_input and bc_input.is_linked:
+                linked = bc_input.links[0].from_node
+                if linked.type == 'TEX_IMAGE' and linked.image:
+                    return linked.image
+                # Handle node groups (e.g. BASE COLOR group)
+                if linked.type == 'GROUP' and linked.node_tree:
+                    imgs = _collect_images(linked.node_tree)
+                    if imgs:
+                        return max(imgs, key=lambda x: x[0].size[0] * x[0].size[1])[0]
+    return None
+
 tex_image = None
 all_images = []
 for slot in obj_active.material_slots:
     mat = slot.material
+    # Prefer the image connected to Base Color — avoids normal/roughness maps
+    tex_image = _find_base_color_image(mat)
+    if tex_image:
+        break
     if mat and mat.use_nodes:
         all_images.extend(_collect_images(mat.node_tree))
 
-if all_images:
+if not tex_image and all_images:
     if len(all_images) == 1:
         tex_image = all_images[0][0]
     else:
-        # Pick the largest image (baked texture is usually biggest)
+        # Fallback: pick the largest image
         tex_image = max(all_images, key=lambda x: x[0].size[0] * x[0].size[1])[0]
+    print(f"   ⚠ No Base Color connection found — using largest image as fallback")
+
+if tex_image:
     print(f"   Texture found: '{tex_image.name}'  ({tex_image.size[0]}×{tex_image.size[1]})")
 
 if tex_image:

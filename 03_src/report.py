@@ -395,6 +395,12 @@ def _viewer_section(regions: list, viewer_data: dict,
         '<div class="legend-item">'
         '<div class="legend-dot" style="background:#3d4455"></div>Unclassified</div>'
     )
+    if viewer_data.get("has_unscanned"):
+        legend_items += (
+            '<div class="legend-row">'
+            '<div class="legend-dot" style="background:#94a3b8"></div>'
+            'Unscanned (ground contact)</div>'
+        )
 
     has_scan_js = "true" if color_mode == "scan" else "false"
 
@@ -460,6 +466,17 @@ def _viewer_section(regions: list, viewer_data: dict,
 
         # ── Serialise texture map for JS ─────────────────────────────────────
         feat_tex_js = json.dumps(feat_tex_rels)   # {"all": "path", "staining": "path", ...}
+
+        # ── Feature Labels button (point cloud mode, shown only when features exist) ──
+        has_features    = viewer_data.get("has_features", False)
+        has_features_js = json.dumps(has_features)
+        feat_colors_js  = json.dumps([_LABEL_COLORS.get(lbl, "#b0b8d0") for lbl in TAXONOMY])
+        feat_labels_btn = (
+            '<button id="feat-labels-btn" onclick="window.toggleFeatureLabels()" '
+            'style="display:none;position:absolute;top:8px;right:8px;background:#1e2030;'
+            'border:1px solid #7c83fd;color:#7c83fd;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Feature Labels</button>'
+        ) if has_features else ""
 
         glb_js = f"""
 
@@ -563,24 +580,46 @@ def _viewer_section(regions: list, viewer_data: dict,
     document.getElementById('mesh-toggle').textContent = showMeshMode ? 'Point Cloud' : 'Textured Mesh';
     // Close feature panel when switching to point cloud
     if (!showMeshMode && featurePanelOpen) window.toggleFeaturePanel();
+    // Reset feature-label colours when returning to mesh view
+    if (showMeshMode && showFeatureLabels) window.toggleFeatureLabels();
     var leg   = document.getElementById('viewer-legend');
-    if (leg)  leg.style.display = (!showMeshMode && curMode === 'region') ? '' : 'none';
+    if (leg)  leg.style.display = (!showMeshMode && curMode === 'region' && !showFeatureLabels) ? '' : 'none';
     var ctBtn = document.getElementById('color-toggle');
     if (ctBtn) ctBtn.style.display = (!showMeshMode && {has_scan_js}) ? '' : 'none';
     var fBtn  = document.getElementById('feature-btn');
     if (fBtn)  fBtn.style.display = showMeshMode && {json.dumps(bool(feat_tex_rels))}.toString() === 'true' ? '' : 'none';
+    var flBtn = document.getElementById('feat-labels-btn');
+    if (flBtn) flBtn.style.display = (!showMeshMode && HAS_FEATURES) ? '' : 'none';
   }};
 """
     else:
         mesh_toggle_btn  = ""
         feature_main_btn = ""
+        feat_labels_btn  = ""
         gltf_script_tag  = ""
         glb_js           = ""
+        has_features     = False
+        has_features_js  = "false"
+        feat_colors_js   = json.dumps([_LABEL_COLORS.get(lbl, "#b0b8d0") for lbl in TAXONOMY])
         scan_toggle_btn  = (
             '<button id="color-toggle" style="position:absolute;top:8px;right:8px;'
             'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
             'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
         ) if color_mode == "scan" else ""
+
+    # ── Feature legend (shown in Feature Labels point-cloud mode) ────────────
+    if has_features:
+        _fl_items = "".join(
+            f'<div class="legend-item">'
+            f'<div class="legend-dot" style="background:{_LABEL_COLORS.get(lbl, "#b0b8d0")}"></div>'
+            f'{lbl.replace("_", " ")}</div>'
+            for lbl in TAXONOMY
+        ) + '<div class="legend-item"><div class="legend-dot" style="background:#111318"></div>Unlabeled</div>'
+        feat_legend_html = (
+            f'<div class="viewer-legend" id="feat-legend" style="display:none">{_fl_items}</div>'
+        )
+    else:
+        feat_legend_html = ""
 
     return f"""
 <div class="section">
@@ -590,9 +629,11 @@ def _viewer_section(regions: list, viewer_data: dict,
     <div class="viewer-hint">drag to rotate &nbsp;·&nbsp; scroll to zoom</div>
     {mesh_toggle_btn}
     {feature_main_btn}
+    {feat_labels_btn}
     {scan_toggle_btn}
   </div>
   <div class="viewer-legend" id="viewer-legend" style="display:none">{legend_items}</div>
+  {feat_legend_html}
   {chips_html}
 </div>
 
@@ -602,7 +643,9 @@ def _viewer_section(regions: list, viewer_data: dict,
 (function () {{
   var POINT_DATA   = {point_json};
   var HAS_SCAN     = {has_scan_js};
+  var HAS_FEATURES = {has_features_js};
   var COLORS       = {json.dumps(REGION_COLORS)};
+  var FEAT_COLORS  = {feat_colors_js};
   var UNCLASSIFIED = '#3d4455';
   var curMode      = '{color_mode}';
 
@@ -625,16 +668,26 @@ def _viewer_section(regions: list, viewer_data: dict,
   renderer.setSize(W, H);
   renderer.outputEncoding = THREE.sRGBEncoding;
 
-  var positions = [], scanColors = [], regionColors = [];
+  var UNSCANNED_ID    = 100;
+  var UNSCANNED_COLOR = '#94a3b8';   // grey-blue — ground-contact face (not scanned)
+
+  var positions = [], scanColors = [], regionColors = [], featureColors = [];
+  var showFeatureLabels = false;
   var col = new THREE.Color();
   for (var i = 0; i < POINT_DATA.length; i++) {{
     var p = POINT_DATA[i];
     positions.push(p[0], p[1], p[2]);
     if (HAS_SCAN && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
-    else col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
+    else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     scanColors.push(col.r, col.g, col.b);
-    col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
+    col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     regionColors.push(col.r, col.g, col.b);
+    // Feature label colour: UNSCANNED stays grey, labeled points → FEAT_COLORS[fid], unlabeled → near-black
+    var fid = (p.length >= 5) ? p[4] : -1;
+    if (p[3] === UNSCANNED_ID) col.set(UNSCANNED_COLOR);
+    else if (fid >= 0 && fid < FEAT_COLORS.length) col.set(FEAT_COLORS[fid]);
+    else col.set('#111318');
+    featureColors.push(col.r, col.g, col.b);
   }}
   var geo  = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -705,6 +758,30 @@ def _viewer_section(regions: list, viewer_data: dict,
     document.querySelectorAll('.region-row').forEach(function (r) {{
       r.classList.toggle('row-active', parseInt(r.dataset.regionId) === regionId);
     }});
+  }};
+
+  // ── Feature Labels colour mode (point cloud) ──────────────────────────────
+  // Colours each sampled point by its 8×8 grid feature label rather than
+  // RANSAC region — shows the true spatial distribution of surface features.
+  window.toggleFeatureLabels = function () {{
+    showFeatureLabels = !showFeatureLabels;
+    var arr = showFeatureLabels ? featureColors : regionColors;
+    cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+    var btn = document.getElementById('feat-labels-btn');
+    if (btn) {{
+      btn.textContent       = showFeatureLabels ? 'Region Colors' : 'Feature Labels';
+      btn.style.color       = showFeatureLabels ? '#fbbf24' : '#7c83fd';
+      btn.style.borderColor = showFeatureLabels ? '#fbbf24' : '#7c83fd';
+    }}
+    var leg  = document.getElementById('viewer-legend');
+    var fleg = document.getElementById('feat-legend');
+    if (showFeatureLabels) {{
+      if (leg)  leg.style.display  = 'none';
+      if (fleg) fleg.style.display = '';
+    }} else {{
+      if (leg)  leg.style.display  = (curMode === 'region') ? '' : 'none';
+      if (fleg) fleg.style.display = 'none';
+    }}
   }};
 {glb_js}
 }})();
@@ -1303,6 +1380,8 @@ const REGION_COLORS = [
   '#7c83fd','#4ade80','#fbbf24','#f87171',
   '#60a5fa','#c084fc','#fb923c','#34d399'
 ];
+const UNSCANNED_ID    = 100;
+const UNSCANNED_COLOR = '#94a3b8';   // grey-blue — ground-contact face (not scanned)
 
 const ROUGHNESS_GRADES = {
   S:  { label: 'Smooth',     color: '#4ade80' },
@@ -1569,9 +1648,9 @@ function loadPointCloud(points, regions, colorMode) {
     var p = points[i];
     positions.push(p[0], p[1], p[2]);
     if (hasScan && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
-    else col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));
     scanColArr.push(col.r, col.g, col.b);
-    col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));
     regionColArr.push(col.r, col.g, col.b);
   }
   var geo = new THREE.BufferGeometry();
@@ -1604,6 +1683,11 @@ function loadPointCloud(points, regions, colorMode) {
             'R'+(j+1)+' · '+area+'</span>';
   }
   html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:#3d4455;display:inline-block"></span>unclassified</span>';
+  // Check if any point has UNSCANNED_ID
+  var hasUnscanned = points.some(function(p) { return p[3] === UNSCANNED_ID; });
+  if (hasUnscanned) {
+    html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:' + UNSCANNED_COLOR + ';display:inline-block"></span>unscanned (ground contact)</span>';
+  }
   leg.innerHTML = html;
 }
 
@@ -1689,6 +1773,10 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
     hash_init     = f'"{highlight_id}"' if highlight_id else "null"
     count         = len(fragments)
 
+    # _INDEX_JS is a plain string (not an f-string), so {hash_init} inside it
+    # must be substituted manually before embedding into the HTML template.
+    index_js = _INDEX_JS.replace('{hash_init}', hash_init)
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1721,7 +1809,7 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-{_INDEX_JS}
+{index_js}
 init({fragment_json}, {viewer_json});
 </script>
 </body>

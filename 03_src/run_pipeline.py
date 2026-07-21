@@ -51,6 +51,8 @@ from descriptors.feature_texture import build_feature_textures
 from report import generate_report, open_report, update_inventory
 from ai.vision_client import classify_texture
 from ai.texture_segmentation import classify_texture_grid
+from ai.taxonomy import TAXONOMY as _TAXONOMY
+from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -220,12 +222,27 @@ def _normalize_points(points: np.ndarray):
     return pts_c / scale, scale
 
 
-def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000) -> dict:
-    """Sample mesh surface, assign region IDs. Points in [-1, 1]."""
+VIEWER_UNSCANNED_ID = 100  # sentinel region_id for UNSCANNED points in the viewer
+
+
+def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
+                      unscanned_sidecar: dict | None = None,
+                      grid_data: dict | None = None) -> dict:
+    """Sample mesh surface, assign region IDs. Points in [-1, 1].
+
+    If unscanned_sidecar is provided, points whose face normal is within 20° of
+    the recorded UNSCANNED normal are assigned VIEWER_UNSCANNED_ID (100) and
+    rendered grey in the viewer — bypassing RANSAC entirely.
+
+    If grid_data is provided, per-point feature_ids are derived from UV → 8×8
+    grid cell → TAXONOMY index.  This gives spatially correct feature colours in
+    the point cloud viewer (based on the actual grid classification, not UV
+    texture projection which shows arbitrary UV island shapes).
+    """
     if not planes:
         return {"points": [], "n_regions": 0, "color_mode": "region"}
 
-    points, _ = trimesh.sample.sample_surface(mesh, n_points)
+    points, face_indices = trimesh.sample.sample_surface(mesh, n_points)
     region_ids = np.full(len(points), -1, dtype=int)
     best_dist  = np.full(len(points), np.inf)
 
@@ -237,13 +254,81 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000)
         region_ids[mask] = i
         best_dist[mask]  = distances[mask]
 
+    # UNSCANNED overlay — direct face-normal + position match, no RANSAC
+    #
+    # Sidecar records avg_normal and avg_center in Blender Z-up space.
+    # Blender GLB export converts to Y-up:  gltf = [blender_x, blender_z, -blender_y]
+    #
+    # Strategy:
+    #   1. Normal match:   face normal within 20° of the converted UNSCANNED normal
+    #   2. Position match: point's GLB-Y coordinate within 80 mm of the bottom face
+    #                      (avg_center Blender-Z == face Y in GLB space)
+    # Both filters together isolate the filled ground-contact face without
+    # catching the many rough side/overhang faces that also point somewhat downward.
+    has_unscanned = False
+    if unscanned_sidecar is not None:
+        bx, by, bz = unscanned_sidecar["avg_normal"]
+        u_normal = np.array([bx, bz, -by], dtype=float)   # Blender → GLB Y-up
+        u_normal /= np.linalg.norm(u_normal)
+
+        face_normals_sampled = mesh.face_normals[face_indices]
+        cos_angles    = np.abs(face_normals_sampled @ u_normal)
+        normal_mask   = cos_angles >= np.cos(np.radians(20.0))
+
+        # NOTE: sidecar avg_center is in Blender LOCAL space; GLB uses WORLD
+        # coordinates — cannot use avg_center[2] as an absolute GLB Y.
+        # Derive bottom-face Y from the normal-matching sampled points instead.
+        if normal_mask.any():
+            y_bottom_pts  = float(points[normal_mask][:, 1].min())
+            pos_mask      = points[:, 1] < (y_bottom_pts + 0.08)   # ≤ 80 mm above bottom
+        else:
+            pos_mask      = np.zeros(len(points), dtype=bool)
+
+        unscanned_mask = normal_mask & pos_mask
+        if unscanned_mask.any():
+            region_ids[unscanned_mask] = VIEWER_UNSCANNED_ID
+            has_unscanned = True
+            print(f"  (UNSCANNED: {unscanned_mask.sum()} / {len(points)} sampled points marked)")
+
+    # Per-point feature labels via UV → 8×8 grid → TAXONOMY index.
+    # This maps the Phase 3B grid classification onto sampled surface points,
+    # giving spatially meaningful feature colours (8×8 blocks in 3D space,
+    # not the arbitrary UV-island shapes that the UV-texture overlay produces).
+    feature_ids  = np.full(len(points), -1, dtype=int)
+    has_features = False
+    if grid_data is not None:
+        vis = getattr(mesh, "visual", None)
+        if vis is not None and hasattr(vis, "uv") and vis.uv is not None:
+            grid_n   = grid_data["grid_n"]
+            cells    = grid_data["cells"]
+            _t_index = {lbl: i for i, lbl in enumerate(_TAXONOMY)}
+            # Average UV of the 3 face vertices for each sampled point's face
+            face_uvs = vis.uv[mesh.faces[face_indices]].mean(axis=1)  # (N, 2)
+            u_coords = np.clip(face_uvs[:, 0], 0.0, 1.0)
+            v_coords = np.clip(face_uvs[:, 1], 0.0, 1.0)
+            g_rows   = (v_coords * grid_n).astype(int).clip(0, grid_n - 1)
+            g_cols   = (u_coords * grid_n).astype(int).clip(0, grid_n - 1)
+            for k, (r, c) in enumerate(zip(g_rows, g_cols)):
+                lbl = cells[r][c]
+                if lbl and lbl in _t_index:
+                    feature_ids[k] = _t_index[lbl]
+            # UNSCANNED points are excluded from feature extraction — keep -1
+            if has_unscanned:
+                feature_ids[region_ids == VIEWER_UNSCANNED_ID] = -1
+            n_labeled = int((feature_ids >= 0).sum())
+            has_features = n_labeled > 0
+            print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled from UV grid)")
+
     pts_n, scale = _normalize_points(points)
     return {
-        "color_mode": "region",
-        "points":     [[round(float(x), 4), round(float(y), 4), round(float(z), 4), int(r)]
-                       for (x, y, z), r in zip(pts_n, region_ids)],
-        "n_regions":  len(planes),
-        "scale_mm":   round(scale, 1),
+        "color_mode":    "region",
+        "points":        [[round(float(x), 4), round(float(y), 4), round(float(z), 4),
+                           int(r), int(f)]
+                          for (x, y, z), r, f in zip(pts_n, region_ids, feature_ids)],
+        "n_regions":     len(planes),
+        "has_unscanned": has_unscanned,
+        "has_features":  has_features,
+        "scale_mm":      round(scale, 1),
     }
 
 
@@ -299,6 +384,100 @@ def build_viewer_data_pcd(pcd: o3d.geometry.PointCloud, planes: list,
     }
 
 
+def build_unscanned_texture_mask(
+    mesh: trimesh.Trimesh,
+    unscanned_sidecar: dict,
+    texture_size: int = 1080,
+) -> "np.ndarray | None":
+    """
+    Return a boolean (H, W) mask where True = pixel belongs to UNSCANNED faces.
+
+    Identifies UNSCANNED faces on the already-loaded GLB mesh using the same
+    normal + position filter as build_viewer_data, then rasterises their UV
+    triangles into texture space.
+
+    Used to zero out fake bottom-face pixels before the 8×8 grid classifier
+    sends cells to the vision API — preventing the AI from assigning surface
+    feature labels to a synthetically filled face.
+
+    glTF UV convention: (0, 0) = top-left, V increases downward → same as PIL,
+    so no V-flip is needed when converting UV → pixel coordinates.
+    """
+    if unscanned_sidecar is None:
+        return None
+    vis = getattr(mesh, "visual", None)
+    if vis is None or not hasattr(vis, "uv") or vis.uv is None:
+        print("  (UNSCANNED texture mask: mesh has no UV — skipping)")
+        return None
+
+    # Identify UNSCANNED faces (same normal + position filter as build_viewer_data)
+    bx, by, bz = unscanned_sidecar["avg_normal"]
+    u_normal  = np.array([bx, bz, -by], dtype=float)   # Blender Z-up → GLB Y-up
+    u_normal /= np.linalg.norm(u_normal)
+
+    face_normals = mesh.face_normals                          # (N_faces, 3)
+    cos_angles   = np.abs(face_normals @ u_normal)
+    normal_mask  = cos_angles >= np.cos(np.radians(20.0))
+
+    # face centroid Y in GLB space
+    face_centroids = mesh.vertices[mesh.faces].mean(axis=1)  # (N_faces, 3)
+
+    # NOTE: sidecar avg_center is in Blender LOCAL space; GLB uses WORLD
+    # coordinates (the object's world transform is baked in on export).
+    # We cannot use avg_center[2] as an absolute GLB Y threshold.
+    # Instead derive the bottom face Y from the normal-matching faces:
+    # the lowest centroid-Y among downward-pointing faces IS the filled
+    # bottom face; 80 mm margin captures the whole flat region.
+    if not normal_mask.any():
+        print("  (UNSCANNED texture mask: no faces match normal — skipping)")
+        return None
+    y_bottom = float(face_centroids[normal_mask][:, 1].min())
+    pos_mask = face_centroids[:, 1] < (y_bottom + 0.08)
+
+    unscanned_face_idx = np.where(normal_mask & pos_mask)[0]
+    if len(unscanned_face_idx) == 0:
+        print("  (UNSCANNED texture mask: no matching faces — skipping)")
+        return None
+
+    # Rasterise UV triangles of the UNSCANNED faces into a binary mask
+    from PIL import Image as _PILImage, ImageDraw as _PILDraw
+    img  = _PILImage.new("L", (texture_size, texture_size), 0)
+    draw = _PILDraw.Draw(img)
+
+    uv    = mesh.visual.uv   # (N_split_verts, 2) — u,v ∈ [0, 1]
+    faces = mesh.faces        # (N_faces, 3) — indices into split-vert array
+    W = H = texture_size
+
+    for fi in unscanned_face_idx:
+        tri_uv = uv[faces[fi]]                              # (3, 2)
+        px = [(int(float(np.clip(u, 0, 1)) * W),
+               int(float(np.clip(v, 0, 1)) * H))
+              for u, v in tri_uv]
+        draw.polygon(px, fill=255)
+
+    mask = np.array(img) > 0
+    print(f"  (UNSCANNED texture mask: {mask.sum()} px "
+          f"[{mask.mean()*100:.1f}%] from {len(unscanned_face_idx)} faces)")
+    return mask
+
+
+def _mask_to_excluded_cells(mask: np.ndarray, grid_n: int) -> set:
+    """
+    Return the set of (row, col) grid cells where ≥50 % of pixels are masked.
+    These cells contain UNSCANNED face texture and must be zeroed before
+    passing the grid to the vision API and feature-texture renderer.
+    """
+    H, W = mask.shape
+    excluded: set = set()
+    for row in range(grid_n):
+        for col in range(grid_n):
+            r0, r1 = row * H // grid_n, (row + 1) * H // grid_n
+            c0, c1 = col * W // grid_n, (col + 1) * W // grid_n
+            if mask[r0:r1, c0:c1].mean() >= 0.5:
+                excluded.add((row, col))
+    return excluded
+
+
 def save_output(frag_id: str, data: dict, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / f"{frag_id}_geometry.json"
@@ -348,13 +527,34 @@ def run_single(frag_id: str, args: argparse.Namespace,
             print(f"  ⚠ No texture PNG found at {texture_path}")
             print(f"  Run Blender export script first, then re-run with --phase3")
 
+    # ── Read scan coverage sidecar early ─────────────────────────────────────
+    # Needed here (before Phase 3B) so the UNSCANNED texture mask can be built
+    # and applied before the vision API call.  Also used for RANSAC flagging
+    # and scan_coverage block below.  scan_coverage.py still works as a
+    # standalone re-annotator when needed.
+    _sidecar = read_sidecar(frag_id, processed_dir)
+
     # ── Phase 3B: spatial feature localization ───────────────────────────────
+    grid_data: dict | None = None      # set below if Phase 3B classification runs
     feature_texture_paths: dict = {}
     if args.phase3 and descriptors.get("vision"):
         texture_path_3b = processed_dir / frag_id / f"{frag_id}_texture.png"
         if texture_path_3b.exists():
             print("\n  ── Phase 3B: spatial feature localization ──")
             grid_data = classify_texture_grid(texture_path_3b)
+
+            # Zero out grid cells that fall on the UNSCANNED (fake) face so the
+            # AI label and the feature-texture colour are both suppressed there.
+            if _sidecar is not None and input_type != "point_cloud":
+                _tex_mask = build_unscanned_texture_mask(source, _sidecar)
+                if _tex_mask is not None:
+                    _excl = _mask_to_excluded_cells(_tex_mask, grid_data["grid_n"])
+                    if _excl:
+                        for _row, _col in _excl:
+                            grid_data["cells"][_row][_col] = None
+                        print(f"  (UNSCANNED: {len(_excl)} grid cell(s) cleared "
+                              f"from feature map)")
+
             descriptors["vision"]["grid_classification"] = grid_data
             feature_texture_paths = build_feature_textures(
                 texture_path_3b,
@@ -366,6 +566,33 @@ def run_single(frag_id: str, args: argparse.Namespace,
         else:
             print("  ⚠ Phase 3B skipped: texture PNG not found")
 
+    # ── Scan coverage: flag RANSAC planes + add block ─────────────────────────
+    if _sidecar is not None:
+        _planes = descriptors.get("planarity", [])
+        if _planes:
+            descriptors["planarity"] = flag_unscanned_planes(
+                _planes, _sidecar, ANGLE_THRESHOLD_DEG
+            )
+            _n_unreliable = sum(
+                1 for p in descriptors["planarity"] if not p.get("scan_reliable", True)
+            )
+            print(f"  ✓  Scan coverage: {_n_unreliable}/{len(_planes)} plane(s) flagged as unscanned")
+        descriptors["scan_coverage"] = {
+            "has_unscanned_face":            _sidecar.get("has_unscanned_face", True),
+            "unscanned_avg_normal":          _sidecar["avg_normal"],
+            "unscanned_avg_center":          _sidecar.get("avg_center"),
+            "unscanned_face_count_original": _sidecar.get("face_count"),
+            "angle_threshold_deg":           ANGLE_THRESHOLD_DEG,
+            "notes": (
+                "Ground-contact face not captured during photogrammetry scanning. "
+                "Descriptor values derived from reliable faces only. "
+                "Planarity regions within angle_threshold_deg of unscanned normal "
+                "are flagged scan_reliable: false and excluded from connection "
+                "feasibility assessment."
+            ),
+            "data_status": "annotated",
+        }
+
     # ── Save ─────────────────────────────────────────────────────────────────
     out_path = save_output(frag_id, descriptors, output_dir)
     print(f"\n  Saved → {out_path.relative_to(REPO_ROOT)}")
@@ -376,7 +603,8 @@ def run_single(frag_id: str, args: argparse.Namespace,
     if input_type == "point_cloud":
         viewer_data = build_viewer_data_pcd(source, planes)
     else:
-        viewer_data = build_viewer_data(source, planes)
+        viewer_data = build_viewer_data(source, planes, unscanned_sidecar=_sidecar,
+                                        grid_data=grid_data)
     print(f"{len(viewer_data['points'])} points packed  ({viewer_data['color_mode']} colors)")
 
     viewer_json_path = output_dir / f"{frag_id}_viewer.json"

@@ -224,6 +224,37 @@ def _normalize_points(points: np.ndarray):
 
 VIEWER_UNSCANNED_ID = 100  # sentinel region_id for UNSCANNED points in the viewer
 
+UNSCANNED_ANGLE_DEG = 20.0   # face normal within this angle of sidecar normal
+UNSCANNED_Y_MARGIN  = 0.08   # metres above the bottom face still counted
+
+
+def unscanned_face_idx(mesh: trimesh.Trimesh,
+                       unscanned_sidecar: dict) -> np.ndarray | None:
+    """Return indices of mesh faces belonging to the UNSCANNED (patched) bottom
+    face, or None if the sidecar normal matches nothing.
+
+    Single source of truth for the normal + position filter used by the
+    texture mask, the viewer point cloud, and the per-face feature labels.
+    Sidecar avg_normal is Blender Z-up; GLB is Y-up: gltf = [bx, bz, -by].
+    """
+    bx, by, bz = unscanned_sidecar["avg_normal"]
+    u_normal  = np.array([bx, bz, -by], dtype=float)
+    u_normal /= np.linalg.norm(u_normal)
+
+    cos_angles  = np.abs(mesh.face_normals @ u_normal)
+    normal_mask = cos_angles >= np.cos(np.radians(UNSCANNED_ANGLE_DEG))
+    if not normal_mask.any():
+        return None
+
+    # Sidecar avg_center is Blender LOCAL space; GLB is world — derive the
+    # bottom-face height from the normal-matching faces instead.
+    face_centroids = mesh.vertices[mesh.faces].mean(axis=1)
+    y_bottom = float(face_centroids[normal_mask][:, 1].min())
+    pos_mask = face_centroids[:, 1] < (y_bottom + UNSCANNED_Y_MARGIN)
+
+    idx = np.where(normal_mask & pos_mask)[0]
+    return idx if len(idx) else None
+
 
 def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
                       unscanned_sidecar: dict | None = None,
@@ -234,10 +265,11 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
     the recorded UNSCANNED normal are assigned VIEWER_UNSCANNED_ID (100) and
     rendered grey in the viewer — bypassing RANSAC entirely.
 
-    If grid_data is provided, per-point feature_ids are derived from UV → 8×8
-    grid cell → TAXONOMY index.  This gives spatially correct feature colours in
-    the point cloud viewer (based on the actual grid classification, not UV
-    texture projection which shows arbitrary UV island shapes).
+    If grid_data is provided, per-point feature_ids are derived per mesh face:
+    the face's UV centroid selects its grid cell → label → TAXONOMY index, and
+    each sampled point inherits the label of the face it was sampled from.
+    Labels therefore follow the actual texture locations on the 3D surface
+    (no spatial-grid smearing).
     """
     if not planes:
         return {"points": [], "n_regions": 0, "color_mode": "region"}
@@ -254,55 +286,59 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
         region_ids[mask] = i
         best_dist[mask]  = distances[mask]
 
-    # UNSCANNED overlay — direct face-normal + position match, no RANSAC
-    #
-    # Sidecar records avg_normal and avg_center in Blender Z-up space.
-    # Blender GLB export converts to Y-up:  gltf = [blender_x, blender_z, -blender_y]
-    #
-    # Strategy:
-    #   1. Normal match:   face normal within 20° of the converted UNSCANNED normal
-    #   2. Position match: point's GLB-Y coordinate within 80 mm of the bottom face
-    #                      (avg_center Blender-Z == face Y in GLB space)
-    # Both filters together isolate the filled ground-contact face without
-    # catching the many rough side/overhang faces that also point somewhat downward.
-    has_unscanned = False
+    # UNSCANNED overlay — sampled points inherit membership from their source
+    # face via the shared unscanned_face_idx() helper (normal + position
+    # filter on mesh faces).  One face set drives the texture mask, the point
+    # cloud, the per-face feature labels, and the viewer's mesh overlay.
+    has_unscanned  = False
+    us_face_set    = None      # np bool array over faces, or None
+    us_params      = None      # dict passed to the JS viewer for the 3D test
     if unscanned_sidecar is not None:
-        bx, by, bz = unscanned_sidecar["avg_normal"]
-        u_normal = np.array([bx, bz, -by], dtype=float)   # Blender → GLB Y-up
-        u_normal /= np.linalg.norm(u_normal)
+        us_idx = unscanned_face_idx(mesh, unscanned_sidecar)
+        if us_idx is not None:
+            us_face_set = np.zeros(len(mesh.faces), dtype=bool)
+            us_face_set[us_idx] = True
 
-        face_normals_sampled = mesh.face_normals[face_indices]
-        cos_angles    = np.abs(face_normals_sampled @ u_normal)
-        normal_mask   = cos_angles >= np.cos(np.radians(20.0))
+            unscanned_mask = us_face_set[face_indices]
+            if unscanned_mask.any():
+                region_ids[unscanned_mask] = VIEWER_UNSCANNED_ID
+                has_unscanned = True
+                print(f"  (UNSCANNED: {unscanned_mask.sum()} / {len(points)} sampled points marked)")
 
-        # NOTE: sidecar avg_center is in Blender LOCAL space; GLB uses WORLD
-        # coordinates — cannot use avg_center[2] as an absolute GLB Y.
-        # Derive bottom-face Y from the normal-matching sampled points instead.
-        if normal_mask.any():
-            y_bottom_pts  = float(points[normal_mask][:, 1].min())
-            pos_mask      = points[:, 1] < (y_bottom_pts + 0.08)   # ≤ 80 mm above bottom
-        else:
-            pos_mask      = np.zeros(len(points), dtype=bool)
+            # Parameters for the same test in the viewer JS.
+            #
+            # FRAME-INVARIANT: the GLB may carry node transforms (FS-006 has a
+            # node translation), and the viewer scales/centres the model, so an
+            # absolute Y threshold is meaningless in JS.  We therefore ship the
+            # cut height as a FRACTION of the mesh's vertical extent; the JS
+            # evaluates positions/normals in world space via matrixWorld, where
+            # translation + uniform scale preserve the fraction and directions.
+            bx, by, bz = unscanned_sidecar["avg_normal"]
+            u_n = np.array([bx, bz, -by], dtype=float)
+            u_n /= np.linalg.norm(u_n)
+            fc  = mesh.vertices[mesh.faces].mean(axis=1)
+            vmin_y = float(mesh.vertices[:, 1].min())
+            vmax_y = float(mesh.vertices[:, 1].max())
+            y_cut  = float(fc[us_idx][:, 1].min()) + UNSCANNED_Y_MARGIN
+            y_frac = (y_cut - vmin_y) / max(vmax_y - vmin_y, 1e-9)
+            us_params = {
+                "normal":    [round(float(v), 4) for v in u_n],
+                "cos_angle": round(float(np.cos(np.radians(UNSCANNED_ANGLE_DEG))), 4),
+                "y_frac":    round(float(np.clip(y_frac, 0.0, 1.0)), 4),
+            }
 
-        unscanned_mask = normal_mask & pos_mask
-        if unscanned_mask.any():
-            region_ids[unscanned_mask] = VIEWER_UNSCANNED_ID
-            has_unscanned = True
-            print(f"  (UNSCANNED: {unscanned_mask.sum()} / {len(points)} sampled points marked)")
-
-    # Per-point feature labels via 3D spatial majority-vote.
+    # Per-point feature labels via per-face UV lookup.
     #
-    # UV → grid cell is NOT spatially coherent for Smart UV Project meshes:
-    # scattered UV islands produce fragmented triangular patches in 3D.
-    # Fix: divide the mesh bounding box into GRID_N × GRID_N cells in the
-    # XZ (top-down) plane.  Each spatial cell collects UV-label votes from
-    # all mesh vertices; the dominant label wins.  Sampled points are then
-    # colored by their spatial cell's dominant label → clean rectangular
-    # regions, no UV-fragmentation artefacts.
+    # Each mesh face's UV centroid selects its grid cell → label.  Sampled
+    # points inherit the label of the face they were sampled from, so labels
+    # sit exactly where the classified texture sits on the 3D surface.  The
+    # earlier XZ spatial majority-vote is gone: it collapsed the vertical
+    # axis (side faces were overwritten by the dominant top-surface label)
+    # and rendered bbox-aligned blocks that ignored real surface boundaries.
     #
     # UNSCANNED handling: their UV cells are cleared to None in Phase 3B, so
-    # they contribute zero votes.  The top/side face vertices in the same
-    # spatial cell dominate and provide the correct label automatically.
+    # faces landing in those cells stay unlabeled; UNSCANNED sampled points
+    # are additionally forced to -1 below.
     feature_ids  = np.full(len(points), -1, dtype=int)
     has_features = False
     if grid_data is not None:
@@ -312,53 +348,36 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
             cells    = grid_data["cells"]
             _t_index = {lbl: i for i, lbl in enumerate(_TAXONOMY)}
 
-            # ── Step 1: build spatial-cell → label vote map ─────────────────
-            verts   = mesh.vertices                         # (V, 3)  XYZ
-            v_uvs   = vis.uv                                # (V, 2)  per-vertex UV
-            x_min, z_min = verts[:, 0].min(), verts[:, 2].min()
-            x_rng = max(float(verts[:, 0].max() - x_min), 1e-6)
-            z_rng = max(float(verts[:, 2].max() - z_min), 1e-6)
-            # Spatial cell indices for every vertex
-            sx = ((verts[:, 0] - x_min) / x_rng * grid_n).astype(int).clip(0, grid_n - 1)
-            sz = ((verts[:, 2] - z_min) / z_rng * grid_n).astype(int).clip(0, grid_n - 1)
-            # UV grid cell labels for every vertex (None → cleared/UNSCANNED)
-            u_c  = np.clip(v_uvs[:, 0], 0.0, 1.0)
-            v_c  = np.clip(v_uvs[:, 1], 0.0, 1.0)
-            ugr  = (v_c * grid_n).astype(int).clip(0, grid_n - 1)
-            ugc  = (u_c * grid_n).astype(int).clip(0, grid_n - 1)
-            # votes[(sr, sc)][label] += 1  (only for non-null UV labels)
-            from collections import defaultdict
-            vote_map: dict = defaultdict(lambda: defaultdict(int))
-            for vi in range(len(verts)):
-                lbl = cells[ugr[vi]][ugc[vi]]
+            # ── Step 1: label every mesh face from its UV centroid ──────────
+            # NOTE V-FLIP: trimesh converts GLB UVs to OpenGL convention
+            # (v = 0 at image BOTTOM), while grid cells are in image space
+            # (row 0 = image TOP, as classified).  Rows must use (1 - v).
+            # The JS viewer needs NO flip: Three.js keeps glTF convention,
+            # which already matches image space.
+            v_uvs     = np.clip(np.asarray(vis.uv, dtype=float), 0.0, 1.0)  # (V, 2)
+            face_uvs  = v_uvs[mesh.faces].mean(axis=1)                      # (F, 2)
+            f_ugc     = (face_uvs[:, 0] * grid_n).astype(int).clip(0, grid_n - 1)
+            f_ugr     = ((1.0 - face_uvs[:, 1]) * grid_n).astype(int).clip(0, grid_n - 1)
+            face_fid  = np.full(len(mesh.faces), -1, dtype=int)
+            for fi in range(len(mesh.faces)):
+                lbl = cells[f_ugr[fi]][f_ugc[fi]]
                 if lbl and lbl in _t_index:
-                    vote_map[(int(sz[vi]), int(sx[vi]))][lbl] += 1
+                    face_fid[fi] = _t_index[lbl]
 
-            # Dominant label per spatial cell
-            dom_label: dict = {
-                key: max(cnts, key=cnts.__getitem__)
-                for key, cnts in vote_map.items()
-            }
+            # UNSCANNED faces → never labeled, regardless of UV cell.  This is
+            # the authoritative opt-out: the patched bottom face scatters into
+            # many UV cells at trace coverage, so cell-clearing alone cannot
+            # exclude it.
+            if us_face_set is not None:
+                face_fid[us_face_set] = -1
 
-            # ── Step 2: assign feature_id to each sampled point ─────────────
-            # Sampled points already have 3D positions in `points` (world space,
-            # same coordinate frame as mesh.vertices because trimesh preserves it)
-            pt_sx = ((points[:, 0] - x_min) / x_rng * grid_n).astype(int).clip(0, grid_n - 1)
-            pt_sz = ((points[:, 2] - z_min) / z_rng * grid_n).astype(int).clip(0, grid_n - 1)
-            for k in range(len(points)):
-                key = (int(pt_sz[k]), int(pt_sx[k]))
-                lbl = dom_label.get(key)
-                if lbl and lbl in _t_index:
-                    feature_ids[k] = _t_index[lbl]
-
-            # UNSCANNED sampled points → always unlabeled
-            if has_unscanned:
-                feature_ids[region_ids == VIEWER_UNSCANNED_ID] = -1
+            # ── Step 2: sampled points inherit their source face's label ────
+            feature_ids = face_fid[face_indices]
 
             n_labeled = int((feature_ids >= 0).sum())
             has_features = n_labeled > 0
             print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled "
-                  f"from {len(dom_label)} spatial cells)")
+                  f"from {int((face_fid >= 0).sum())}/{len(face_fid)} labeled faces)")
 
     pts_n, scale = _normalize_points(points)
     return {
@@ -369,6 +388,7 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
         "n_regions":     len(planes),
         "has_unscanned": has_unscanned,
         "has_features":  has_features,
+        "unscanned_3d":  us_params,
         "scale_mm":      round(scale, 1),
     }
 
@@ -451,32 +471,9 @@ def build_unscanned_texture_mask(
         print("  (UNSCANNED texture mask: mesh has no UV — skipping)")
         return None
 
-    # Identify UNSCANNED faces (same normal + position filter as build_viewer_data)
-    bx, by, bz = unscanned_sidecar["avg_normal"]
-    u_normal  = np.array([bx, bz, -by], dtype=float)   # Blender Z-up → GLB Y-up
-    u_normal /= np.linalg.norm(u_normal)
-
-    face_normals = mesh.face_normals                          # (N_faces, 3)
-    cos_angles   = np.abs(face_normals @ u_normal)
-    normal_mask  = cos_angles >= np.cos(np.radians(20.0))
-
-    # face centroid Y in GLB space
-    face_centroids = mesh.vertices[mesh.faces].mean(axis=1)  # (N_faces, 3)
-
-    # NOTE: sidecar avg_center is in Blender LOCAL space; GLB uses WORLD
-    # coordinates (the object's world transform is baked in on export).
-    # We cannot use avg_center[2] as an absolute GLB Y threshold.
-    # Instead derive the bottom face Y from the normal-matching faces:
-    # the lowest centroid-Y among downward-pointing faces IS the filled
-    # bottom face; 80 mm margin captures the whole flat region.
-    if not normal_mask.any():
-        print("  (UNSCANNED texture mask: no faces match normal — skipping)")
-        return None
-    y_bottom = float(face_centroids[normal_mask][:, 1].min())
-    pos_mask = face_centroids[:, 1] < (y_bottom + 0.08)
-
-    unscanned_face_idx = np.where(normal_mask & pos_mask)[0]
-    if len(unscanned_face_idx) == 0:
+    # Identify UNSCANNED faces (shared helper — same filter everywhere)
+    us_idx = unscanned_face_idx(mesh, unscanned_sidecar)
+    if us_idx is None:
         print("  (UNSCANNED texture mask: no matching faces — skipping)")
         return None
 
@@ -489,24 +486,30 @@ def build_unscanned_texture_mask(
     faces = mesh.faces        # (N_faces, 3) — indices into split-vert array
     W = H = texture_size
 
-    for fi in unscanned_face_idx:
+    # NOTE V-FLIP: trimesh UVs are OpenGL convention (v = 0 at image bottom);
+    # the mask must be in image space (row 0 = top) → rasterise at (1 - v).
+    for fi in us_idx:
         tri_uv = uv[faces[fi]]                              # (3, 2)
         px = [(int(float(np.clip(u, 0, 1)) * W),
-               int(float(np.clip(v, 0, 1)) * H))
+               int(float(1.0 - np.clip(v, 0, 1)) * H))
               for u, v in tri_uv]
         draw.polygon(px, fill=255)
 
     mask = np.array(img) > 0
     print(f"  (UNSCANNED texture mask: {mask.sum()} px "
-          f"[{mask.mean()*100:.1f}%] from {len(unscanned_face_idx)} faces)")
+          f"[{mask.mean()*100:.1f}%] from {len(us_idx)} faces)")
     return mask
 
 
-def _mask_to_excluded_cells(mask: np.ndarray, grid_n: int) -> set:
+def _mask_to_excluded_cells(mask: np.ndarray, grid_n: int,
+                            threshold: float = 0.3) -> set:
     """
-    Return the set of (row, col) grid cells where ≥50 % of pixels are masked.
-    These cells contain UNSCANNED face texture and must be zeroed before
-    passing the grid to the vision API and feature-texture renderer.
+    Return the set of (row, col) grid cells where ≥ threshold of pixels are
+    masked as UNSCANNED.  These cells are majority reconstructed-patch texture:
+    they are named as such in the classifier prompt and cleared from the grid.
+
+    Cells with only trace patch coverage are NOT excluded — their real texture
+    dominates, and patch faces are opted out per-face in 3D anyway.
     """
     H, W = mask.shape
     excluded: set = set()
@@ -514,7 +517,7 @@ def _mask_to_excluded_cells(mask: np.ndarray, grid_n: int) -> set:
         for col in range(grid_n):
             r0, r1 = row * H // grid_n, (row + 1) * H // grid_n
             c0, c1 = col * W // grid_n, (col + 1) * W // grid_n
-            if mask[r0:r1, c0:c1].mean() >= 0.5:
+            if mask[r0:r1, c0:c1].mean() >= threshold:
                 excluded.add((row, col))
     return excluded
 
@@ -582,19 +585,29 @@ def run_single(frag_id: str, args: argparse.Namespace,
         texture_path_3b = processed_dir / frag_id / f"{frag_id}_texture.png"
         if texture_path_3b.exists():
             print("\n  ── Phase 3B: spatial feature localization ──")
-            grid_data = classify_texture_grid(texture_path_3b)
 
-            # Zero out grid cells that fall on the UNSCANNED (fake) face so the
-            # AI label and the feature-texture colour are both suppressed there.
+            # Build the UNSCANNED texture mask FIRST so the classifier can be
+            # told which cells are a reconstructed patch (assign null) instead
+            # of classifying fake texture.  Note: only majority-patch cells are
+            # excluded; the authoritative opt-out happens per-face in 3D
+            # (build_viewer_data / viewer JS), because the patch scatters into
+            # many UV cells at trace coverage.
+            _excl: set = set()
             if _sidecar is not None and input_type != "point_cloud":
                 _tex_mask = build_unscanned_texture_mask(source, _sidecar)
                 if _tex_mask is not None:
-                    _excl = _mask_to_excluded_cells(_tex_mask, grid_data["grid_n"])
+                    from ai.texture_segmentation import GRID_N as _SEG_GRID_N
+                    _excl = _mask_to_excluded_cells(_tex_mask, _SEG_GRID_N)
                     if _excl:
-                        for _row, _col in _excl:
-                            grid_data["cells"][_row][_col] = None
-                        print(f"  (UNSCANNED: {len(_excl)} grid cell(s) cleared "
-                              f"from feature map)")
+                        print(f"  (UNSCANNED: {len(_excl)} grid cell(s) flagged "
+                              f"as reconstructed patch)")
+
+            grid_data = classify_texture_grid(texture_path_3b,
+                                              excluded_cells=_excl)
+
+            # Belt and braces: force-clear the excluded cells after return.
+            for _row, _col in _excl:
+                grid_data["cells"][_row][_col] = None
 
             descriptors["vision"]["grid_classification"] = grid_data
             feature_texture_paths = build_feature_textures(

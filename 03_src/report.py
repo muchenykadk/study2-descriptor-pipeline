@@ -470,7 +470,8 @@ def _viewer_section(regions: list, viewer_data: dict,
 
         # ── Grid classification data for vertex-colour feature overlay ────────
         # When present, mesh vertices are coloured by UV→cell→label directly
-        # (spatially correct 8×8 blocks) rather than UV texture projection.
+        # (16×16 quadrant-classified grid; labels follow the texture on the
+        # 3D surface).
         if grid_data:
             grid_cells_js   = json.dumps(grid_data["cells"])
             grid_n_js       = str(grid_data["grid_n"])
@@ -478,6 +479,9 @@ def _viewer_section(regions: list, viewer_data: dict,
             grid_cells_js   = "null"
             grid_n_js       = "8"
         taxonomy_idx_js = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
+        # UNSCANNED 3D test parameters (mesh-local space) — authoritative
+        # opt-out of the reconstructed bottom face in the feature overlay.
+        unsc_3d_js = json.dumps(viewer_data.get("unscanned_3d"))
 
         # ── Feature Labels button (point cloud mode, shown only when features exist) ──
         has_features    = viewer_data.get("has_features", False)
@@ -497,12 +501,13 @@ def _viewer_section(regions: list, viewer_data: dict,
   var showMeshMode = true;
   var activeFeat   = null;
 
-  // Grid classification — used to colour mesh vertices by UV→cell→label.
-  // Gives spatially correct feature regions (8×8 blocks in 3D space)
-  // instead of UV island shapes produced by the old texture overlay approach.
+  // Grid classification — used to colour mesh vertices by UV→cell→label
+  // (GRID_N × GRID_N global grid, quadrant-classified with majority voting).
   var GRID_CELLS     = {grid_cells_js};
   var GRID_N         = {grid_n_js};
   var TAXONOMY_INDEX = {taxonomy_idx_js};
+  // UNSCANNED patch test in mesh-local space: {{normal, cos_angle, y_max}}
+  var UNSC_3D        = {unsc_3d_js};
 
   (function loadGLB() {{
     var loader = new THREE.GLTFLoader();
@@ -525,100 +530,69 @@ def _viewer_section(regions: list, viewer_data: dict,
     }});
   }})();
 
-  // ── Spatial feature overlay (3-D grid, not UV grid) ──────────────────────
+  // ── Feature overlay (per-vertex UV → grid cell → label) ──────────────────
   //
-  // UV → grid cell is NOT spatially coherent: Smart UV Project scatters UV
-  // islands randomly, so the same UV grid cell can contain patches from
-  // completely different parts of the mesh. Coloring by UV cell produces
-  // scattered triangular fragments, not meaningful spatial regions.
+  // Each vertex looks up its own UV coordinate in the GRID_N × GRID_N
+  // classification grid and takes that cell's label. Labels therefore sit
+  // exactly where the classified texture sits on the 3D surface — no
+  // spatial-grid smearing, no bbox-aligned blocks. The finer grid (16×16,
+  // quadrant-classified with majority voting) keeps cell labels reliable
+  // enough that UV-island boundaries no longer fragment the result.
   //
-  // Fix: divide the mesh's world-space bounding box into GRID_N × GRID_N
-  // spatial cells (top-down X-Z view). Each spatial cell collects votes from
-  // all vertices whose UV falls in a labeled UV cell. The dominant label wins.
-  // Vertices are then colored by their spatial cell's dominant label → clean
-  // rectangular blocks on the 3D surface.
-  //
-  // UNSCANNED handling: UNSCANNED face UV cells are cleared to null in Phase
-  // 3B, so they contribute zero votes. The top/side face vertices in the same
-  // spatial cell dominate and supply the correct label automatically.
-
-  var _spatialCache = null;   // rebuilt whenever activateFeature is first called
-
-  function _buildSpatialLabels() {{
-    if (!meshGroup || !GRID_CELLS) return null;
-    var bbox   = new THREE.Box3().setFromObject(meshGroup);
-    var dx     = Math.max(bbox.max.x - bbox.min.x, 1e-6);
-    var dz     = Math.max(bbox.max.z - bbox.min.z, 1e-6);
-    var votes  = {{}};    // "sr_sc" → {{ label: count }}
-    var wPos   = new THREE.Vector3();
-
-    meshGroup.traverse(function (child) {{
-      if (!child.isMesh) return;
-      var posAttr = child.geometry.attributes.position;
-      var uvAttr  = child.geometry.attributes.uv;
-      if (!posAttr || !uvAttr) return;
-      var wMat = child.matrixWorld;
-      for (var i = 0; i < posAttr.count; i++) {{
-        // Spatial cell from world-space XZ position
-        wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
-        var nx = (wPos.x - bbox.min.x) / dx;
-        var nz = (wPos.z - bbox.min.z) / dz;
-        var sr = Math.min(Math.floor(nz * GRID_N), GRID_N - 1);
-        var sc = Math.min(Math.floor(nx * GRID_N), GRID_N - 1);
-        // UV grid label for this vertex
-        var u   = Math.max(0, Math.min(1, uvAttr.getX(i)));
-        var v   = Math.max(0, Math.min(1, uvAttr.getY(i)));
-        var ugc = Math.min(Math.floor(u * GRID_N), GRID_N - 1);
-        var ugr = Math.min(Math.floor(v * GRID_N), GRID_N - 1);
-        var lbl = GRID_CELLS[ugr][ugc];
-        if (!lbl) continue;   // null = UNSCANNED or empty → skip (no vote)
-        var key = sr + '_' + sc;
-        if (!votes[key]) votes[key] = {{}};
-        votes[key][lbl] = (votes[key][lbl] || 0) + 1;
-      }}
-    }});
-
-    // Dominant label per spatial cell
-    var domLabels = {{}};
-    Object.keys(votes).forEach(function (key) {{
-      var v = votes[key];
-      domLabels[key] = Object.keys(v).reduce(function (a, b) {{
-        return v[a] >= v[b] ? a : b;
-      }});
-    }});
-    return {{ labels: domLabels, bbox: bbox, dx: dx, dz: dz }};
-  }}
+  // UNSCANNED handling: majority-patch UV cells are cleared to null in Phase
+  // 3B, and additionally every vertex on the patched bottom face is forced
+  // unlabeled by the UNSC_3D normal + height test (mesh-local space) — the
+  // patch scatters into many UV cells at trace coverage, so cell-clearing
+  // alone cannot opt it out.
 
   function _applyFeatureVertexColors(targetLabel) {{
     if (!meshGroup || !GRID_CELLS) return;
-    if (!_spatialCache) _spatialCache = _buildSpatialLabels();
-    var spatial = _spatialCache;
-    if (!spatial) return;
-    var labels = spatial.labels;
-    var bbox   = spatial.bbox;
-    var dx     = spatial.dx;
-    var dz     = spatial.dz;
-    var c      = new THREE.Color();
-    var wPos   = new THREE.Vector3();
+    var c = new THREE.Color();
+    var cosLim = UNSC_3D ? UNSC_3D.cos_angle : 0;
+    var unx = UNSC_3D ? UNSC_3D.normal[0] : 0,
+        uny = UNSC_3D ? UNSC_3D.normal[1] : 0,
+        unz = UNSC_3D ? UNSC_3D.normal[2] : 0;
+    // World-space height cut: GLB node transforms + viewer scaling make local
+    // Y meaningless, so the cut is a fraction of the world bbox vertical span.
+    var yLim = -Infinity;
+    if (UNSC_3D) {{
+      meshGroup.updateMatrixWorld(true);
+      var wb = new THREE.Box3().setFromObject(meshGroup);
+      yLim = wb.min.y + UNSC_3D.y_frac * (wb.max.y - wb.min.y);
+    }}
+    var wPos = new THREE.Vector3();
+    var wNrm = new THREE.Vector3();
+    var nMat = new THREE.Matrix3();
 
     meshGroup.traverse(function (child) {{
       if (!child.isMesh) return;
       var geo     = child.geometry;
       var posAttr = geo.attributes.position;
-      if (!posAttr) return;
+      var uvAttr  = geo.attributes.uv;
+      var nrmAttr = geo.attributes.normal;
+      if (!posAttr || !uvAttr) return;
       var mat = child.material;
       if (mat._origMap === undefined) mat._origMap = mat.map;
       if (mat._origVC  === undefined) mat._origVC  = mat.vertexColors;
+      var wMat = child.matrixWorld;
+      nMat.getNormalMatrix(wMat);
       var n      = posAttr.count;
       var colArr = new Float32Array(n * 3);
-      var wMat   = child.matrixWorld;
       for (var i = 0; i < n; i++) {{
-        wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
-        var nx  = (wPos.x - bbox.min.x) / dx;
-        var nz  = (wPos.z - bbox.min.z) / dz;
-        var sr  = Math.min(Math.floor(nz * GRID_N), GRID_N - 1);
-        var sc  = Math.min(Math.floor(nx * GRID_N), GRID_N - 1);
-        var lbl = labels[sr + '_' + sc] || null;
+        var u   = Math.max(0, Math.min(1, uvAttr.getX(i)));
+        var v   = Math.max(0, Math.min(1, uvAttr.getY(i)));
+        var ugc = Math.min(Math.floor(u * GRID_N), GRID_N - 1);
+        var ugr = Math.min(Math.floor(v * GRID_N), GRID_N - 1);
+        var lbl = GRID_CELLS[ugr][ugc];
+        // UNSCANNED patch opt-out (world-space normal + height test)
+        if (lbl && UNSC_3D && nrmAttr) {{
+          wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
+          if (wPos.y <= yLim) {{
+            wNrm.fromBufferAttribute(nrmAttr, i).applyMatrix3(nMat).normalize();
+            var dot = Math.abs(wNrm.x * unx + wNrm.y * uny + wNrm.z * unz);
+            if (dot >= cosLim) lbl = null;
+          }}
+        }}
         var fid = (lbl && TAXONOMY_INDEX[lbl] !== undefined) ? TAXONOMY_INDEX[lbl] : -1;
         if (targetLabel === 'all') {{
           c.set(fid >= 0 ? FEAT_COLORS[fid] : '#111318');
@@ -638,7 +612,6 @@ def _viewer_section(regions: list, viewer_data: dict,
 
   function _restoreOrigMesh() {{
     if (!meshGroup) return;
-    _spatialCache = null;   // invalidate so it rebuilds fresh next time
     meshGroup.traverse(function (child) {{
       if (!child.isMesh || !child.material) return;
       var mat = child.material;

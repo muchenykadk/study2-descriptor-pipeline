@@ -1,0 +1,211 @@
+{
+  "fragment_id": "FRAG-S1-FS-006",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-07-21T09:18:16.818301+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      1.6626652773419945,
+      0.7034683215276902,
+      0.448452923946609
+    ],
+    "volume_mm3": 0.4,
+    "volume_m3": 0.0,
+    "volume_source": "convex_hull",
+    "convexity": null,
+    "mass_kg_est": 0.0,
+    "mass_data_status": "pseudo",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.019498,
+        0.998838,
+        -0.044067,
+        0.001311
+      ],
+      "normal_xyz": [
+        -0.0195,
+        0.9988,
+        -0.0441
+      ],
+      "inlier_count": 50000,
+      "inlier_fraction": 1.0,
+      "area_m2_est": 1e-06,
+      "fit_rms_mm": 0.142,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.7,
+      "scan_reliable": true
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.64566,
+      "std_rad": 0.0,
+      "p25_rad": 0.64566,
+      "p75_rad": 0.64566,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.64566,
+      "std_rad": 0.0,
+      "p25_rad": 0.64566,
+      "p75_rad": 0.64566,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "fracture_surface",
+    "labels_present": [
+      "exposed_aggregate",
+      "fracture_surface",
+      "weathered"
+    ],
+    "label_coverage": {
+      "fracture_surface": 50,
+      "exposed_aggregate": 30,
+      "weathered": 20
+    },
+    "label_details": {
+      "exposed_aggregate": {
+        "subtype": "crushed_stone",
+        "notes": "Crushed stone aggregates, grey and white, medium size."
+      },
+      "fracture_surface": {
+        "subtype": "matrix_fracture",
+        "notes": "Rough texture with visible matrix fractures, light grey color, medium size."
+      },
+      "weathered": {
+        "subtype": "carbonation",
+        "notes": "Surface shows signs of carbonation, lightened color, moderate condition."
+      }
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "branching",
+      "coverage_pct": 23
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominant light grey with some white aggregates, signs of carbonation.",
+    "reuse_notes": "The presence of matrix fractures and carbonation may limit structural reuse. Suitable for non-structural applications or as recycled aggregate.",
+    "confidence": "medium",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-006\\FRAG-S1-FS-006_texture.png",
+    "data_status": "computed",
+    "grid_classification": {
+      "grid_n": 8,
+      "cells": [
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ]
+      ]
+    }
+  },
+  "scan_coverage": {
+    "has_unscanned_face": true,
+    "unscanned_avg_normal": [
+      0.0199,
+      -0.067,
+      -0.9976
+    ],
+    "unscanned_avg_center": [
+      -0.0567,
+      -0.0865,
+      -0.2059
+    ],
+    "unscanned_face_count_original": 1325,
+    "angle_threshold_deg": 25.0,
+    "notes": "Ground-contact face not captured during photogrammetry scanning. Descriptor values derived from reliable faces only. Planarity regions within angle_threshold_deg of unscanned normal are flagged scan_reliable: false and excluded from connection feasibility assessment.",
+    "data_status": "annotated"
+  }
+}

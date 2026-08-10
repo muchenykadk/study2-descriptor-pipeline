@@ -1,0 +1,192 @@
+{
+  "fragment_id": "FRAG-S1-FS-004",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-07-17T13:56:36.324643+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      2.050392791591751,
+      1.242759205904596,
+      0.4490378847394424
+    ],
+    "volume_mm3": 0.6,
+    "volume_m3": 0.0,
+    "volume_source": "convex_hull",
+    "convexity": null,
+    "mass_kg_est": 0.0,
+    "mass_data_status": "pseudo",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.005446,
+        0.999049,
+        -0.043268,
+        0.000758
+      ],
+      "normal_xyz": [
+        -0.0054,
+        0.999,
+        -0.0433
+      ],
+      "inlier_count": 50000,
+      "inlier_fraction": 1.0,
+      "area_m2_est": 2e-06,
+      "fit_rms_mm": 0.145,
+      "data_status": "computed"
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.76706,
+      "std_rad": 0.0,
+      "p25_rad": 0.76706,
+      "p75_rad": 0.76706,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.76706,
+      "std_rad": 0.0,
+      "p25_rad": 0.76706,
+      "p75_rad": 0.76706,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "exposed_aggregate",
+    "labels_present": [
+      "exposed_aggregate",
+      "fracture_surface",
+      "weathered"
+    ],
+    "label_coverage": {
+      "exposed_aggregate": 50,
+      "fracture_surface": 30,
+      "weathered": 20
+    },
+    "label_details": {
+      "exposed_aggregate": {
+        "subtype": "crushed_stone",
+        "notes": "Visible crushed stone aggregates, grey and beige, medium size."
+      },
+      "fracture_surface": {
+        "subtype": "matrix_fracture",
+        "notes": "Irregular fracture surfaces, light grey, rough texture."
+      },
+      "weathered": {
+        "subtype": "carbonation",
+        "notes": "Surface shows signs of carbonation, whitish areas, moderate condition."
+      }
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "branching",
+      "coverage_pct": 15
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominant grey and beige tones with some whitish carbonation.",
+    "reuse_notes": "The presence of medium-sized crushed stone aggregates suggests potential for reuse in structural applications. Carbonation may require surface treatment before reuse.",
+    "confidence": "high",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-004\\FRAG-S1-FS-004_texture.png",
+    "data_status": "computed",
+    "grid_classification": {
+      "grid_n": 8,
+      "cells": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "formwork_imprint",
+          null,
+          null,
+          null,
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null,
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null,
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null
+        ],
+        [
+          null,
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ]
+      ]
+    }
+  }
+}

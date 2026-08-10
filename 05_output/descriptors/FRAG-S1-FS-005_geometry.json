@@ -1,0 +1,192 @@
+{
+  "fragment_id": "FRAG-S1-FS-005",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-07-20T13:01:12.300830+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      1.6626652773419945,
+      0.7034683215276902,
+      0.448452923946609
+    ],
+    "volume_mm3": 0.4,
+    "volume_m3": 0.0,
+    "volume_source": "convex_hull",
+    "convexity": null,
+    "mass_kg_est": 0.0,
+    "mass_data_status": "pseudo",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.020209,
+        0.998829,
+        -0.043957,
+        0.001034
+      ],
+      "normal_xyz": [
+        -0.0202,
+        0.9988,
+        -0.044
+      ],
+      "inlier_count": 50000,
+      "inlier_fraction": 1.0,
+      "area_m2_est": 1e-06,
+      "fit_rms_mm": 0.142,
+      "data_status": "computed"
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.62267,
+      "std_rad": 0.0,
+      "p25_rad": 0.62267,
+      "p75_rad": 0.62267,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.62267,
+      "std_rad": 0.0,
+      "p25_rad": 0.62267,
+      "p75_rad": 0.62267,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "fracture_surface",
+    "labels_present": [
+      "exposed_aggregate",
+      "fracture_surface",
+      "weathered"
+    ],
+    "label_coverage": {
+      "fracture_surface": 50,
+      "exposed_aggregate": 30,
+      "weathered": 20
+    },
+    "label_details": {
+      "exposed_aggregate": {
+        "subtype": "crushed_stone",
+        "notes": "Irregularly shaped crushed stone, grey and beige, small to medium size."
+      },
+      "fracture_surface": {
+        "subtype": "matrix_fracture",
+        "notes": "Rough texture with visible matrix fractures, light grey color, moderate size."
+      },
+      "weathered": {
+        "subtype": "carbonation",
+        "notes": "Surface shows signs of carbonation, lightened color, moderate condition."
+      }
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "branching",
+      "coverage_pct": 15
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominant grey and beige tones with some lightened areas due to carbonation.",
+    "reuse_notes": "The presence of matrix fractures and carbonation may limit structural reuse but could be suitable for decorative applications. Exposed aggregates offer aesthetic potential.",
+    "confidence": "medium",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-005\\FRAG-S1-FS-005_texture.png",
+    "data_status": "computed",
+    "grid_classification": {
+      "grid_n": 8,
+      "cells": [
+        [
+          "formwork_imprint",
+          null,
+          "formwork_imprint",
+          null,
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint"
+        ]
+      ]
+    }
+  }
+}

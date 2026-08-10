@@ -1,0 +1,192 @@
+{
+  "fragment_id": "FRAG-S1-FS-003",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-07-20T09:17:27.753805+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      2.0505782218325646,
+      1.2443647381187684,
+      0.45323807012198725
+    ],
+    "volume_mm3": 0.6,
+    "volume_m3": 0.0,
+    "volume_source": "convex_hull",
+    "convexity": null,
+    "mass_kg_est": 0.0,
+    "mass_data_status": "pseudo",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.004833,
+        0.999129,
+        -0.041451,
+        0.000112
+      ],
+      "normal_xyz": [
+        -0.0048,
+        0.9991,
+        -0.0415
+      ],
+      "inlier_count": 50000,
+      "inlier_fraction": 1.0,
+      "area_m2_est": 2e-06,
+      "fit_rms_mm": 0.145,
+      "data_status": "computed"
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.77306,
+      "std_rad": 0.0,
+      "p25_rad": 0.77306,
+      "p75_rad": 0.77306,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.77306,
+      "std_rad": 0.0,
+      "p25_rad": 0.77306,
+      "p75_rad": 0.77306,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "fracture_surface",
+    "labels_present": [
+      "exposed_aggregate",
+      "fracture_surface",
+      "weathered"
+    ],
+    "label_coverage": {
+      "fracture_surface": 50,
+      "exposed_aggregate": 30,
+      "weathered": 20
+    },
+    "label_details": {
+      "exposed_aggregate": {
+        "subtype": "crushed_stone",
+        "notes": "Irregularly shaped crushed stone, light grey, small to medium size."
+      },
+      "fracture_surface": {
+        "subtype": "matrix_fracture",
+        "notes": "Rough texture with visible matrix fractures, grey color, moderate size."
+      },
+      "weathered": {
+        "subtype": "carbonation",
+        "notes": "Surface shows signs of carbonation, light grey, moderate condition."
+      }
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "branching",
+      "coverage_pct": 23
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominant grey with some light brown staining, signs of carbonation.",
+    "reuse_notes": "The presence of matrix fractures and carbonation may limit structural reuse. Suitable for non-structural applications or as recycled aggregate.",
+    "confidence": "medium",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-003\\FRAG-S1-FS-003_texture.png",
+    "data_status": "computed",
+    "grid_classification": {
+      "grid_n": 8,
+      "cells": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          "formwork_imprint",
+          null,
+          null
+        ],
+        [
+          "fracture_surface",
+          "fracture_surface",
+          "fracture_surface",
+          "fracture_surface",
+          "fracture_surface",
+          "fracture_surface",
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null
+        ],
+        [
+          "rebar_visible",
+          "rebar_visible",
+          "rebar_visible",
+          "rebar_visible",
+          "rebar_visible",
+          "rebar_visible",
+          null,
+          null
+        ],
+        [
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered",
+          "weathered",
+          null,
+          null
+        ],
+        [
+          "staining",
+          "staining",
+          "staining",
+          "staining",
+          "staining",
+          "staining",
+          null,
+          null
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "has_unscanned_face": true,
+  "avg_normal": [
+    0.0348,
+    -0.994,
+    -0.1033
+  ],
+  "avg_center": [
+    0.1915,
+    0.2609,
+    0.6412
+  ],
+  "face_count": 0,
+  "loop_vertex_count": 484,
+  "total_boundary_loops": 256,
+  "detection_method": "auto_boundary_loop",
+  "notes": "Ground-contact face not captured during photogrammetry scanning. Normal estimated from the largest open boundary loop (Newell method). The voxel remesh closes this hole automatically."
+}

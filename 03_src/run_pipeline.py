@@ -51,7 +51,10 @@ from descriptors.feature_texture import build_feature_textures
 from report import generate_report, open_report, update_inventory
 from ai.vision_client import classify_texture
 from ai.texture_segmentation import classify_texture_grid
+from ai.region_classification import (classify_regions, cells_from_regions,
+                                      GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
+from descriptors.regions import segment_regions
 from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 
 
@@ -92,6 +95,22 @@ def _scale_check(max_dim_mm: float) -> None:
         print(f"\n  ⚠ SCALE WARNING: largest dimension {max_dim_mm:.1f} mm — too large.\n")
 
 
+def _autoscale_mesh(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
+    """Blender/Scaniverse GLB exports are in metres; the pipeline expects mm.
+
+    Same heuristic as the PLY path: a concrete fragment is never < 10 mm, so
+    a max dimension < 10 means metres → scale ×1000.  Without this, RANSAC's
+    3 mm threshold spans the whole fragment (one giant 'plane') and mass /
+    area estimates are off by 1e9.
+    """
+    max_dim = float(max(mesh.bounding_box.primitive.extents))
+    if max_dim < 10.0:
+        print(f"  ⚠ Mesh largest dim = {max_dim:.4f} — looks like metres. "
+              f"Auto-scaling ×1000 to mm.")
+        mesh.apply_scale(1000.0)
+    return mesh
+
+
 def load_input(frag_id: str, processed_dir: Path):
     """
     Load geometry for analysis. Priority: PLY → GLB → OBJ (fallback).
@@ -130,6 +149,7 @@ def load_input(frag_id: str, processed_dir: Path):
         mesh = trimesh.load(str(glb_path), force="mesh")
         print(f"  Loaded GLB: {len(mesh.vertices):,} vertices · {len(mesh.faces):,} faces")
         print(f"  Watertight: {mesh.is_watertight}")
+        mesh    = _autoscale_mesh(mesh)
         max_dim = float(max(mesh.bounding_box_oriented.primitive.extents))
         _scale_check(max_dim)
         return mesh, "mesh"
@@ -138,6 +158,7 @@ def load_input(frag_id: str, processed_dir: Path):
         mesh = trimesh.load(str(obj_path), force="mesh")
         print(f"  Loaded OBJ: {len(mesh.vertices):,} vertices · {len(mesh.faces):,} faces")
         print(f"  Watertight: {mesh.is_watertight}")
+        mesh    = _autoscale_mesh(mesh)
         max_dim = float(max(mesh.bounding_box_oriented.primitive.extents))
         _scale_check(max_dim)
         return mesh, "mesh"
@@ -225,7 +246,8 @@ def _normalize_points(points: np.ndarray):
 VIEWER_UNSCANNED_ID = 100  # sentinel region_id for UNSCANNED points in the viewer
 
 UNSCANNED_ANGLE_DEG = 20.0   # face normal within this angle of sidecar normal
-UNSCANNED_Y_MARGIN  = 0.08   # metres above the bottom face still counted
+UNSCANNED_Y_MARGIN  = 80.0   # mm above the bottom face still counted
+                             # (mesh is auto-scaled to mm in load_input)
 
 
 def unscanned_face_idx(mesh: trimesh.Trimesh,
@@ -586,28 +608,63 @@ def run_single(frag_id: str, args: argparse.Namespace,
         if texture_path_3b.exists():
             print("\n  ── Phase 3B: spatial feature localization ──")
 
-            # Build the UNSCANNED texture mask FIRST so the classifier can be
-            # told which cells are a reconstructed patch (assign null) instead
-            # of classifying fake texture.  Note: only majority-patch cells are
-            # excluded; the authoritative opt-out happens per-face in 3D
-            # (build_viewer_data / viewer JS), because the patch scatters into
-            # many UV cells at trace coverage.
-            _excl: set = set()
+            _tex_mask = None
             if _sidecar is not None and input_type != "point_cloud":
                 _tex_mask = build_unscanned_texture_mask(source, _sidecar)
+
+            if input_type == "mesh" and not args.grid_legacy:
+                # ── Region-based classification (default) ────────────────────
+                # Segment the mesh into coherent surface regions (RANSAC
+                # planes + fracture clusters), classify each region from its
+                # own full-res texture crop (one batched call per vote), then
+                # backfill the 16×16 grid so viewer/report stay unchanged.
+                _us_idx = (unscanned_face_idx(source, _sidecar)
+                           if _sidecar is not None else None)
+                _regions = segment_regions(source,
+                                           descriptors.get("planarity", []),
+                                           unscanned_idx=_us_idx)
+                print(f"  Regions: " + ", ".join(
+                    f"#{r['region_id']} {r['kind']}"
+                    f"({r['area_frac']*100:.0f}%)" for r in _regions))
+                _results, _crops = classify_regions(texture_path_3b, source,
+                                                    _regions)
+                for _res in _results:
+                    if _res["label"]:
+                        _an = (f" +{len(_res['anomalies'])} anomalies"
+                               if _res["anomalies"] else "")
+                        print(f"    region #{_res['region_id']} "
+                              f"({_res['kind']}, {_res['area_frac']*100:.0f}%)"
+                              f" → {_res['label']}{_an}")
+                from PIL import Image as _PIL
+                _tex_size = _PIL.open(texture_path_3b).size[0]
+                _cells = cells_from_regions(_results, _crops, _tex_size,
+                                            unscanned_mask=_tex_mask)
+                grid_data = {"grid_n": REGION_GRID_N, "cells": _cells,
+                             "method": "region"}
+                # per-region results into descriptors + planarity linkage
+                descriptors["vision"]["regions"] = [
+                    {k: r[k] for k in ("region_id", "kind", "plane_index",
+                                       "area_frac", "label", "anomalies",
+                                       "n_label_votes")}
+                    for r in _results
+                ]
+                for _res in _results:
+                    if _res["plane_index"] is not None and _res["label"]:
+                        descriptors["planarity"][_res["plane_index"]][
+                            "surface_label"] = _res["label"]
+            else:
+                # ── Legacy grid classification (--grid-legacy / point cloud) ─
+                _excl: set = set()
                 if _tex_mask is not None:
                     from ai.texture_segmentation import GRID_N as _SEG_GRID_N
                     _excl = _mask_to_excluded_cells(_tex_mask, _SEG_GRID_N)
                     if _excl:
                         print(f"  (UNSCANNED: {len(_excl)} grid cell(s) flagged "
                               f"as reconstructed patch)")
-
-            grid_data = classify_texture_grid(texture_path_3b,
-                                              excluded_cells=_excl)
-
-            # Belt and braces: force-clear the excluded cells after return.
-            for _row, _col in _excl:
-                grid_data["cells"][_row][_col] = None
+                grid_data = classify_texture_grid(texture_path_3b,
+                                                  excluded_cells=_excl)
+                for _row, _col in _excl:
+                    grid_data["cells"][_row][_col] = None
 
             descriptors["vision"]["grid_classification"] = grid_data
             feature_texture_paths = build_feature_textures(
@@ -774,6 +831,11 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
     parser.add_argument(
         "--serve", action="store_true",
         help="Skip all calculations — just open the existing report in the browser."
+    )
+    parser.add_argument(
+        "--grid-legacy", action="store_true",
+        help="Use the legacy per-cell grid classification instead of "
+             "region-based classification."
     )
     args = parser.parse_args()
     args.phase3 = not args.geometry_only

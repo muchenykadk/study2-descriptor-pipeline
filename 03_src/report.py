@@ -355,7 +355,7 @@ def _bounding_section(b: dict) -> str:
       {convexity_html}
     </div>
     <div class="stat-card">
-      <div class="stat-label">Mass Estimate {_badge(mass_status)}</div>
+      <div class="stat-label">Mass Estimate</div>
       <div class="stat-value">{_fmt(mass, 3)}<span class="stat-unit"> kg</span></div>
       <div class="stat-sub">@ 2400 kg/m³ concrete</div>
     </div>
@@ -1597,7 +1597,7 @@ function renderDetail(fragment) {
         '<div class="stat-chip"><div class="chip-label">OBB Dimensions</div><div class="chip-val" style="font-size:12px">' + dims + '</div><div class="chip-sub">mm (L × W × H)</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Volume</div><div class="chip-val">' + fmt(b.volume_m3, 6) + '</div><div class="chip-sub">m³ (' + (b.volume_source || 'mesh') + ')</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Convexity</div>' + convHtml + '</div>' +
-        '<div class="stat-chip"><div class="chip-label">Mass (pseudo)</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2400 kg/m³</div></div>' +
+        '<div class="stat-chip"><div class="chip-label">Mass Estimate</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2400 kg/m³</div></div>' +
       '</div>' +
     '</div>' +
 

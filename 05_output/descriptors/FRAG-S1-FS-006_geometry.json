@@ -4,7 +4,7 @@
   "archetype_label": "Floor Slab",
   "input_type": "mesh",
   "pipeline_version": "v0.2",
-  "computed_at": "2026-07-21T09:18:16.818301+00:00",
+  "computed_at": "2026-08-10T03:04:38.090067+00:00",
   "ransac_threshold_mm": 3.0,
   "bounding": {
     "obb_dims_mm": [
@@ -24,38 +24,38 @@
   "planarity": [
     {
       "plane_abcd": [
-        -0.019498,
-        0.998838,
-        -0.044067,
-        0.001311
+        -0.020742,
+        0.99867,
+        -0.047195,
+        -0.000206
       ],
       "normal_xyz": [
-        -0.0195,
-        0.9988,
-        -0.0441
+        -0.0207,
+        0.9987,
+        -0.0472
       ],
       "inlier_count": 50000,
       "inlier_fraction": 1.0,
       "area_m2_est": 1e-06,
-      "fit_rms_mm": 0.142,
+      "fit_rms_mm": 0.143,
       "data_status": "computed",
-      "angle_to_unscanned_deg": 88.7,
+      "angle_to_unscanned_deg": 88.8,
       "scan_reliable": true
     }
   ],
   "curvature": {
     "fine_mm": {
-      "mean_rad": 0.64566,
+      "mean_rad": 0.59375,
       "std_rad": 0.0,
-      "p25_rad": 0.64566,
-      "p75_rad": 0.64566,
+      "p25_rad": 0.59375,
+      "p75_rad": 0.59375,
       "radius_mm": 20.0
     },
     "coarse_mm": {
-      "mean_rad": 0.64566,
+      "mean_rad": 0.59375,
       "std_rad": 0.0,
-      "p25_rad": 0.64566,
-      "p75_rad": 0.64566,
+      "p25_rad": 0.59375,
+      "p75_rad": 0.59375,
       "radius_mm": 60.0
     },
     "data_status": "computed"

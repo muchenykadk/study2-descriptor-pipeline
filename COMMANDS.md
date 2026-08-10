@@ -78,10 +78,17 @@ python 03_src/run_pipeline.py FRAG-S1-FS-003 --ransac-threshold 5.0
 
 ---
 
+**Re-apply scan-coverage flags** (auto-runs inside the pipeline when a `_scan_coverage.json` sidecar exists; standalone re-annotation only):
+```powershell
+python 03_src/scan_coverage.py FRAG-S1-FS-003
+```
+
+---
+
 ## Blender export
 
-Open `02_blender/export_fragment.py` in the Blender Scripting tab.  
-Set `FRAG_ID = "FRAG-S1-{ARCHETYPE}-{###}"` at the top, select the mesh, click ▶ Run Script.
+Use the **v2 scripts** (they also write the UNSCANNED `_scan_coverage.json` sidecar): open `02_blender/bake_texture_v2.py` (remesh + bake + export) or `02_blender/export_fragment_v2.py` (export only) in the Blender Scripting tab.  
+Set `FRAG_ID = "FRAG-S1-{ARCHETYPE}-{###}"` at the top, select the mesh, click ▶ Run Script. Assign the `UNSCANNED` vertex group to the manually closed ground-contact faces *before* running (see `HANDOVER.md` §5–6).
 
 Outputs:
 - `01_input/meshes/processed/FRAG-S1-{ARCHETYPE}-{###}/FRAG-S1-{ARCHETYPE}-{###}.glb`
@@ -125,7 +132,11 @@ git log --oneline -10
 
 ## Fragment registry
 
-| ID | Archetype | Status |
+| ID | Archetype | Status (2026-08-10) |
 |---|---|---|
-| FRAG-S1-FS-001 | Floor Slab | raw scan only (no Blender processing) |
-| FRAG-S1-FS-002 | Floor Slab | processed — descriptors complete |
+| FRAG-S1-FS-001 | Floor Slab | geometry-only descriptors (no AI run yet) |
+| FRAG-S1-FS-002 | Floor Slab | processed — descriptors + feature map |
+| FRAG-S1-FS-003 | Floor Slab | processed — descriptors + feature map; UNSCANNED sidecar |
+| FRAG-S1-FS-004 | Floor Slab | processed — descriptors + feature map |
+| FRAG-S1-FS-005 | Floor Slab | processed — descriptors + feature map |
+| FRAG-S1-FS-006 | Floor Slab | processed — descriptors + feature map; UNSCANNED verified |

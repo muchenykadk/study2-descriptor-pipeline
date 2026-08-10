@@ -1,2 +1,7 @@
 fragment_id,mesh_file,texture_file,photo_dir,scan_quality,vertex_count,known_mass_kg,notes
-FRAG-S1-001,,,,,,,
+FRAG-S1-FS-001,01_input/meshes/processed/FRAG-S1-FS-001/FRAG-S1-FS-001.glb,01_input/meshes/processed/FRAG-S1-FS-001/FRAG-S1-FS-001_texture.png,,,,,geometry-only descriptors; AI run pending
+FRAG-S1-FS-002,01_input/meshes/processed/FRAG-S1-FS-002/FRAG-S1-FS-002.glb,01_input/meshes/processed/FRAG-S1-FS-002/FRAG-S1-FS-002_texture.png,,,,,descriptors + feature map complete
+FRAG-S1-FS-003,01_input/meshes/processed/FRAG-S1-FS-003/FRAG-S1-FS-003.glb,01_input/meshes/processed/FRAG-S1-FS-003/FRAG-S1-FS-003_texture.png,,,,,descriptors + feature map complete; UNSCANNED sidecar
+FRAG-S1-FS-004,01_input/meshes/processed/FRAG-S1-FS-004/FRAG-S1-FS-004.glb,01_input/meshes/processed/FRAG-S1-FS-004/FRAG-S1-FS-004_texture.png,,,,,descriptors + feature map complete
+FRAG-S1-FS-005,01_input/meshes/processed/FRAG-S1-FS-005/FRAG-S1-FS-005.glb,01_input/meshes/processed/FRAG-S1-FS-005/FRAG-S1-FS-005_texture.png,,,,,descriptors + feature map complete
+FRAG-S1-FS-006,01_input/meshes/processed/FRAG-S1-FS-006/FRAG-S1-FS-006.glb,01_input/meshes/processed/FRAG-S1-FS-006/FRAG-S1-FS-006_texture.png,,,,,descriptors + feature map complete; UNSCANNED verified

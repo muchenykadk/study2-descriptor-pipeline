@@ -1,7 +1,7 @@
 # Study 2 — Pipeline Workflow
 
 Source of truth for **when to do what**, what to run, and when to upgrade.  
-Keep this open alongside Blender and Rhino during active work sessions.
+Keep this open alongside Blender during active work sessions.
 
 ---
 
@@ -9,10 +9,12 @@ Keep this open alongside Blender and Rhino during active work sessions.
 
 ```
 Scaniverse (iPad Pro)   → raw scan (.glb — fused geometry + baked texture)
-Blender                 → clean mesh, UV unwrap, texture rebake → .glb + _texture.png
-Python (run_pipeline.py)→ geometry + AI descriptors → JSON + HTML report
-Rhino / Grasshopper     → design queries, annotation (annotate.gh), figures
+Blender                 → clean mesh, UNSCANNED marking, UV unwrap, texture bake → .glb + _texture.png + sidecar
+Python (run_pipeline.py)→ geometry + AI descriptors + scan-coverage flags → JSON + HTML report
+HTML / Three.js viewer  → per-fragment report + inventory (run_pipeline.py --serve)
 ```
+
+(The earlier Rhino / Grasshopper stage is superseded; `02_gh/` is unused.)
 
 ---
 
@@ -53,14 +55,24 @@ If you deleted faces, merged vertices, or decimated heavily:
 - [ ] Bake: select cleaned mesh first (active), shift-click original scan, Bake type = Diffuse, uncheck Direct/Indirect, enable Selected to Active, Ray Distance ~5 mm
 - [ ] Save the baked texture PNG
 
-### Export — run the Blender script (automates both exports)
+### Mark the UNSCANNED ground-contact face (before export)
 
-Open `02_blender/export_fragment.py` in the Blender Scripting tab.  
+The ground-contact face is never captured by the scan. After closing the hole manually (select boundary edge loop → F):
+
+- [ ] With the filled faces still selected: Object Data Properties → Vertex Groups → `+` → name `UNSCANNED` → Assign
+- [ ] Verify: deselect all → select the `UNSCANNED` group → Select → the closed patch highlights
+
+### Export — run the Blender script (automates both exports + sidecar)
+
+Open **`02_blender/bake_texture_v2.py`** (remesh + UV + bake + export) or **`02_blender/export_fragment_v2.py`** (export only, if the texture is already good) in the Blender Scripting tab.  
 Set `FRAG_ID` at the top, select the cleaned mesh, click Run Script (▶).
 
 This produces:
 - `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###.glb` — mesh + UV (pipeline input + 3D viewer)
 - `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_texture.png` — rebaked albedo (AI analysis)
+- `01_input/meshes/processed/FRAG-S1-###/FRAG-S1-###_scan_coverage.json` — UNSCANNED sidecar (read automatically by the pipeline)
+
+(The v1 scripts `bake_texture.py` / `export_fragment.py` still work for fragments without an UNSCANNED vertex group.)
 
 > Manual export alternative if the script fails:  
 > **GLB**: File → Export → glTF 2.0 · Format = Binary (.glb) · ✓ UVs · ✓ Normals · ✓ Materials  
@@ -99,6 +111,8 @@ python 03_src/run_pipeline.py FRAG-S1-FS-001 --geometry-only
 Output: `05_output/descriptors/FRAG-S1-FS-001_geometry.json` + HTML report  
 The terminal prints OBB dimensions, mass estimate, planar regions, and AI feature labels.
 
+If a `_scan_coverage.json` sidecar exists, the pipeline automatically flags matching RANSAC planes `scan_reliable: false` and excludes UNSCANNED texture cells from AI classification. Batch mode: `python 03_src/run_pipeline.py --batch`. View reports: `python 03_src/run_pipeline.py --serve`.
+
 Requires `env/.env` with `OPENAI_API_KEY` for AI classification (copy `env/.env.example` → `env/.env`).
 
 > **Git:** commit after running:  
@@ -124,10 +138,14 @@ For each AI-classified field, fill in `human_value` and `human_notes`, set `data
 
 ---
 
-## Step 6 — Rhino / Grasshopper
+## Step 5 — Review in the viewer
 
-Import the GLB: `_Import` → select `FRAG-S1-###.glb`  
-Open `02_gh/inventory_query.gh` to query the descriptor inventory.
+```powershell
+python 03_src/run_pipeline.py --serve
+```
+Opens the inventory (`05_output/descriptors/index.html`) over HTTP; per-fragment reports include the 3D viewer with planar regions, feature labels, and UNSCANNED overlay.
+
+> The earlier Rhino / Grasshopper step (`02_gh/inventory_query.gh`) is superseded and unused.
 
 ---
 

@@ -365,7 +365,8 @@ def _bounding_section(b: dict) -> str:
 
 def _viewer_section(regions: list, viewer_data: dict,
                     glb_rel_path: str = "",
-                    feat_tex_rels: dict = None) -> str:
+                    feat_tex_rels: dict = None,
+                    grid_data: dict = None) -> str:
     """
     Build the 3D viewer section HTML + embedded Three.js script.
 
@@ -467,6 +468,17 @@ def _viewer_section(regions: list, viewer_data: dict,
         # ── Serialise texture map for JS ─────────────────────────────────────
         feat_tex_js = json.dumps(feat_tex_rels)   # {"all": "path", "staining": "path", ...}
 
+        # ── Grid classification data for vertex-colour feature overlay ────────
+        # When present, mesh vertices are coloured by UV→cell→label directly
+        # (spatially correct 8×8 blocks) rather than UV texture projection.
+        if grid_data:
+            grid_cells_js   = json.dumps(grid_data["cells"])
+            grid_n_js       = str(grid_data["grid_n"])
+        else:
+            grid_cells_js   = "null"
+            grid_n_js       = "8"
+        taxonomy_idx_js = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
+
         # ── Feature Labels button (point cloud mode, shown only when features exist) ──
         has_features    = viewer_data.get("has_features", False)
         has_features_js = json.dumps(has_features)
@@ -481,10 +493,16 @@ def _viewer_section(regions: list, viewer_data: dict,
         glb_js = f"""
 
   // ── GLB textured mesh ─────────────────────────────────────────────────────
-  var meshGroup   = null;
+  var meshGroup    = null;
   var showMeshMode = true;
-  var featTextures = {{}};       // label → THREE.Texture  (loaded async)
-  var activeFeat   = null;      // currently active feature label or null
+  var activeFeat   = null;
+
+  // Grid classification — used to colour mesh vertices by UV→cell→label.
+  // Gives spatially correct feature regions (8×8 blocks in 3D space)
+  // instead of UV island shapes produced by the old texture overlay approach.
+  var GRID_CELLS     = {grid_cells_js};
+  var GRID_N         = {grid_n_js};
+  var TAXONOMY_INDEX = {taxonomy_idx_js};
 
   (function loadGLB() {{
     var loader = new THREE.GLTFLoader();
@@ -507,41 +525,133 @@ def _viewer_section(regions: list, viewer_data: dict,
     }});
   }})();
 
-  // ── Pre-load all feature textures ─────────────────────────────────────────
-  (function loadFeatTextures() {{
-    var paths = {feat_tex_js};
-    var tl = new THREE.TextureLoader();
-    Object.keys(paths).forEach(function (label) {{
-      tl.load(paths[label], function (tex) {{
-        tex.flipY = false;
-        tex.encoding = THREE.sRGBEncoding;
-        featTextures[label] = tex;
-      }}, undefined, function () {{
-        console.warn('Feature texture not found:', label, paths[label]);
+  // ── Spatial feature overlay (3-D grid, not UV grid) ──────────────────────
+  //
+  // UV → grid cell is NOT spatially coherent: Smart UV Project scatters UV
+  // islands randomly, so the same UV grid cell can contain patches from
+  // completely different parts of the mesh. Coloring by UV cell produces
+  // scattered triangular fragments, not meaningful spatial regions.
+  //
+  // Fix: divide the mesh's world-space bounding box into GRID_N × GRID_N
+  // spatial cells (top-down X-Z view). Each spatial cell collects votes from
+  // all vertices whose UV falls in a labeled UV cell. The dominant label wins.
+  // Vertices are then colored by their spatial cell's dominant label → clean
+  // rectangular blocks on the 3D surface.
+  //
+  // UNSCANNED handling: UNSCANNED face UV cells are cleared to null in Phase
+  // 3B, so they contribute zero votes. The top/side face vertices in the same
+  // spatial cell dominate and supply the correct label automatically.
+
+  var _spatialCache = null;   // rebuilt whenever activateFeature is first called
+
+  function _buildSpatialLabels() {{
+    if (!meshGroup || !GRID_CELLS) return null;
+    var bbox   = new THREE.Box3().setFromObject(meshGroup);
+    var dx     = Math.max(bbox.max.x - bbox.min.x, 1e-6);
+    var dz     = Math.max(bbox.max.z - bbox.min.z, 1e-6);
+    var votes  = {{}};    // "sr_sc" → {{ label: count }}
+    var wPos   = new THREE.Vector3();
+
+    meshGroup.traverse(function (child) {{
+      if (!child.isMesh) return;
+      var posAttr = child.geometry.attributes.position;
+      var uvAttr  = child.geometry.attributes.uv;
+      if (!posAttr || !uvAttr) return;
+      var wMat = child.matrixWorld;
+      for (var i = 0; i < posAttr.count; i++) {{
+        // Spatial cell from world-space XZ position
+        wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
+        var nx = (wPos.x - bbox.min.x) / dx;
+        var nz = (wPos.z - bbox.min.z) / dz;
+        var sr = Math.min(Math.floor(nz * GRID_N), GRID_N - 1);
+        var sc = Math.min(Math.floor(nx * GRID_N), GRID_N - 1);
+        // UV grid label for this vertex
+        var u   = Math.max(0, Math.min(1, uvAttr.getX(i)));
+        var v   = Math.max(0, Math.min(1, uvAttr.getY(i)));
+        var ugc = Math.min(Math.floor(u * GRID_N), GRID_N - 1);
+        var ugr = Math.min(Math.floor(v * GRID_N), GRID_N - 1);
+        var lbl = GRID_CELLS[ugr][ugc];
+        if (!lbl) continue;   // null = UNSCANNED or empty → skip (no vote)
+        var key = sr + '_' + sc;
+        if (!votes[key]) votes[key] = {{}};
+        votes[key][lbl] = (votes[key][lbl] || 0) + 1;
+      }}
+    }});
+
+    // Dominant label per spatial cell
+    var domLabels = {{}};
+    Object.keys(votes).forEach(function (key) {{
+      var v = votes[key];
+      domLabels[key] = Object.keys(v).reduce(function (a, b) {{
+        return v[a] >= v[b] ? a : b;
       }});
     }});
-  }})();
+    return {{ labels: domLabels, bbox: bbox, dx: dx, dz: dz }};
+  }}
 
-  // Apply a texture to all mesh materials; pass null to restore originals
-  function _applyMeshTex(tex) {{
-    if (!meshGroup) return;
+  function _applyFeatureVertexColors(targetLabel) {{
+    if (!meshGroup || !GRID_CELLS) return;
+    if (!_spatialCache) _spatialCache = _buildSpatialLabels();
+    var spatial = _spatialCache;
+    if (!spatial) return;
+    var labels = spatial.labels;
+    var bbox   = spatial.bbox;
+    var dx     = spatial.dx;
+    var dz     = spatial.dz;
+    var c      = new THREE.Color();
+    var wPos   = new THREE.Vector3();
+
     meshGroup.traverse(function (child) {{
-      if (child.isMesh && child.material) {{
-        var mat = child.material;
-        if (mat._origMap === undefined) mat._origMap = mat.map;
-        mat.map = tex !== null ? tex : mat._origMap;
-        mat.needsUpdate = true;
+      if (!child.isMesh) return;
+      var geo     = child.geometry;
+      var posAttr = geo.attributes.position;
+      if (!posAttr) return;
+      var mat = child.material;
+      if (mat._origMap === undefined) mat._origMap = mat.map;
+      if (mat._origVC  === undefined) mat._origVC  = mat.vertexColors;
+      var n      = posAttr.count;
+      var colArr = new Float32Array(n * 3);
+      var wMat   = child.matrixWorld;
+      for (var i = 0; i < n; i++) {{
+        wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
+        var nx  = (wPos.x - bbox.min.x) / dx;
+        var nz  = (wPos.z - bbox.min.z) / dz;
+        var sr  = Math.min(Math.floor(nz * GRID_N), GRID_N - 1);
+        var sc  = Math.min(Math.floor(nx * GRID_N), GRID_N - 1);
+        var lbl = labels[sr + '_' + sc] || null;
+        var fid = (lbl && TAXONOMY_INDEX[lbl] !== undefined) ? TAXONOMY_INDEX[lbl] : -1;
+        if (targetLabel === 'all') {{
+          c.set(fid >= 0 ? FEAT_COLORS[fid] : '#111318');
+        }} else {{
+          if (lbl === targetLabel && fid >= 0) c.set(FEAT_COLORS[fid]);
+          else if (fid >= 0)                   c.set('#1e1e26');
+          else                                 c.set('#111318');
+        }}
+        colArr[i*3] = c.r; colArr[i*3+1] = c.g; colArr[i*3+2] = c.b;
       }}
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colArr, 3));
+      mat.vertexColors = true;
+      mat.map          = null;
+      mat.needsUpdate  = true;
+    }});
+  }}
+
+  function _restoreOrigMesh() {{
+    if (!meshGroup) return;
+    _spatialCache = null;   // invalidate so it rebuilds fresh next time
+    meshGroup.traverse(function (child) {{
+      if (!child.isMesh || !child.material) return;
+      var mat = child.material;
+      mat.map          = mat._origMap !== undefined ? mat._origMap : mat.map;
+      mat.vertexColors = mat._origVC  !== undefined ? mat._origVC  : false;
+      mat.needsUpdate  = true;
     }});
   }}
 
   // ── Feature chip activation ───────────────────────────────────────────────
   window.activateFeature = function (label) {{
-    var tex = featTextures[label] || null;
-    if (!tex) {{ console.warn('Texture not ready:', label); return; }}
     activeFeat = label;
-    _applyMeshTex(tex);
-    // Update chip styles
+    _applyFeatureVertexColors(label);
     document.querySelectorAll('#feat-chips button').forEach(function (b) {{
       var isActive = b.dataset.feat === label;
       b.style.background = isActive ? '#2d3250' : '#1e2030';
@@ -558,12 +668,10 @@ def _viewer_section(regions: list, viewer_data: dict,
     if (chips) chips.style.display = featurePanelOpen ? 'flex' : 'none';
     if (btn)   btn.textContent     = featurePanelOpen ? 'Hide Features' : 'Feature Map';
     if (featurePanelOpen) {{
-      // Default to combined "all" on first open
       if (!activeFeat) window.activateFeature('all');
     }} else {{
-      // Restore original texture when closing
       activeFeat = null;
-      _applyMeshTex(null);
+      _restoreOrigMesh();
       document.querySelectorAll('#feat-chips button').forEach(function (b) {{
         b.style.background = '#1e2030';
         b.style.fontWeight  = 'normal';
@@ -578,9 +686,7 @@ def _viewer_section(regions: list, viewer_data: dict,
     meshGroup.visible = showMeshMode;
     cloud.visible     = !showMeshMode;
     document.getElementById('mesh-toggle').textContent = showMeshMode ? 'Point Cloud' : 'Textured Mesh';
-    // Close feature panel when switching to point cloud
     if (!showMeshMode && featurePanelOpen) window.toggleFeaturePanel();
-    // Reset feature-label colours when returning to mesh view
     if (showMeshMode && showFeatureLabels) window.toggleFeatureLabels();
     var leg   = document.getElementById('viewer-legend');
     if (leg)  leg.style.display = (!showMeshMode && curMode === 'region' && !showFeatureLabels) ? '' : 'none';
@@ -601,6 +707,9 @@ def _viewer_section(regions: list, viewer_data: dict,
         has_features     = False
         has_features_js  = "false"
         feat_colors_js   = json.dumps([_LABEL_COLORS.get(lbl, "#b0b8d0") for lbl in TAXONOMY])
+        grid_cells_js    = "null"
+        grid_n_js        = "8"
+        taxonomy_idx_js  = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
         scan_toggle_btn  = (
             '<button id="color-toggle" style="position:absolute;top:8px;right:8px;'
             'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
@@ -1048,11 +1157,15 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     # Build relative paths for all feature textures
     feat_tex_rels = {k: _rel(v) for k, v in feature_texture_paths.items() if _rel(v)}
 
+    # Grid classification data for vertex-colour feature overlay in the viewer
+    grid_data = vision.get("grid_classification") if vision else None
+
     banner_html    = _mesh_banner(bounding)
     bounding_html  = _bounding_section(bounding)
     viewer_html    = _viewer_section(regions, viewer_data or {},
                                      glb_rel_path=glb_rel,
-                                     feat_tex_rels=feat_tex_rels)
+                                     feat_tex_rels=feat_tex_rels,
+                                     grid_data=grid_data)
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
     vision_html    = _vision_section(vision, texture_rel_path=tex_rel)

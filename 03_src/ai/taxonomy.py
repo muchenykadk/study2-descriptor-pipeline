@@ -50,11 +50,6 @@ _taxonomy_data: list[dict] = load_taxonomy()
 TAXONOMY: list[str] = [t["id"] for t in _taxonomy_data]
 LABEL_COLORS: dict[str, str] = {t["id"]: t["color"] for t in _taxonomy_data}
 LABEL_DESCRIPTIONS: dict[str, str] = {t["id"]: t["description"] for t in _taxonomy_data}
-LABEL_SUBTYPES: dict = {
-    t["id"]: t.get("subtypes", ["unknown"]) for t in _taxonomy_data
-}
-omy_data
-}
 LABEL_SUBTYPES: dict[str, list[str]] = {
     t["id"]: t.get("subtypes", ["unknown"]) for t in _taxonomy_data
 }

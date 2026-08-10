@@ -1,0 +1,71 @@
+domain,category,descriptor,subtype,unit,method,data_status,links_to
+geometric,bounding_geometry,obb_dims,,mm,PCA on vertices,computed,handling_class
+geometric,bounding_geometry,volume,,m³,trimesh watertight / hull fallback,computed,handling_class
+geometric,bounding_geometry,convexity,,–,volume / convex hull volume,computed,
+geometric,bounding_geometry,mass_est,,kg,volume × 2400 kg/m³,pseudo→measured,handling_class
+geometric,planarity,area_m2,,m²,RANSAC plane segmentation,computed,connection_strategy; design_assignment
+geometric,planarity,fit_rms_mm,,mm,RANSAC inlier deviation,computed,connection_strategy
+geometric,planarity,normal_xyz,,–,RANSAC plane normal,computed,scan_reliable flag; connection_strategy
+geometric,planarity,scan_reliable,,boolean,dot product vs UNSCANNED sidecar normal,computed,connection_strategy
+geometric,curvature,fine_mean_curvature,,1/mm,per-vertex discrete curvature (radius < 5 mm),computed,
+geometric,curvature,coarse_mean_curvature,,1/mm,per-vertex discrete curvature (radius ≥ 20 mm),computed,
+surface,roughness,roughness_fine_rms,,mm,RMS deviation from region plane (radius < 5 mm),computed,connection_strategy
+surface,roughness,roughness_coarse_rms,,mm,RMS deviation from region plane (radius ≥ 20 mm),computed,connection_strategy
+surface,colour,colour_entropy,,bits,Shannon entropy of UV texture crop per region,computed,design_assignment
+surface,texture_classification,formwork_imprint,timber_formwork,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face)
+surface,texture_classification,formwork_imprint,steel_formwork,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face)
+surface,texture_classification,formwork_imprint,plastic_formwork,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face)
+surface,texture_classification,formwork_imprint,prefab_mould,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face)
+surface,texture_classification,formwork_imprint,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face)
+surface,texture_classification,fracture_surface,matrix_fracture,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy
+surface,texture_classification,fracture_surface,aggregate_pullout,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy
+surface,texture_classification,fracture_surface,aggregate_split,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy
+surface,texture_classification,fracture_surface,bond_failure,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy
+surface,texture_classification,fracture_surface,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy
+surface,texture_classification,exposed_aggregate,gravel_rounded,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,exposed_aggregate,crushed_stone,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,exposed_aggregate,limestone,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,exposed_aggregate,granite,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,exposed_aggregate,recycled_aggregate,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,exposed_aggregate,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment; connection_strategy (no_drill)
+surface,texture_classification,rebar_visible,round_bar,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,rebar_visible,deformed_bar,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,rebar_visible,mesh,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,rebar_visible,stirrup,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,rebar_visible,anchor_bolt,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,rebar_visible,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (rebar_present proxy); design_assignment (buried)
+surface,texture_classification,weathered,carbonation,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,weathered,spalling,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,weathered,erosion,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,weathered,efflorescence,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,weathered,freeze_thaw_damage,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,weathered,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,structural (integrity); design_assignment (buried)
+surface,texture_classification,staining,rust,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,moss_algae,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,oil_grease,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,paint,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,efflorescence,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,soot,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,staining,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face penalty)
+surface,texture_classification,original_finish,ceramic_tile,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,stone_tile,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,mosaic,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,paint,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,plaster,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,render,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,screed,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+surface,texture_classification,original_finish,unknown,–,GPT-4o vision / 8×8 spatial grid,ai-annotated,design_assignment (show_face priority)
+structural,integrity,rebar_present,,boolean,physical inspection / rebar_visible proxy,measured→pseudo,connection_strategy; design_assignment
+structural,integrity,concrete_class_assumed,,–,assumed from archetype,pseudo,handling_class
+structural,integrity,integrity_note,,text,visual inspection,measured,design_assignment
+procedural,derived,connection_strategy,direct_bolt,class,rule: planarity + surface condition,derived,
+procedural,derived,connection_strategy,adaptive_bracket,class,rule: planarity + surface condition,derived,
+procedural,derived,connection_strategy,no_drill,class,rule: planarity + surface condition,derived,
+procedural,derived,connection_strategy,gravity_only,class,rule: planarity + surface condition,derived,
+procedural,derived,handling_class,manual,class,rule: mass_est + obb_dims,derived,
+procedural,derived,handling_class,two_person,class,rule: mass_est + obb_dims,derived,
+procedural,derived,handling_class,excavator,class,rule: mass_est + obb_dims,derived,
+procedural,derived,design_assignment,show_face,class,rule: face-region texture labels,derived,
+procedural,derived,design_assignment,seat_face,class,rule: face-region texture labels,derived,
+procedural,derived,design_assignment,buried,class,rule: face-region texture labels,derived,
+procedural,derived,design_assignment,unassigned,class,rule: face-region texture labels,derived,

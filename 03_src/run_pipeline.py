@@ -290,10 +290,19 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
             has_unscanned = True
             print(f"  (UNSCANNED: {unscanned_mask.sum()} / {len(points)} sampled points marked)")
 
-    # Per-point feature labels via UV → 8×8 grid → TAXONOMY index.
-    # This maps the Phase 3B grid classification onto sampled surface points,
-    # giving spatially meaningful feature colours (8×8 blocks in 3D space,
-    # not the arbitrary UV-island shapes that the UV-texture overlay produces).
+    # Per-point feature labels via 3D spatial majority-vote.
+    #
+    # UV → grid cell is NOT spatially coherent for Smart UV Project meshes:
+    # scattered UV islands produce fragmented triangular patches in 3D.
+    # Fix: divide the mesh bounding box into GRID_N × GRID_N cells in the
+    # XZ (top-down) plane.  Each spatial cell collects UV-label votes from
+    # all mesh vertices; the dominant label wins.  Sampled points are then
+    # colored by their spatial cell's dominant label → clean rectangular
+    # regions, no UV-fragmentation artefacts.
+    #
+    # UNSCANNED handling: their UV cells are cleared to None in Phase 3B, so
+    # they contribute zero votes.  The top/side face vertices in the same
+    # spatial cell dominate and provide the correct label automatically.
     feature_ids  = np.full(len(points), -1, dtype=int)
     has_features = False
     if grid_data is not None:
@@ -302,22 +311,54 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
             grid_n   = grid_data["grid_n"]
             cells    = grid_data["cells"]
             _t_index = {lbl: i for i, lbl in enumerate(_TAXONOMY)}
-            # Average UV of the 3 face vertices for each sampled point's face
-            face_uvs = vis.uv[mesh.faces[face_indices]].mean(axis=1)  # (N, 2)
-            u_coords = np.clip(face_uvs[:, 0], 0.0, 1.0)
-            v_coords = np.clip(face_uvs[:, 1], 0.0, 1.0)
-            g_rows   = (v_coords * grid_n).astype(int).clip(0, grid_n - 1)
-            g_cols   = (u_coords * grid_n).astype(int).clip(0, grid_n - 1)
-            for k, (r, c) in enumerate(zip(g_rows, g_cols)):
-                lbl = cells[r][c]
+
+            # ── Step 1: build spatial-cell → label vote map ─────────────────
+            verts   = mesh.vertices                         # (V, 3)  XYZ
+            v_uvs   = vis.uv                                # (V, 2)  per-vertex UV
+            x_min, z_min = verts[:, 0].min(), verts[:, 2].min()
+            x_rng = max(float(verts[:, 0].max() - x_min), 1e-6)
+            z_rng = max(float(verts[:, 2].max() - z_min), 1e-6)
+            # Spatial cell indices for every vertex
+            sx = ((verts[:, 0] - x_min) / x_rng * grid_n).astype(int).clip(0, grid_n - 1)
+            sz = ((verts[:, 2] - z_min) / z_rng * grid_n).astype(int).clip(0, grid_n - 1)
+            # UV grid cell labels for every vertex (None → cleared/UNSCANNED)
+            u_c  = np.clip(v_uvs[:, 0], 0.0, 1.0)
+            v_c  = np.clip(v_uvs[:, 1], 0.0, 1.0)
+            ugr  = (v_c * grid_n).astype(int).clip(0, grid_n - 1)
+            ugc  = (u_c * grid_n).astype(int).clip(0, grid_n - 1)
+            # votes[(sr, sc)][label] += 1  (only for non-null UV labels)
+            from collections import defaultdict
+            vote_map: dict = defaultdict(lambda: defaultdict(int))
+            for vi in range(len(verts)):
+                lbl = cells[ugr[vi]][ugc[vi]]
+                if lbl and lbl in _t_index:
+                    vote_map[(int(sz[vi]), int(sx[vi]))][lbl] += 1
+
+            # Dominant label per spatial cell
+            dom_label: dict = {
+                key: max(cnts, key=cnts.__getitem__)
+                for key, cnts in vote_map.items()
+            }
+
+            # ── Step 2: assign feature_id to each sampled point ─────────────
+            # Sampled points already have 3D positions in `points` (world space,
+            # same coordinate frame as mesh.vertices because trimesh preserves it)
+            pt_sx = ((points[:, 0] - x_min) / x_rng * grid_n).astype(int).clip(0, grid_n - 1)
+            pt_sz = ((points[:, 2] - z_min) / z_rng * grid_n).astype(int).clip(0, grid_n - 1)
+            for k in range(len(points)):
+                key = (int(pt_sz[k]), int(pt_sx[k]))
+                lbl = dom_label.get(key)
                 if lbl and lbl in _t_index:
                     feature_ids[k] = _t_index[lbl]
-            # UNSCANNED points are excluded from feature extraction — keep -1
+
+            # UNSCANNED sampled points → always unlabeled
             if has_unscanned:
                 feature_ids[region_ids == VIEWER_UNSCANNED_ID] = -1
+
             n_labeled = int((feature_ids >= 0).sum())
             has_features = n_labeled > 0
-            print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled from UV grid)")
+            print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled "
+                  f"from {len(dom_label)} spatial cells)")
 
     pts_n, scale = _normalize_points(points)
     return {

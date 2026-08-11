@@ -153,9 +153,17 @@ def planar_regions(
     n_samples : int
         Surface sample count. 50k is sufficient for a ~300 mm fragment.
     """
+    # Record the centroid used by centering so the fitted plane equations can
+    # be reported back in the ORIGINAL source frame.  Downstream consumers
+    # (viewer region overlay, region segmentation, scan-coverage flagging)
+    # test original-frame coordinates against plane_abcd; a centred-frame d
+    # made every such test miss once meshes stopped being manually moved to
+    # the world origin in Blender.
     if isinstance(source, o3d.geometry.PointCloud):
+        _centroid = np.asarray(source.points).mean(axis=0)
         source = _center_pcd(source)
     else:
+        _centroid = np.asarray(source.centroid, dtype=float)
         source = _center_mesh(source)
     pcd = _to_o3d_pcd(source, n_samples)
     pcd.estimate_normals(
@@ -201,8 +209,12 @@ def planar_regions(
         except Exception:
             area_m2 = None
 
+        # Convert the plane equation from the centred fit frame back to the
+        # original frame:  n·(x − c) + d = 0  ⇒  n·x + (d − n·c) = 0
+        d_world = float(d - normal @ _centroid)
         regions.append({
-            "plane_abcd": [round(float(x), 6) for x in plane_model],
+            "plane_abcd": [round(float(a), 6), round(float(b), 6),
+                           round(float(c), 6), round(d_world, 6)],
             "normal_xyz": [round(float(x), 4) for x in normal.tolist()],
             "inlier_count": len(inliers),
             "inlier_fraction": round(len(inliers) / n_samples, 3),

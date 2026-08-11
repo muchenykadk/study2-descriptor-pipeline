@@ -280,7 +280,8 @@ def unscanned_face_idx(mesh: trimesh.Trimesh,
 
 def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
                       unscanned_sidecar: dict | None = None,
-                      grid_data: dict | None = None) -> dict:
+                      grid_data: dict | None = None,
+                      texture_path: "Path | None" = None) -> dict:
     """Sample mesh surface, assign region IDs. Points in [-1, 1].
 
     If unscanned_sidecar is provided, points whose face normal is within 20° of
@@ -401,12 +402,39 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
             print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled "
                   f"from {int((face_fid >= 0).sum())}/{len(face_fid)} labeled faces)")
 
+    # Scan colours: sample the texture at each point's face-UV centroid so the
+    # inventory / report viewers can toggle photo colours ↔ region colours
+    # ("Show Regions" button appears only when scan colours exist).
+    rgb = None
+    vis = getattr(mesh, "visual", None)
+    if (texture_path is not None and texture_path.exists()
+            and vis is not None and hasattr(vis, "uv") and vis.uv is not None):
+        from PIL import Image as _PILImage
+        tex   = np.asarray(_PILImage.open(texture_path).convert("RGB"),
+                           dtype=np.float32) / 255.0
+        H, W  = tex.shape[:2]
+        v_uvs = np.clip(np.asarray(vis.uv, dtype=float), 0.0, 1.0)
+        f_uv  = v_uvs[mesh.faces].mean(axis=1)[face_indices]     # (N, 2)
+        px    = np.clip((f_uv[:, 0] * W).astype(int), 0, W - 1)
+        # V-FLIP: trimesh UVs are OpenGL convention (v = 0 at image bottom)
+        py    = np.clip(((1.0 - f_uv[:, 1]) * H).astype(int), 0, H - 1)
+        rgb   = tex[py, px]                                       # (N, 3)
+
     pts_n, scale = _normalize_points(points)
+    if rgb is not None:
+        # 8-element points: [x, y, z, region_id, feature_id, r, g, b]
+        pts_out = [[round(float(x), 4), round(float(y), 4), round(float(z), 4),
+                    int(r), int(f),
+                    round(float(cr), 3), round(float(cg), 3), round(float(cb), 3)]
+                   for (x, y, z), r, f, (cr, cg, cb)
+                   in zip(pts_n, region_ids, feature_ids, rgb)]
+    else:
+        pts_out = [[round(float(x), 4), round(float(y), 4), round(float(z), 4),
+                    int(r), int(f)]
+                   for (x, y, z), r, f in zip(pts_n, region_ids, feature_ids)]
     return {
-        "color_mode":    "region",
-        "points":        [[round(float(x), 4), round(float(y), 4), round(float(z), 4),
-                           int(r), int(f)]
-                          for (x, y, z), r, f in zip(pts_n, region_ids, feature_ids)],
+        "color_mode":    "scan" if rgb is not None else "region",
+        "points":        pts_out,
         "n_regions":     len(planes),
         "has_unscanned": has_unscanned,
         "has_features":  has_features,
@@ -714,8 +742,9 @@ def run_single(frag_id: str, args: argparse.Namespace,
     if input_type == "point_cloud":
         viewer_data = build_viewer_data_pcd(source, planes)
     else:
-        viewer_data = build_viewer_data(source, planes, unscanned_sidecar=_sidecar,
-                                        grid_data=grid_data)
+        viewer_data = build_viewer_data(
+            source, planes, unscanned_sidecar=_sidecar, grid_data=grid_data,
+            texture_path=processed_dir / frag_id / f"{frag_id}_texture.png")
     print(f"{len(viewer_data['points'])} points packed  ({viewer_data['color_mode']} colors)")
 
     viewer_json_path = output_dir / f"{frag_id}_viewer.json"

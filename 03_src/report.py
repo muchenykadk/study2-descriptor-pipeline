@@ -759,13 +759,14 @@ def _viewer_section(regions: list, viewer_data: dict,
   for (var i = 0; i < POINT_DATA.length; i++) {{
     var p = POINT_DATA[i];
     positions.push(p[0], p[1], p[2]);
-    if (HAS_SCAN && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
+    if (HAS_SCAN && p.length >= 8)      col.setRGB(p[5], p[6], p[7]);
+    else if (HAS_SCAN && p.length === 7) col.setRGB(p[4], p[5], p[6]);
     else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     scanColors.push(col.r, col.g, col.b);
     col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     regionColors.push(col.r, col.g, col.b);
     // Feature label colour: UNSCANNED stays grey, labeled points → FEAT_COLORS[fid], unlabeled → near-black
-    var fid = (p.length >= 5) ? p[4] : -1;
+    var fid = (p.length === 5 || p.length >= 8) ? p[4] : -1;
     if (p[3] === UNSCANNED_ID) col.set(UNSCANNED_COLOR);
     else if (fid >= 0 && fid < FEAT_COLORS.length) col.set(FEAT_COLORS[fid]);
     else col.set('#111318');
@@ -1733,7 +1734,8 @@ function loadPointCloud(points, regions, colorMode) {
   for (var i = 0; i < points.length; i++) {
     var p = points[i];
     positions.push(p[0], p[1], p[2]);
-    if (hasScan && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
+    if (hasScan && p.length >= 8)       col.setRGB(p[5], p[6], p[7]);
+    else if (hasScan && p.length === 7) col.setRGB(p[4], p[5], p[6]);
     else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));
     scanColArr.push(col.r, col.g, col.b);
     col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));

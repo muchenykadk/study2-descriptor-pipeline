@@ -35,6 +35,7 @@ from PIL import Image, ImageDraw
 from .vision_client import TAXONOMY, CACHE_DIR, _load_dotenv
 
 GRID_N        = 16     # backfill grid resolution (kept for viewer/report)
+COHERENCE_MIN = 0.5    # min share of a region's UV footprint in one island
 N_VOTES       = 3
 CROP_MARGIN   = 16     # px context margin around region bbox
 CROP_MAX_SIDE = 1024   # downscale crops larger than this
@@ -67,13 +68,30 @@ def rasterize_region_mask(mesh, face_idx, size: int) -> np.ndarray:
     return np.array(img) > 0
 
 
+def uv_coherence(mask: np.ndarray) -> float:
+    """Share of the region's UV footprint that lies in its largest island.
+
+    Smart UV Project keeps a real planar face as essentially one island, so a
+    coherent region scores near 1.0.  A pooled residual of slivers scatters
+    into hundreds of islands and scores low; its crop is not a view of one
+    surface and must not be classified as if it were.
+    """
+    from scipy import ndimage
+    lab, n = ndimage.label(mask)
+    if n == 0:
+        return 0.0
+    sizes = ndimage.sum(mask, lab, range(1, n + 1))
+    return float(sizes.max() / mask.sum())
+
+
 def build_region_crops(texture_img: Image.Image, mesh, regions: list) -> list:
     """For each region: masked, bbox-cropped texture image + placement meta.
 
     Returns list of dicts (same order as regions):
         {"region_id", "image": PIL, "bbox": (x0, y0, x1, y1) in texture px,
-         "mask": bool array (texture size)}
-    Regions with no UV footprint get image=None.
+         "mask": bool array, "coherence": float, "skipped": str|None}
+    Regions with no UV footprint, or with a fragmented footprint, get
+    image=None and are not sent to the vision model.
     """
     tex  = np.array(texture_img.convert("RGB"))
     size = tex.shape[0]
@@ -82,7 +100,16 @@ def build_region_crops(texture_img: Image.Image, mesh, regions: list) -> list:
         mask = rasterize_region_mask(mesh, reg["face_idx"], size)
         if not mask.any():
             out.append({"region_id": reg["region_id"], "image": None,
-                        "bbox": None, "mask": mask})
+                        "bbox": None, "mask": mask, "coherence": 0.0,
+                        "skipped": "no_uv_footprint"})
+            continue
+        coh = uv_coherence(mask)
+        if coh < COHERENCE_MIN:
+            print(f"      region #{reg['region_id']} ({reg['kind']}): UV "
+                  f"coherence {coh:.2f} < {COHERENCE_MIN}, not classified")
+            out.append({"region_id": reg["region_id"], "image": None,
+                        "bbox": None, "mask": mask, "coherence": round(coh, 3),
+                        "skipped": "fragmented_uv"})
             continue
         rows = np.where(mask.any(axis=1))[0]
         cols = np.where(mask.any(axis=0))[0]
@@ -95,7 +122,7 @@ def build_region_crops(texture_img: Image.Image, mesh, regions: list) -> list:
             img.thumbnail((CROP_MAX_SIDE, CROP_MAX_SIDE))
         out.append({"region_id": reg["region_id"], "image": img,
                     "bbox": (int(x0), int(y0), int(x1), int(y1)),
-                    "mask": mask})
+                    "mask": mask, "coherence": round(coh, 3), "skipped": None})
     return out
 
 
@@ -254,9 +281,13 @@ def classify_regions(texture_path: Path, mesh, regions: list,
     for reg, crop in zip(regions, crops):
         if crop["image"] is None:
             results.append({**_region_meta(reg), "label": None,
-                            "anomalies": [], "n_label_votes": 0})
+                            "anomalies": [], "n_label_votes": 0,
+                            "uv_coherence": crop.get("coherence"),
+                            "skipped": crop.get("skipped")})
         else:
-            results.append({**_region_meta(reg), **merged[mi]})
+            results.append({**_region_meta(reg), **merged[mi],
+                            "uv_coherence": crop.get("coherence"),
+                            "skipped": None})
             mi += 1
     return results, crops
 

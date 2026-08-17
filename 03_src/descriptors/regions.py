@@ -124,3 +124,50 @@ def segment_regions(mesh: trimesh.Trimesh,
     for new_id, r in enumerate(regions):
         r["region_id"] = new_id
     return regions
+
+
+def propagate_labels(mesh, face_label: "np.ndarray", n_labels: int = 8,
+                     max_rounds: int = 12) -> "tuple[np.ndarray, np.ndarray]":
+    """Fill unlabeled faces from their labelled neighbours.
+
+    Regions too fragmented in UV to classify (pooled slivers, thin transition
+    zones) leave gaps in the face labelling.  Rather than leave them blank or
+    guess a label from a fragmented crop, each unlabeled face adopts the
+    dominant label among its adjacent faces, applied iteratively until no
+    face changes.  Faces filled this way are reported as inferred, not
+    classified, so the distinction stays visible in the record.
+
+    Vectorised over the face-adjacency graph: these meshes carry millions of
+    faces, so votes are tallied with bincount rather than per-edge iteration.
+
+    Returns (face_label, inferred_mask).
+    """
+    face_label = face_label.copy()
+    inferred   = np.zeros(len(face_label), dtype=bool)
+    adj = mesh.face_adjacency
+    if len(adj) == 0:
+        return face_label, inferred
+
+    src = np.concatenate([adj[:, 0], adj[:, 1]])
+    dst = np.concatenate([adj[:, 1], adj[:, 0]])
+
+    for _ in range(max_rounds):
+        gaps = np.where(face_label < 0)[0]
+        if len(gaps) == 0:
+            break
+        gap_pos = np.full(len(face_label), -1, dtype=np.int64)
+        gap_pos[gaps] = np.arange(len(gaps))
+
+        m = (face_label[src] >= 0) & (face_label[dst] < 0)
+        if not m.any():
+            break
+        d = gap_pos[dst[m]]
+        l = face_label[src[m]]
+        counts = np.bincount(d * n_labels + l,
+                             minlength=len(gaps) * n_labels
+                             ).reshape(len(gaps), n_labels)
+        has  = counts.sum(axis=1) > 0
+        best = counts.argmax(axis=1)
+        face_label[gaps[has]] = best[has]
+        inferred[gaps[has]]   = True
+    return face_label, inferred

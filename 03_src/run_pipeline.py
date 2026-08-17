@@ -54,7 +54,7 @@ from ai.texture_segmentation import classify_texture_grid
 from ai.region_classification import (classify_regions, cells_from_regions,
                                       GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
-from descriptors.regions import segment_regions
+from descriptors.regions import segment_regions, propagate_labels
 from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 
 
@@ -680,6 +680,26 @@ def run_single(frag_id: str, args: argparse.Namespace,
                     if _res["plane_index"] is not None and _res["label"]:
                         descriptors["planarity"][_res["plane_index"]][
                             "surface_label"] = _res["label"]
+                # Faces in regions too fragmented to classify inherit the
+                # dominant label of their neighbours, flagged as inferred.
+                _t_idx = {l: i for i, l in enumerate(_TAXONOMY)}
+                _face_lbl = np.full(len(source.faces), -1, dtype=int)
+                for _reg, _res in zip(_regions, _results):
+                    if _res["label"] in _t_idx:
+                        _face_lbl[_reg["face_idx"]] = _t_idx[_res["label"]]
+                _n_gap = int((_face_lbl < 0).sum())
+                _face_lbl, _inferred = propagate_labels(
+                    source, _face_lbl, n_labels=len(_TAXONOMY))
+                descriptors["vision"]["face_labels"] = {
+                    "classified_faces": int(len(_face_lbl) - _n_gap),
+                    "inferred_faces":   int(_inferred.sum()),
+                    "unlabeled_faces":  int((_face_lbl < 0).sum()),
+                    "method": "region classification; gaps filled from "
+                              "adjacent faces and flagged as inferred",
+                }
+                print(f"  (Face labels: {len(_face_lbl) - _n_gap:,} classified, "
+                      f"{int(_inferred.sum()):,} inferred, "
+                      f"{int((_face_lbl < 0).sum()):,} unlabeled)")
             else:
                 # ── Legacy grid classification (--grid-legacy / point cloud) ─
                 _excl: set = set()

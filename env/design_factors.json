@@ -88,8 +88,8 @@
     ]
   },
   "use_suggestions": {
-    "basis": "Study 1 urban-furniture programme: seating, table surfaces, leaning supports, stable bases.",
-    "_how_to_read": "Each entry combines conditions on one face with conditions on the whole fragment. A suggestion is offered when at least one face satisfies requires_face and the fragment satisfies requires_fragment. Thickness = smallest oriented-bounding-box dimension.",
+    "basis": "Study 1 urban-furniture programme: seating, table surfaces, leaning supports, stable bases, steps, paving and edging. All uses keep the fragment whole and visible; downcycling to fill or aggregate is out of scope by design.",
+    "_how_to_read": "Each entry combines conditions on one face with conditions on the whole fragment. A suggestion is offered when the fragment satisfies requires_fragment and at least one face satisfies requires_face. A rule may instead use requires_no_face, firing when no face meets those conditions. Thickness = smallest oriented-bounding-box dimension; aspect ratio = longest / smallest.",
     "rules": [
       {
         "id": "bench_top",
@@ -163,6 +163,88 @@
         },
         "requires_fragment": {},
         "note": "carries visible traces of the fragment's former life; candidate to face outward"
+      },
+      {
+        "id": "step_tread",
+        "label": "Step or stair tread",
+        "requires_face": {
+          "min_area_m2": 0.15,
+          "max_fit_rms_mm": 6.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_thickness_mm": 120,
+          "min_mass_kg": 100,
+          "max_fine_curvature_rad": 0.5
+        },
+        "note": "flat, even face on a thick heavy fragment; low fine curvature so the tread is not rough underfoot"
+      },
+      {
+        "id": "paving_slab",
+        "label": "Paving or stepping stone",
+        "requires_face": {
+          "min_area_m2": 0.15,
+          "max_fit_rms_mm": 8.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_thickness_mm": 60,
+          "max_thickness_mm": 250,
+          "min_convexity": 0.8
+        },
+        "note": "slab-like and regular in form, thick enough to bed but low enough to walk over",
+        "caveat": "convexity required; not evaluated when the mesh is not watertight"
+      },
+      {
+        "id": "kerb_edge",
+        "label": "Kerb or edging element",
+        "requires_face": {
+          "min_area_m2": 0.08,
+          "max_fit_rms_mm": 12.0
+        },
+        "requires_fragment": {
+          "min_aspect_ratio": 3.0,
+          "min_mass_kg": 150
+        },
+        "note": "elongated and heavy, with one bearing face; defines an edge without fixing"
+      },
+      {
+        "id": "rough_feature",
+        "label": "Textured feature surface",
+        "requires_face": {
+          "min_area_m2": 0.1,
+          "labels": [
+            "fracture_surface",
+            "exposed_aggregate"
+          ],
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_fine_curvature_rad": 0.3
+        },
+        "note": "deliberately rough face, exposing the break and aggregate as visible and tactile character"
+      },
+      {
+        "id": "cut_candidate",
+        "label": "Cut to create a bearing face",
+        "requires_no_face": {
+          "min_area_m2": 0.12,
+          "max_fit_rms_mm": 8.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_thickness_mm": 150,
+          "min_mass_kg": 150
+        },
+        "note": "substantial fragment with no usable flat face; a wall or wire saw could create one",
+        "caveat": "cutting equipment not yet encoded"
+      }
+    ],
+    "_known_gaps": [
+      {
+        "id": "planter_void",
+        "label": "Planter or void reuse",
+        "why_absent": "Study 1 reinterpreted former pipe penetrations as integrated planters. Openings through a fragment are not detected by the pipeline, so this use cannot be proposed. Listed here so the gap stays visible."
       }
     ]
   }

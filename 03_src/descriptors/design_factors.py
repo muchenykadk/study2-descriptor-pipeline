@@ -107,54 +107,85 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
 
     Unlike the per-face factors, a use suggestion needs several conditions to
     hold at once, some on a face (area, flatness, surface character) and some
-    on the whole fragment (thickness, mass).  A suggestion is offered when at
-    least one face satisfies `requires_face` while the fragment satisfies
-    `requires_fragment`; the qualifying faces are named so the reasoning can be
-    checked against the geometry.
+    on the whole fragment (thickness, mass, convexity, proportion, curvature).
+    A suggestion is offered when the fragment satisfies `requires_fragment` and
+    at least one face satisfies `requires_face`; the qualifying faces are named
+    so the reasoning can be checked against the geometry.
+
+    A rule may instead declare `requires_no_face`, which fires when *no* face
+    meets the given conditions.  That is how the cut candidate is expressed:
+    the fragment is substantial but offers no usable flat face, so one would
+    have to be created by sawing.
     """
     cfg = factors.get("use_suggestions") or {}
     bounding = descriptors.get("bounding", {}) or {}
     faces    = descriptors.get("planarity", []) or []
+    curv     = descriptors.get("curvature", {}) or {}
 
-    dims      = bounding.get("obb_dims_mm") or []
-    thickness = min(dims) if dims else None
+    dims      = sorted(bounding.get("obb_dims_mm") or [])
+    thickness = dims[0] if dims else None
+    longest   = dims[-1] if dims else None
+    aspect    = (longest / thickness) if (thickness and thickness > 0) else None
     mass      = bounding.get("mass_kg_est")
+    convexity = bounding.get("convexity")
+    fine_curv = (curv.get("fine_mm") or {}).get("mean_rad")
+
+    def _frag_ok(req: dict) -> bool:
+        checks = [
+            ("min_thickness_mm", thickness, lambda v, t: v is not None and v >= t),
+            ("max_thickness_mm", thickness, lambda v, t: v is not None and v <= t),
+            ("min_mass_kg",      mass,      lambda v, t: v is not None and v >= t),
+            ("max_mass_kg",      mass,      lambda v, t: v is not None and v <= t),
+            ("min_convexity",    convexity, lambda v, t: v is not None and v >= t),
+            ("max_convexity",    convexity, lambda v, t: v is not None and v <= t),
+            ("min_aspect_ratio", aspect,    lambda v, t: v is not None and v >= t),
+            ("min_fine_curvature_rad", fine_curv, lambda v, t: v is not None and v >= t),
+            ("max_fine_curvature_rad", fine_curv, lambda v, t: v is not None and v <= t),
+        ]
+        for key, value, test in checks:
+            if key in req and not test(value, req[key]):
+                return False
+        return True
+
+    def _faces_matching(fr: dict) -> list:
+        out = []
+        for i, face in enumerate(faces):
+            a, r = face.get("area_m2_est"), face.get("fit_rms_mm")
+            if "min_area_m2" in fr and not (a is not None and a >= fr["min_area_m2"]):
+                continue
+            if "max_fit_rms_mm" in fr and not (r is not None and r <= fr["max_fit_rms_mm"]):
+                continue
+            if "labels" in fr and face.get("surface_label") not in fr["labels"]:
+                continue
+            if "exclude_labels" in fr and face.get("surface_label") in fr["exclude_labels"]:
+                continue
+            if ("scan_reliable" in fr
+                    and bool(face.get("scan_reliable", True)) != fr["scan_reliable"]):
+                continue
+            out.append(i)
+        return out
 
     out = []
     for rule in cfg.get("rules", []):
-        frag_req = rule.get("requires_fragment") or {}
-        if "min_thickness_mm" in frag_req:
-            if thickness is None or thickness < frag_req["min_thickness_mm"]:
-                continue
-        if "min_mass_kg" in frag_req:
-            if mass is None or mass < frag_req["min_mass_kg"]:
+        if not _frag_ok(rule.get("requires_fragment") or {}):
+            continue
+
+        if "requires_no_face" in rule:
+            if _faces_matching(rule["requires_no_face"]):
+                continue          # such a face exists, so the rule does not apply
+            matched = []
+        else:
+            matched = _faces_matching(rule.get("requires_face") or {})
+            if not matched:
                 continue
 
-        fr = rule.get("requires_face") or {}
-        matched = []
-        for i, face in enumerate(faces):
-            if "min_area_m2" in fr:
-                a = face.get("area_m2_est")
-                if a is None or a < fr["min_area_m2"]:
-                    continue
-            if "max_fit_rms_mm" in fr:
-                r = face.get("fit_rms_mm")
-                if r is None or r > fr["max_fit_rms_mm"]:
-                    continue
-            if "labels" in fr and face.get("surface_label") not in fr["labels"]:
-                continue
-            if "scan_reliable" in fr and bool(face.get("scan_reliable", True)) != fr["scan_reliable"]:
-                continue
-            matched.append(i)
-
-        if matched:
-            out.append({
-                "id":     rule["id"],
-                "label":  rule.get("label", rule["id"]),
-                "faces":  matched,
-                "note":   rule.get("note", ""),
-                "caveat": rule.get("caveat"),
-            })
+        out.append({
+            "id":     rule["id"],
+            "label":  rule.get("label", rule["id"]),
+            "faces":  matched,
+            "note":   rule.get("note", ""),
+            "caveat": rule.get("caveat"),
+        })
     return out
 
 

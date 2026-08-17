@@ -336,7 +336,6 @@ def _bounding_section(b: dict) -> str:
     convexity  = b.get("convexity")
     mass       = b.get("mass_kg_est")
     status     = b.get("data_status", "computed")
-    mass_status = b.get("mass_data_status", "pseudo")
 
     convexity_html = (
         f'<div class="stat-value">{convexity:.4f}</div>'
@@ -472,9 +471,6 @@ def _viewer_section(regions: list, viewer_data: dict,
             '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/'
             'examples/js/loaders/GLTFLoader.js"></script>'
         )
-
-        # ── Serialise texture map for JS ─────────────────────────────────────
-        feat_tex_js = json.dumps(feat_tex_rels)   # {"all": "path", "staining": "path", ...}
 
         # ── Grid classification data for vertex-colour feature overlay ────────
         # When present, mesh vertices are coloured by UV→cell→label directly
@@ -852,8 +848,8 @@ def _viewer_section(regions: list, viewer_data: dict,
   }};
 
   // ── Feature Labels colour mode (point cloud) ──────────────────────────────
-  // Colours each sampled point by its 8×8 grid feature label rather than
-  // RANSAC region — shows the true spatial distribution of surface features.
+  // Colours each sampled point by the surface label of the face it was
+  // sampled from, rather than by RANSAC region.
   window.toggleFeatureLabels = function () {{
     showFeatureLabels = !showFeatureLabels;
     var arr = showFeatureLabels ? featureColors : regionColors;
@@ -934,10 +930,9 @@ def _procedural_section(proc: dict, vision: dict) -> str:
     </div>
   </div>"""
     else:
-        uses_html = ("""
-  <div style="margin-top:14px;font-size:11px;color:var(--muted)">
-    No candidate use met its conditions for this fragment.</div>"""
-            if SHOW_USES_IN_REPORT else "")
+        uses_html = ('<div style="margin-top:14px;font-size:11px;color:var(--muted)">'
+                     'No candidate use met its conditions for this fragment.</div>'
+                     if SHOW_USES_IN_REPORT else "")
 
     return f"""
 <div class="section">

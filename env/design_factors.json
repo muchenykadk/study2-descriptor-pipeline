@@ -238,13 +238,19 @@
         },
         "note": "substantial fragment with no usable flat face; a wall or wire saw could create one",
         "caveat": "cutting equipment not yet encoded"
-      }
-    ],
-    "_known_gaps": [
+      },
       {
         "id": "planter_void",
         "label": "Planter or void reuse",
-        "why_absent": "Study 1 reinterpreted former pipe penetrations as integrated planters. Openings through a fragment are not detected by the pipeline, so this use cannot be proposed. Listed here so the gap stays visible."
+        "requires_face": {
+          "requires_anomaly": "opening",
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_thickness_mm": 100
+        },
+        "note": "a former pipe or conduit penetration, detected in the texture, can be reinterpreted as a planting pocket or light opening, as in Study 1",
+        "caveat": "opening detected from the image only; depth and whether it passes through are not measured"
       }
     ]
   }

@@ -39,7 +39,21 @@ COHERENCE_MIN = 0.5    # min share of a region's UV footprint in one island
 N_VOTES       = 3
 CROP_MARGIN   = 16     # px context margin around region bbox
 CROP_MAX_SIDE = 1024   # downscale crops larger than this
-ANOMALY_LABELS = ["rebar_visible", "staining", "weathered"]
+ANOMALY_LABELS = ["rebar_visible", "staining", "weathered", "opening"]
+
+# Short descriptions so the model knows what to look for. "opening" matters
+# because photogrammetry cannot reconstruct a void it never saw into: a pipe
+# penetration is closed or mangled in the mesh, but remains plainly visible in
+# the texture. Detecting it from the image recovers a feature the geometry
+# cannot supply.
+ANOMALY_HINTS = {
+    "rebar_visible": "exposed steel bar or mesh",
+    "staining":      "rust, moss, oil, paint or other discolouration",
+    "weathered":     "locally eroded or carbonated patch",
+    "opening":       "a hole through or into the fragment, typically a former "
+                     "pipe or conduit penetration: a dark round or oval region, "
+                     "often with a rim, a mortar collar, or pipe remnants",
+}
 
 _SYSTEM = (
     "You are a materials scientist analysing demolition concrete surfaces. "
@@ -148,8 +162,9 @@ def _call_vision(crops: list, provider: str, model: str) -> dict:
         f"Surface labels (choose exactly one per region):\n"
         + "\n".join(f"  - {t}" for t in TAXONOMY) +
         f"\n\nAnomalies: small distinct patches WITHIN the region that differ "
-        f"from its overall character (only {ANOMALY_LABELS}; box_pct in % of "
-        f"the image, 0-100; empty list if none).\n"
+        f"from its overall character. Use only these:\n"
+        + "\n".join(f"  - {k}: {v}" for k, v in ANOMALY_HINTS.items())
+        + f"\nGive box_pct in % of the image (0-100); empty list if none.\n"
         f"Return ONLY a JSON object with keys 1..{len(numbered)}."
     )
     content = [{"type": "text", "text": prompt}]

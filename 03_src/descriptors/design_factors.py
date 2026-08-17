@@ -159,6 +159,12 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
                 continue
             if "exclude_labels" in fr and face.get("surface_label") in fr["exclude_labels"]:
                 continue
+            if "requires_anomaly" in fr:
+                want = fr["requires_anomaly"]
+                want = want if isinstance(want, list) else [want]
+                found = {a.get("label") for a in (face.get("anomalies") or [])}
+                if not (found & set(want)):
+                    continue
             if ("scan_reliable" in fr
                     and bool(face.get("scan_reliable", True)) != fr["scan_reliable"]):
                 continue

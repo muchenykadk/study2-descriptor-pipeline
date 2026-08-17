@@ -678,9 +678,16 @@ def run_single(frag_id: str, args: argparse.Namespace,
                     for r in _results
                 ]
                 for _res in _results:
-                    if _res["plane_index"] is not None and _res["label"]:
-                        descriptors["planarity"][_res["plane_index"]][
-                            "surface_label"] = _res["label"]
+                    if _res["plane_index"] is None:
+                        continue
+                    _face = descriptors["planarity"][_res["plane_index"]]
+                    if _res["label"]:
+                        _face["surface_label"] = _res["label"]
+                    # Carry the localized anomalies onto the face as well: the
+                    # design factors read them (an opening detected in the
+                    # texture is what makes a planter reuse proposable).
+                    if _res.get("anomalies"):
+                        _face["anomalies"] = _res["anomalies"]
                 # Faces in regions too fragmented to classify inherit the
                 # dominant label of their neighbours, flagged as inferred.
                 _t_idx = {l: i for i, l in enumerate(_TAXONOMY)}

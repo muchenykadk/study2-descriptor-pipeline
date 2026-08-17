@@ -878,19 +878,7 @@ def _procedural_section(proc: dict, vision: dict) -> str:
     h    = proc.get("handling_class") or {}
     hv   = h.get("value") or "—"
     hr   = h.get("reason") or ""
-    fl   = (vision or {}).get("face_labels") or {}
-    cls_, inf, unl = (fl.get("classified_faces"), fl.get("inferred_faces"),
-                      fl.get("unlabeled_faces"))
     coverage = ""
-    if cls_ is not None:
-        tot = (cls_ or 0) + (inf or 0) + (unl or 0)
-        coverage = f"""
-    <div class="stat-block">
-      <div class="stat-label">Face labelling</div>
-      <div class="stat-value" style="font-size:18px">{cls_:,}<span class="stat-unit"> classified</span></div>
-      <div style="font-size:11px;color:var(--muted)">{inf:,} inferred from neighbours ·
-        {unl:,} unlabeled · {tot:,} faces total</div>
-    </div>"""
 
     regions_html = ""
     for r in (vision or {}).get("regions", []) or []:
@@ -914,6 +902,34 @@ def _procedural_section(proc: dict, vision: dict) -> str:
     <tbody>{regions_html}</tbody>
   </table>""" if regions_html else ""
 
+    # ── Design implications: combinations of descriptors → candidate uses ────
+    uses = proc.get("use_suggestions") or []
+    if uses:
+        cards = ""
+        for u in uses:
+            faces_txt = ", ".join(f"region {i+1}" for i in u.get("faces", []))
+            caveat = (f'<div style="font-size:10px;color:var(--warning);margin-top:4px">'
+                      f'{u["caveat"]}</div>') if u.get("caveat") else ""
+            cards += f"""
+      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
+                  background:#15171f">
+        <div style="font-size:13px;font-weight:bold;color:var(--text)">{u['label']}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">{u['note']}</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by {faces_txt}</div>
+        {caveat}
+      </div>"""
+        uses_html = f"""
+  <div style="margin-top:14px">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+                letter-spacing:0.06em;margin-bottom:8px">Candidate uses {_badge('proposed')}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">{cards}
+    </div>
+  </div>"""
+    else:
+        uses_html = ("""
+  <div style="margin-top:14px;font-size:11px;color:var(--muted)">
+    No candidate use met its conditions for this fragment.</div>""")
+
     return f"""
 <div class="section">
   <div class="section-title">Design Factors {_badge('proposed')}
@@ -925,7 +941,7 @@ def _procedural_section(proc: dict, vision: dict) -> str:
       <div class="stat-value" style="font-size:18px">{hv}</div>
       <div style="font-size:11px;color:var(--muted)">{hr}</div>
     </div>{coverage}
-  </div>{regions_table}
+  </div>{uses_html}{regions_table}
 </div>"""
 
 

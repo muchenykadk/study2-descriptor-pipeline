@@ -102,6 +102,62 @@ def design_assignment(face: dict, factors: dict) -> dict:
 
 # ── entry point ──────────────────────────────────────────────────────────────
 
+def use_suggestions(descriptors: dict, factors: dict) -> list:
+    """Combine face and fragment conditions into candidate uses.
+
+    Unlike the per-face factors, a use suggestion needs several conditions to
+    hold at once, some on a face (area, flatness, surface character) and some
+    on the whole fragment (thickness, mass).  A suggestion is offered when at
+    least one face satisfies `requires_face` while the fragment satisfies
+    `requires_fragment`; the qualifying faces are named so the reasoning can be
+    checked against the geometry.
+    """
+    cfg = factors.get("use_suggestions") or {}
+    bounding = descriptors.get("bounding", {}) or {}
+    faces    = descriptors.get("planarity", []) or []
+
+    dims      = bounding.get("obb_dims_mm") or []
+    thickness = min(dims) if dims else None
+    mass      = bounding.get("mass_kg_est")
+
+    out = []
+    for rule in cfg.get("rules", []):
+        frag_req = rule.get("requires_fragment") or {}
+        if "min_thickness_mm" in frag_req:
+            if thickness is None or thickness < frag_req["min_thickness_mm"]:
+                continue
+        if "min_mass_kg" in frag_req:
+            if mass is None or mass < frag_req["min_mass_kg"]:
+                continue
+
+        fr = rule.get("requires_face") or {}
+        matched = []
+        for i, face in enumerate(faces):
+            if "min_area_m2" in fr:
+                a = face.get("area_m2_est")
+                if a is None or a < fr["min_area_m2"]:
+                    continue
+            if "max_fit_rms_mm" in fr:
+                r = face.get("fit_rms_mm")
+                if r is None or r > fr["max_fit_rms_mm"]:
+                    continue
+            if "labels" in fr and face.get("surface_label") not in fr["labels"]:
+                continue
+            if "scan_reliable" in fr and bool(face.get("scan_reliable", True)) != fr["scan_reliable"]:
+                continue
+            matched.append(i)
+
+        if matched:
+            out.append({
+                "id":     rule["id"],
+                "label":  rule.get("label", rule["id"]),
+                "faces":  matched,
+                "note":   rule.get("note", ""),
+                "caveat": rule.get("caveat"),
+            })
+    return out
+
+
 def derive(descriptors: dict, factors: dict | None = None) -> dict:
     """Run all design factors over one fragment record, in place.
 
@@ -123,8 +179,11 @@ def derive(descriptors: dict, factors: dict | None = None) -> dict:
             "data_status": "proposed",
         }
 
+    uses = use_suggestions(descriptors, factors)
+
     block = {
         "handling_class": handling,
+        "use_suggestions": uses,
         "faces_evaluated": len(faces),
         "data_status": "proposed",
         "basis": factors.get("_status"),

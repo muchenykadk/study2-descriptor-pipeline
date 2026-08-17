@@ -293,6 +293,13 @@ body {
 
 # ── Helper renderers ──────────────────────────────────────────────────────────
 
+# Candidate uses are computed into the record and are queryable via query.py,
+# but are NOT shown in the interface: presenting a closed list of uses in the
+# viewer would read as prescriptive and understate the open-ended vocabulary the
+# descriptors support. Set True to surface them (e.g. for a figure).
+SHOW_USE_SUGGESTIONS = False
+
+
 def _badge(status: str) -> str:
     cls = "badge-computed" if status == "computed" else "badge-pseudo"
     return f'<span class="badge {cls}">{status}</span>'
@@ -903,7 +910,7 @@ def _procedural_section(proc: dict, vision: dict) -> str:
   </table>""" if regions_html else ""
 
     # ── Design implications: combinations of descriptors → candidate uses ────
-    uses = proc.get("use_suggestions") or []
+    uses = (proc.get("use_suggestions") or []) if SHOW_USE_SUGGESTIONS else []
     if uses:
         cards = ""
         for u in uses:
@@ -928,7 +935,8 @@ def _procedural_section(proc: dict, vision: dict) -> str:
     else:
         uses_html = ("""
   <div style="margin-top:14px;font-size:11px;color:var(--muted)">
-    No candidate use met its conditions for this fragment.</div>""")
+    No candidate use met its conditions for this fragment.</div>"""
+            if SHOW_USE_SUGGESTIONS else "")
 
     return f"""
 <div class="section">
@@ -1592,6 +1600,7 @@ function fmt(v, d, unit) {
 // The uses come from the encoded design factors and are proposals, not verified
 // assignments; the filter selects fragments whose record offers a given use.
 var useFilter = '';
+var SHOW_USES = {show_uses_js};   // candidate uses hidden in the interface by default
 
 function fragUses(f) {
   return ((f.procedural || {}).use_suggestions) || [];
@@ -1612,6 +1621,8 @@ function useChips(f) {
 function buildUseFilter(fragments) {
   var sel = document.getElementById('use-filter');
   if (!sel) return;
+  var box = document.getElementById('use-filter-box');
+  if (!SHOW_USES) { if (box) box.style.display = 'none'; return; }
   var seen = {};
   fragments.forEach(function(f) {
     fragUses(f).forEach(function(u) { seen[u.id] = u.label; });
@@ -1659,7 +1670,7 @@ function renderList(fragments, selectedId) {
       (archCode ? '<div style="font-size:10px;color:var(--accent);margin-bottom:2px;letter-spacing:0.04em">' + archCode + ' · ' + (f.archetype_label || '') + '</div>' : '') +
       '<div class="frag-dims">' + dims + ' mm</div>' +
       '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>' +
-      useChips(f);
+      (SHOW_USES ? useChips(f) : '');
     item.addEventListener('click', function() { selectFragment(f.fragment_id); });
     list.appendChild(item);
   });
@@ -2004,7 +2015,9 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 
     # _INDEX_JS is a plain string (not an f-string), so {hash_init} inside it
     # must be substituted manually before embedding into the HTML template.
-    index_js = _INDEX_JS.replace('{hash_init}', hash_init)
+    index_js = (_INDEX_JS.replace('{hash_init}', hash_init)
+               .replace('{show_uses_js}',
+                        'true' if SHOW_USE_SUGGESTIONS else 'false'))
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -2022,7 +2035,7 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 </div>
 
 <div class="panels">
-  <div style="padding:8px 10px;border-bottom:1px solid #262a36">
+  <div id="use-filter-box" style="padding:8px 10px;border-bottom:1px solid #262a36">
     <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Intended use</div>
     <select id="use-filter" style="width:100%;background:#15171f;color:#b0b8d0;border:1px solid #262a36;border-radius:4px;font-size:11px;padding:4px 6px"></select>
   </div>

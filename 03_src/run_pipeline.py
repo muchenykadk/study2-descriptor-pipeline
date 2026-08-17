@@ -55,6 +55,7 @@ from ai.region_classification import (classify_regions, cells_from_regions,
                                       GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
 from descriptors.regions import segment_regions, propagate_labels
+from descriptors.design_factors import derive as derive_design_factors
 from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 
 
@@ -751,6 +752,21 @@ def run_single(frag_id: str, args: argparse.Namespace,
             ),
             "data_status": "annotated",
         }
+
+    # ── Design factors: execute the encoded links ────────────────────────────
+    # Provisional by construction: the factors are drawn from Study 1 experience
+    # and general practice, so every value carries data_status "proposed".
+    _proc = derive_design_factors(descriptors)
+    _h = _proc["handling_class"]
+    if _h.get("value"):
+        print(f"\n  Design factors: handling_class = {_h['value']} ({_h['reason']})")
+        _asg = [f.get("procedural", {}).get("design_assignment", {}).get("value")
+                for f in descriptors.get("planarity", [])]
+        _cnx = [f.get("procedural", {}).get("connection_strategy", {}).get("value")
+                for f in descriptors.get("planarity", [])]
+        from collections import Counter as _C
+        print(f"    faces: assignment {dict(_C(a for a in _asg if a))}")
+        print(f"           connection {dict(_C(c for c in _cnx if c))}")
 
     # ── Save ─────────────────────────────────────────────────────────────────
     out_path = save_output(frag_id, descriptors, output_dir)

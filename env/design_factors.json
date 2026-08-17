@@ -1,0 +1,45 @@
+{
+  "_comment": "Encoded design factors: what a descriptor value implies for making. Edit here, not in code.",
+  "_status": "PROVISIONAL. Drawn from Study 1 site experience and general handling/fabrication practice. Not verified with domain experts. Every derived output carries data_status 'proposed'.",
+  "_circularity_note": "Thresholds were informed by Study 1. Agreement between derived outputs and Study 1 decisions is therefore expected and is NOT validation.",
+
+  "handling_class": {
+    "basis": "Manual-handling guidance for single and team lifts; Study 1 site practice.",
+    "rules": [
+      { "max_mass_kg": 25,   "class": "manual",     "note": "single-person lift" },
+      { "max_mass_kg": 50,   "class": "two_person", "note": "team lift, short carry" },
+      { "max_mass_kg": null, "class": "excavator",  "note": "machine handling required" }
+    ],
+    "max_manual_dim_mm": 800,
+    "max_dim_note": "Above this longest dimension, a fragment is machine-handled regardless of mass (awkward to grip, unsafe to carry)."
+  },
+
+  "connection_strategy": {
+    "basis": "Study 1 timber-to-concrete connections; drilling avoidance where reinforcement is exposed.",
+    "rules": [
+      { "if_label": "rebar_visible", "strategy": "no_drill",
+        "note": "drilling risks striking reinforcement" },
+      { "if_scan_reliable": false, "strategy": "gravity_only",
+        "note": "face not captured by the scan; geometry unverified" },
+      { "max_fit_rms_mm": 5.0, "min_area_m2": 0.10, "strategy": "direct_bolt",
+        "note": "flat, large enough to seat a fixing plate" },
+      { "max_fit_rms_mm": 12.0, "min_area_m2": 0.05, "strategy": "adaptive_bracket",
+        "note": "moderately flat; bracket absorbs tolerance" },
+      { "strategy": "gravity_only", "note": "too rough or too small for a fixing" }
+    ]
+  },
+
+  "design_assignment": {
+    "basis": "Study 1 spolia principle: cast and finished faces exposed, fracture faces seated or buried.",
+    "rules": [
+      { "if_scan_reliable": false, "assignment": "buried",
+        "note": "ground-contact face, not observed" },
+      { "if_label": ["formwork_imprint", "original_finish"], "assignment": "show_face",
+        "note": "carries visible material history" },
+      { "if_label": ["fracture_surface", "exposed_aggregate"], "min_area_m2": 0.10,
+        "max_fit_rms_mm": 8.0, "assignment": "seat_face",
+        "note": "flat fracture face, suitable for bearing" },
+      { "assignment": "unassigned", "note": "no rule applies" }
+    ]
+  }
+}

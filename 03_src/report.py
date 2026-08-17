@@ -293,11 +293,12 @@ body {
 
 # ── Helper renderers ──────────────────────────────────────────────────────────
 
-# Candidate uses are computed into the record and are queryable via query.py,
-# but are NOT shown in the interface: presenting a closed list of uses in the
-# viewer would read as prescriptive and understate the open-ended vocabulary the
-# descriptors support. Set True to surface them (e.g. for a figure).
-SHOW_USE_SUGGESTIONS = False
+# Candidate uses are shown on the individual fragment page, where they read as
+# implications of that fragment's descriptors, but not on the inventory, where a
+# category selector would present a closed list of uses as the way to browse the
+# stock and understate the open-ended vocabulary the descriptors support.
+SHOW_USES_IN_REPORT    = True
+SHOW_USES_IN_INVENTORY = False
 
 
 def _badge(status: str) -> str:
@@ -910,7 +911,7 @@ def _procedural_section(proc: dict, vision: dict) -> str:
   </table>""" if regions_html else ""
 
     # ── Design implications: combinations of descriptors → candidate uses ────
-    uses = (proc.get("use_suggestions") or []) if SHOW_USE_SUGGESTIONS else []
+    uses = (proc.get("use_suggestions") or []) if SHOW_USES_IN_REPORT else []
     if uses:
         cards = ""
         for u in uses:
@@ -936,7 +937,7 @@ def _procedural_section(proc: dict, vision: dict) -> str:
         uses_html = ("""
   <div style="margin-top:14px;font-size:11px;color:var(--muted)">
     No candidate use met its conditions for this fragment.</div>"""
-            if SHOW_USE_SUGGESTIONS else "")
+            if SHOW_USES_IN_REPORT else "")
 
     return f"""
 <div class="section">
@@ -2017,7 +2018,7 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
     # must be substituted manually before embedding into the HTML template.
     index_js = (_INDEX_JS.replace('{hash_init}', hash_init)
                .replace('{show_uses_js}',
-                        'true' if SHOW_USE_SUGGESTIONS else 'false'))
+                        'true' if SHOW_USES_IN_INVENTORY else 'false'))
 
     html = f"""<!DOCTYPE html>
 <html lang="en">

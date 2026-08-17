@@ -142,6 +142,13 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
             ("min_fine_curvature_rad", fine_curv, lambda v, t: v is not None and v >= t),
             ("max_fine_curvature_rad", fine_curv, lambda v, t: v is not None and v <= t),
         ]
+        # Height band: a fragment can be laid to present any of its three
+        # bounding dimensions as height, so the band matches if any dimension
+        # falls inside it. Which orientation is actually stable is not computed.
+        if "height_band_mm" in req:
+            lo, hi = req["height_band_mm"]
+            if not any(lo <= d <= hi for d in dims):
+                return False
         for key, value, test in checks:
             if key in req and not test(value, req[key]):
                 return False

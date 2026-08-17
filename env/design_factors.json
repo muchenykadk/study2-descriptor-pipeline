@@ -88,8 +88,8 @@
     ]
   },
   "use_suggestions": {
-    "basis": "Study 1 urban-furniture programme: seating, table surfaces, leaning supports, stable bases, steps, paving and edging. All uses keep the fragment whole and visible; downcycling to fill or aggregate is out of scope by design.",
-    "_how_to_read": "Each entry combines conditions on one face with conditions on the whole fragment. A suggestion is offered when the fragment satisfies requires_fragment and at least one face satisfies requires_face. A rule may instead use requires_no_face, firing when no face meets those conditions. Thickness = smallest oriented-bounding-box dimension; aspect ratio = longest / smallest.",
+    "basis": "Study 1 programme: landscape installation and urban furniture. Fragments serve as supports, stands, shelves, seats and worktops within an assembly. Ground surfacing and downcycling to fill or aggregate are out of scope by design.",
+    "_how_to_read": "Each entry combines conditions on one face with conditions on the whole fragment. A suggestion is offered when the fragment satisfies requires_fragment and at least one face satisfies requires_face; requires_no_face fires when no face qualifies. Thickness = smallest bounding dimension; aspect ratio = longest / smallest; height_band_mm matches if ANY bounding dimension falls in the band, since the fragment can be laid to present that dimension as height. Which orientation is stable is not computed.",
     "rules": [
       {
         "id": "bench_top",
@@ -109,20 +109,6 @@
         "note": "flat, smooth cast face large enough to sit at or place objects on; thick enough to span"
       },
       {
-        "id": "seat_surface",
-        "label": "Seat surface",
-        "requires_face": {
-          "min_area_m2": 0.12,
-          "max_fit_rms_mm": 10.0,
-          "scan_reliable": true
-        },
-        "requires_fragment": {
-          "min_thickness_mm": 60,
-          "min_mass_kg": 50
-        },
-        "note": "smaller flat face, fragment heavy enough to stay put under use"
-      },
-      {
         "id": "leaning_support",
         "label": "Leaning or backrest surface",
         "requires_face": {
@@ -135,18 +121,6 @@
         },
         "note": "large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified",
         "caveat": "orientation unverified"
-      },
-      {
-        "id": "stable_base",
-        "label": "Stable base or footing",
-        "requires_face": {
-          "min_area_m2": 0.15,
-          "max_fit_rms_mm": 12.0
-        },
-        "requires_fragment": {
-          "min_mass_kg": 200
-        },
-        "note": "broad bearing face and high mass; supports elements placed on top"
       },
       {
         "id": "exposed_face",
@@ -163,50 +137,6 @@
         },
         "requires_fragment": {},
         "note": "carries visible traces of the fragment's former life; candidate to face outward"
-      },
-      {
-        "id": "step_tread",
-        "label": "Step or stair tread",
-        "requires_face": {
-          "min_area_m2": 0.15,
-          "max_fit_rms_mm": 6.0,
-          "scan_reliable": true
-        },
-        "requires_fragment": {
-          "min_thickness_mm": 120,
-          "min_mass_kg": 100,
-          "max_fine_curvature_rad": 0.5
-        },
-        "note": "flat, even face on a thick heavy fragment; low fine curvature so the tread is not rough underfoot"
-      },
-      {
-        "id": "paving_slab",
-        "label": "Paving or stepping stone",
-        "requires_face": {
-          "min_area_m2": 0.15,
-          "max_fit_rms_mm": 8.0,
-          "scan_reliable": true
-        },
-        "requires_fragment": {
-          "min_thickness_mm": 60,
-          "max_thickness_mm": 250,
-          "min_convexity": 0.8
-        },
-        "note": "slab-like and regular in form, thick enough to bed but low enough to walk over",
-        "caveat": "convexity required; not evaluated when the mesh is not watertight"
-      },
-      {
-        "id": "kerb_edge",
-        "label": "Kerb or edging element",
-        "requires_face": {
-          "min_area_m2": 0.08,
-          "max_fit_rms_mm": 12.0
-        },
-        "requires_fragment": {
-          "min_aspect_ratio": 3.0,
-          "min_mass_kg": 150
-        },
-        "note": "elongated and heavy, with one bearing face; defines an edge without fixing"
       },
       {
         "id": "rough_feature",
@@ -251,6 +181,87 @@
         },
         "note": "a former pipe or conduit penetration, detected in the texture, can be reinterpreted as a planting pocket or light opening, as in Study 1",
         "caveat": "opening detected from the image only; depth and whether it passes through are not measured"
+      },
+      {
+        "id": "seat_block",
+        "label": "Seat or stool",
+        "requires_face": {
+          "min_area_m2": 0.1,
+          "max_fit_rms_mm": 10.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "height_band_mm": [
+            380,
+            520
+          ],
+          "min_mass_kg": 50
+        },
+        "note": "presents a sittable height with a flat enough top face; heavy enough to stay put",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "bar_table_stand",
+        "label": "Bar-table or high-table stand",
+        "requires_face": {
+          "min_area_m2": 0.08,
+          "max_fit_rms_mm": 12.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "height_band_mm": [
+            900,
+            1150
+          ],
+          "min_mass_kg": 100
+        },
+        "note": "stands at counter height with a bearing face on top to carry a table plate",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "low_support",
+        "label": "Low support or side table",
+        "requires_face": {
+          "min_area_m2": 0.08,
+          "max_fit_rms_mm": 12.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "height_band_mm": [
+            250,
+            400
+          ],
+          "min_mass_kg": 30
+        },
+        "note": "low bearing element: side table, footrest, or plinth beneath a larger piece",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "pedestal_support",
+        "label": "Pedestal or structural support",
+        "requires_face": {
+          "min_area_m2": 0.12,
+          "max_fit_rms_mm": 10.0
+        },
+        "requires_fragment": {
+          "min_mass_kg": 150
+        },
+        "note": "broad flat bearing face and mass enough to carry a timber deck, plate or slab above"
+      },
+      {
+        "id": "shelf_slab",
+        "label": "Shelf or spanning slab",
+        "requires_face": {
+          "min_area_m2": 0.2,
+          "max_fit_rms_mm": 8.0,
+          "scan_reliable": true
+        },
+        "requires_fragment": {
+          "min_thickness_mm": 50,
+          "max_thickness_mm": 180,
+          "min_aspect_ratio": 2.5
+        },
+        "note": "slab-like and elongated with a flat face; spans between two supports as a shelf or seat plate"
       }
     ]
   }

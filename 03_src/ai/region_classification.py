@@ -39,6 +39,7 @@ COHERENCE_MIN = 0.5    # min share of a region's UV footprint in one island
 N_VOTES       = 3
 CROP_MARGIN   = 16     # px context margin around region bbox
 CROP_MAX_SIDE = 1024   # downscale crops larger than this
+MASK_FILL     = 128    # flat grey for area outside the region
 ANOMALY_LABELS = ["rebar_visible", "staining", "weathered", "opening"]
 
 # Short descriptions so the model knows what to look for. "opening" matters
@@ -78,7 +79,12 @@ def rasterize_region_mask(mesh, face_idx, size: int) -> np.ndarray:
     rows  = np.clip(((1.0 - uv[verts, 1]) * size).astype(int), 0, size - 1)
     arr = np.zeros((size, size), dtype=np.uint8)
     arr[rows, cols] = 255
+    # Dilate to join neighbouring samples, then CLOSE the result: scattered
+    # vertices leave pinholes inside the footprint, and an unclosed mask
+    # punches dark gaps into the crop that a vision model reads as voids in
+    # the concrete. Closing removes the artifact without growing the outline.
     img = Image.fromarray(arr).filter(ImageFilter.MaxFilter(5))
+    img = img.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.MinFilter(9))
     return np.array(img) > 0
 
 
@@ -130,7 +136,11 @@ def build_region_crops(texture_img: Image.Image, mesh, regions: list) -> list:
         y0, y1 = max(rows[0] - CROP_MARGIN, 0), min(rows[-1] + CROP_MARGIN, size)
         x0, x1 = max(cols[0] - CROP_MARGIN, 0), min(cols[-1] + CROP_MARGIN, size)
         crop = tex[y0:y1, x0:x1].copy()
-        crop[~mask[y0:y1, x0:x1]] = 0          # black out other regions
+        # Fill outside the region with a flat mid grey, not black: a black fill
+        # reads as a hole in the material, and the model reported those as
+        # openings. A flat neutral tone is visibly "not surface" without
+        # looking like a void.
+        crop[~mask[y0:y1, x0:x1]] = MASK_FILL
         img = Image.fromarray(crop)
         if max(img.size) > CROP_MAX_SIDE:
             img.thumbnail((CROP_MAX_SIDE, CROP_MAX_SIDE))
@@ -154,7 +164,9 @@ def _call_vision(crops: list, provider: str, model: str) -> dict:
     prompt = (
         f"You receive {len(numbered)} numbered images. Each is one coherent "
         f"surface region of a single demolition concrete fragment, cut out of "
-        f"its texture atlas (black = outside the region).\n\n"
+        f"its texture atlas. Flat grey areas are outside the region and are "
+        f"not part of the material: never report them as holes, voids or "
+f"openings.\n\n"
         f"For EACH image i return:\n"
         f'  "i": {{"label": <surface label>, '
         f'"anomalies": [{{"label": <anomaly label>, '

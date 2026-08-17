@@ -871,6 +871,64 @@ def _viewer_section(regions: list, viewer_data: dict,
 </script>"""
 
 
+def _procedural_section(proc: dict, vision: dict) -> str:
+    """Fragment-level design factors + how many faces were classified vs inferred."""
+    if not proc:
+        return ""
+    h    = proc.get("handling_class") or {}
+    hv   = h.get("value") or "—"
+    hr   = h.get("reason") or ""
+    fl   = (vision or {}).get("face_labels") or {}
+    cls_, inf, unl = (fl.get("classified_faces"), fl.get("inferred_faces"),
+                      fl.get("unlabeled_faces"))
+    coverage = ""
+    if cls_ is not None:
+        tot = (cls_ or 0) + (inf or 0) + (unl or 0)
+        coverage = f"""
+    <div class="stat-block">
+      <div class="stat-label">Face labelling</div>
+      <div class="stat-value" style="font-size:18px">{cls_:,}<span class="stat-unit"> classified</span></div>
+      <div style="font-size:11px;color:var(--muted)">{inf:,} inferred from neighbours ·
+        {unl:,} unlabeled · {tot:,} faces total</div>
+    </div>"""
+
+    regions_html = ""
+    for r in (vision or {}).get("regions", []) or []:
+        skipped = r.get("skipped")
+        coh     = r.get("uv_coherence")
+        note    = (f'<span style="color:var(--warning)">not classified ({skipped}, '
+                   f'coherence {coh})</span>') if skipped else (r.get("label") or "—")
+        an = len(r.get("anomalies") or [])
+        regions_html += f"""
+      <tr>
+        <td>#{r.get('region_id')}</td>
+        <td style="font-size:11px">{r.get('kind','')}</td>
+        <td class="num">{(r.get('area_frac') or 0)*100:.1f}%</td>
+        <td style="font-size:11px">{note}</td>
+        <td class="num">{an if an else '—'}</td>
+      </tr>"""
+    regions_table = f"""
+  <table class="data-table" style="margin-top:12px">
+    <thead><tr><th>Region</th><th>Kind</th><th class="num">Area</th>
+      <th>Label</th><th class="num">Anomalies</th></tr></thead>
+    <tbody>{regions_html}</tbody>
+  </table>""" if regions_html else ""
+
+    return f"""
+<div class="section">
+  <div class="section-title">Design Factors {_badge('proposed')}
+    <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">
+      — derived from encoded links, provisional and not expert-verified</span></div>
+  <div class="stat-grid">
+    <div class="stat-block">
+      <div class="stat-label">Handling class</div>
+      <div class="stat-value" style="font-size:18px">{hv}</div>
+      <div style="font-size:11px;color:var(--muted)">{hr}</div>
+    </div>{coverage}
+  </div>{regions_table}
+</div>"""
+
+
 def _planar_section(regions: list) -> str:
     if not regions:
         return """
@@ -886,12 +944,23 @@ def _planar_section(regions: list) -> str:
         frac  = f"{r.get('inlier_fraction', 0):.1%}"
         rms   = f"{r.get('fit_rms_mm', 0):.3f} mm"
         nx, ny, nz = (r.get("normal_xyz") or [0, 0, 0])
+        lbl   = r.get("surface_label") or "—"
+        proc  = r.get("procedural") or {}
+        conn  = (proc.get("connection_strategy") or {}).get("value") or "—"
+        asg   = (proc.get("design_assignment") or {}).get("value") or "—"
+        conn_t = (proc.get("connection_strategy") or {}).get("rule") or ""
+        asg_t  = (proc.get("design_assignment") or {}).get("rule") or ""
+        rel   = "" if r.get("scan_reliable", True) else (
+                ' <span style="color:var(--warning);font-size:10px">unscanned</span>')
         rows += f"""
       <tr class="region-row" data-region-id="{i}" onclick="highlightRegion({i})" style="cursor:pointer">
-        <td><span class="region-dot" style="background:{color}"></span>{i+1}</td>
+        <td><span class="region-dot" style="background:{color}"></span>{i+1}{rel}</td>
         <td class="num">{area}</td>
         <td class="num">{frac}</td>
         <td class="num">{rms}</td>
+        <td style="font-size:11px">{lbl}</td>
+        <td style="font-size:11px" title="{conn_t}">{conn}</td>
+        <td style="font-size:11px" title="{asg_t}">{asg}</td>
         <td class="num" style="color:var(--muted);font-size:11px">({nx:.3f}, {ny:.3f}, {nz:.3f})</td>
       </tr>"""
 
@@ -905,6 +974,9 @@ def _planar_section(regions: list) -> str:
         <th class="num">Area</th>
         <th class="num">Coverage</th>
         <th class="num">Fit RMS</th>
+        <th>Surface</th>
+        <th>Connection <span class="badge badge-pseudo">proposed</span></th>
+        <th>Assignment <span class="badge badge-pseudo">proposed</span></th>
         <th class="num">Normal (x, y, z)</th>
       </tr>
     </thead>
@@ -1121,6 +1193,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     regions        = data.get("planarity", [])
     curvature      = data.get("curvature", {})
     vision         = data.get("vision", {})
+    procedural     = data.get("procedural", {})
 
     def _rel(p):
         return _os.path.relpath(p, output_dir).replace("\\", "/") if p and Path(p).exists() else ""
@@ -1143,6 +1216,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
     vision_html    = _vision_section(vision, texture_rel_path=tex_rel)
+    procedural_html= _procedural_section(procedural, vision)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1177,6 +1251,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
   {planarity_html}
   {curvature_html}
   {vision_html}
+  {procedural_html}
 
   <div style="margin-top:40px;color:var(--border);font-size:10px;text-align:right">
     Generated by Study2_Descriptor_Pipeline {version}

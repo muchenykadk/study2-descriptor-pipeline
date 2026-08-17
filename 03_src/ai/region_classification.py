@@ -270,6 +270,12 @@ def classify_regions(texture_path: Path, mesh, regions: list,
     reg_sig  = hashlib.md5(json.dumps(
         [[int(r["face_idx"][0]), len(r["face_idx"])] for r in regions]
     ).encode()).hexdigest()[:8]
+    # The prompt is part of the cache identity: editing the taxonomy or the
+    # anomaly hints must invalidate previous answers, or a changed question
+    # silently returns the old answer.
+    prompt_sig = hashlib.md5(
+        json.dumps([TAXONOMY, ANOMALY_LABELS, ANOMALY_HINTS],
+                   sort_keys=True).encode()).hexdigest()[:6]
 
     print(f"    region classification: {len(numbered)} regions, "
           f"{n_votes} votes — {provider}/{model}")
@@ -277,7 +283,7 @@ def classify_regions(texture_path: Path, mesh, regions: list,
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     runs = []
     for run in range(1, n_votes + 1):
-        cache_p = (CACHE_DIR / f"reg_{tex_hash}_{reg_sig}_run{run}_"
+        cache_p = (CACHE_DIR / f"reg_{tex_hash}_{reg_sig}_{prompt_sig}_run{run}_"
                                f"{provider}_{model.replace('/', '-')}.json")
         if cache_p.exists():
             runs.append(json.loads(cache_p.read_text(encoding="utf-8")))

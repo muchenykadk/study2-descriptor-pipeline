@@ -71,6 +71,12 @@ python 03_src/run_pipeline.py --batch --geometry-only
 python 03_src/run_pipeline.py --serve
 ```
 
+**Process and open in one command** — `--serve` acts as a modifier when a fragment ID or `--batch` is given:
+```powershell
+python 03_src/run_pipeline.py FRAG-S1-FS-006 --force --serve
+python 03_src/run_pipeline.py --batch --force --serve
+```
+
 **Custom RANSAC threshold** (default 3.0 mm — increase for noisier scans):
 ```powershell
 python 03_src/run_pipeline.py FRAG-S1-FS-003 --ransac-threshold 5.0

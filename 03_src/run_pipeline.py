@@ -825,6 +825,29 @@ def run_single(frag_id: str, args: argparse.Namespace,
         print()
 
 
+def _serve_output(output_dir: Path, frag_id: str = "",
+                  require_existing: bool = False) -> None:
+    """Open the inventory (or a single report) over HTTP.
+
+    Used both by `--serve` alone and as the final step of a processing run
+    that was given `--serve`.
+    """
+    report_path = output_dir / f"{frag_id}_report.html" if frag_id else None
+    index_path  = output_dir / "index.html"
+    if require_existing and frag_id and report_path and not report_path.exists():
+        print(f"\n  No report found at {report_path}")
+        print(f"  Run without --serve first to generate it.")
+        sys.exit(1)
+    entry = index_path if index_path.exists() else report_path
+    if entry is None or not entry.exists():
+        print(f"\n  Nothing to serve in {output_dir}")
+        return
+    print(f"\n  Serving at http://127.0.0.1:PORT/{entry.name} ...")
+    if frag_id:
+        print(f"  (Open the 3D report for {frag_id} from the inventory)")
+    open_report(entry)
+
+
 def _discover_fragments(processed_dir: Path) -> list[str]:
     """Return sorted list of fragment IDs that have at least one input file."""
     _EXTENSIONS = {".ply", ".glb", ".obj"}
@@ -895,7 +918,7 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
     )
     parser.add_argument(
         "--serve", action="store_true",
-        help="Skip all calculations — just open the existing report in the browser."
+        help="Open the report in the browser. Alone: skip all calculations and show the existing output. With a fragment ID or --batch: process first, then open."
     )
     parser.add_argument(
         "--grid-legacy", action="store_true",
@@ -912,20 +935,10 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
         parser.error("Provide a fragment ID or use --batch.")
 
     # ── Serve-only shortcut ───────────────────────────────────────────────────
-    if args.serve:
-        output_dir = Path(args.output_dir)
-        frag_id    = args.frag_id or ""
-        report_path = output_dir / f"{frag_id}_report.html"
-        index_path  = output_dir / "index.html"
-        if frag_id and not report_path.exists():
-            print(f"\n  No report found at {report_path}")
-            print(f"  Run without --serve first to generate it.")
-            sys.exit(1)
-        entry = index_path if index_path.exists() else report_path
-        print(f"\n  Serving inventory at http://127.0.0.1:PORT/{entry.name} ...")
-        if frag_id:
-            print(f"  (Click 'Open 3D Report' for {frag_id} from there)")
-        open_report(entry)
+    # --serve alone means "just open the last output". Combined with a fragment
+    # ID or --batch it is a modifier: process first, then open the result.
+    if args.serve and not args.frag_id and not args.batch:
+        _serve_output(Path(args.output_dir), "", require_existing=True)
         return
 
     processed_dir = Path(args.input_dir)
@@ -967,10 +980,15 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
         print(f"\n  Batch complete. {len(queue)} fragment(s) processed.")
         print(f"  Commit: git add 05_output/ && git commit -m 'data: batch descriptors'")
         print()
+        if args.serve:
+            _serve_output(output_dir, "")
         return
 
     # ── Single fragment ───────────────────────────────────────────────────────
-    run_single(args.frag_id, args, processed_dir, output_dir, open_browser=True)
+    run_single(args.frag_id, args, processed_dir, output_dir,
+               open_browser=not args.serve)
+    if args.serve:
+        _serve_output(output_dir, args.frag_id)
 
 
 if __name__ == "__main__":

@@ -91,6 +91,36 @@ python 03_src/scan_coverage.py FRAG-S1-FS-003
 
 ---
 
+## Query the records
+
+Structured filters over the per-fragment JSON. No natural language: the descriptors are
+already symbolic, so selection is exact filtering.
+
+**By intended design use:**
+```powershell
+python 03_src/query.py --list-uses
+python 03_src/query.py --use bench_top --rank mass
+python 03_src/query.py --use bar_table_stand
+python 03_src/query.py --use seat_block --max-mass 400 --handling two_person
+```
+
+**By surface condition or anomaly:**
+```powershell
+python 03_src/query.py --label formwork_imprint --min-face-area 0.3
+python 03_src/query.py --anomaly opening
+```
+
+**Evaluation baseline** — withhold the surface descriptors and re-derive, so the
+difference between the two runs isolates what surface characterization contributes:
+```powershell
+python 03_src/query.py --use bench_top --geometry-only
+```
+
+Unsupported predicates exit with code 2 and an explanation, instead of returning a
+plausible wrong answer.
+
+---
+
 ## Blender export
 
 Use the **v2 scripts** (they also write the UNSCANNED `_scan_coverage.json` sidecar): open `02_blender/bake_texture_v2.py` (remesh + bake + export) or `02_blender/export_fragment_v2.py` (export only) in the Blender Scripting tab.  

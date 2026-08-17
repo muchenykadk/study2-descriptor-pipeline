@@ -1588,8 +1588,56 @@ function fmt(v, d, unit) {
   return v.toFixed(d) + (unit ? ' ' + unit : '');
 }
 
+// ── Intended design use: chips on each card, and a filter over the list ──────
+// The uses come from the encoded design factors and are proposals, not verified
+// assignments; the filter selects fragments whose record offers a given use.
+var useFilter = '';
+
+function fragUses(f) {
+  return ((f.procedural || {}).use_suggestions) || [];
+}
+
+function useChips(f) {
+  var us = fragUses(f);
+  if (!us.length) return '';
+  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">' +
+    us.map(function(u) {
+      var on = useFilter && u.id === useFilter;
+      return '<span style="font-size:9px;padding:1px 5px;border-radius:8px;' +
+        'background:' + (on ? '#2d3250' : '#1b1e29') + ';color:' + (on ? '#9aa4ff' : '#6b7280') +
+        ';border:1px solid ' + (on ? '#7c83fd' : '#262a36') + '">' + u.label + '</span>';
+    }).join('') + '</div>';
+}
+
+function buildUseFilter(fragments) {
+  var sel = document.getElementById('use-filter');
+  if (!sel) return;
+  var seen = {};
+  fragments.forEach(function(f) {
+    fragUses(f).forEach(function(u) { seen[u.id] = u.label; });
+  });
+  var opts = ['<option value="">All fragments</option>'];
+  Object.keys(seen).sort().forEach(function(id) {
+    var n = fragments.filter(function(f) {
+      return fragUses(f).some(function(u) { return u.id === id; });
+    }).length;
+    opts.push('<option value="' + id + '">' + seen[id] + ' (' + n + ')</option>');
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = useFilter;
+  sel.onchange = function() {
+    useFilter = this.value;
+    renderList(allFragments, selectedId);
+  };
+}
+
 function renderList(fragments, selectedId) {
   const list = document.getElementById('frag-list');
+  if (useFilter) {
+    fragments = fragments.filter(function(f) {
+      return fragUses(f).some(function(u) { return u.id === useFilter; });
+    });
+  }
   list.innerHTML = '';
   fragments.forEach(function(f) {
     const b = f.bounding || {};
@@ -1610,7 +1658,8 @@ function renderList(fragments, selectedId) {
       '</div>' +
       (archCode ? '<div style="font-size:10px;color:var(--accent);margin-bottom:2px;letter-spacing:0.04em">' + archCode + ' · ' + (f.archetype_label || '') + '</div>' : '') +
       '<div class="frag-dims">' + dims + ' mm</div>' +
-      '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>';
+      '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>' +
+      useChips(f);
     item.addEventListener('click', function() { selectFragment(f.fragment_id); });
     list.appendChild(item);
   });
@@ -1909,6 +1958,7 @@ function init(fragments, vmap) {
   document.getElementById('count').textContent = allFragments.length + ' fragment' + (allFragments.length !== 1 ? 's' : '');
   var hash  = location.hash.replace('#', '') || {hash_init};
   var first = hash || (allFragments[0] ? allFragments[0].fragment_id : null);
+  buildUseFilter(allFragments);
   renderList(allFragments, first);
   renderDetail(allFragments.find(function(f){ return f.fragment_id === first; }) || null);
   if (first) { selectedId = first; selectFragment(first); }
@@ -1972,6 +2022,10 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 </div>
 
 <div class="panels">
+  <div style="padding:8px 10px;border-bottom:1px solid #262a36">
+    <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Intended use</div>
+    <select id="use-filter" style="width:100%;background:#15171f;color:#b0b8d0;border:1px solid #262a36;border-radius:4px;font-size:11px;padding:4px 6px"></select>
+  </div>
   <div class="frag-list" id="frag-list"></div>
   <div class="detail-panel" id="detail-panel">
     <div id="viewer-wrap">

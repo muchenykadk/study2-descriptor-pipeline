@@ -5,6 +5,103 @@ Versions: `v0.x` = pre-release development, `v1.0` = first full fragment process
 
 ---
 
+## [v2.0.5] 2026-08-27 — Features read on fracture surfaces are now retrievable
+
+**Three quarters of successful classifications reached nothing.** A feature is classified on a
+surface region; a design rule and `--label` both read planar faces. Cluster regions carry no
+`plane_index`, so 49 of 65 classifications were unreachable. On FS-010 the model read
+`brick_inclusion` correctly and `--label brick_inclusion` returned nothing.
+
+**Two changes, deliberately separate.**
+
+*Rules that make no demand on flatness now evaluate over regions.* `exposed_face`,
+`rough_feature` and `planter_void` specify no `max_fit_rms_mm`: they ask about surface
+character, which a fracture surface answers as well as a cast one. `rough_feature` asks for
+`broken_face` and `exposed_aggregate` and could not fire on a broken face. The eight rules that
+put a load or a body on a surface still require a plane, because flatness is their function.
+Show-face recall went from 1 of 3 to 2 of 3, and the planter reuse became expressible.
+
+*Faces now record the fracture surfaces they meet.* Moving a cluster's features onto the
+nearest plane was tried and rejected: the clusters sit 27 to 323 mm away at 35° to 141°, so it
+would record a condition on a surface that does not have it. Adjacency is the honest relation,
+so `adjacent_features` records that two surfaces meet, weighted by shared boundary, with a face
+claiming a region only above a 50% share. 17 of 25 linked clusters touch more than one face, up
+to six. `--label` retrieval rose from 17 of 39 observations to 32 of 39. **No design rule reads
+the new field**, `features` still means "observed on this face", and the frozen query results
+are unchanged.
+
+Supporting additions: `regions.area_m2` so region-evaluated rules can compare against
+thresholds stated in m²; `regions.adjacent_faces()`; `query._face_matches(include_adjacent=)`,
+off by default and reported separately so a face match and an adjacency match are never
+confused.
+
+**A cache guard, found while doing this.** The region cache key covers the texture, the
+partition and the prompt, but not how many regions passed the texture gates, and the crops are
+numbered over those that did. The smear-mask fix in v2.0.4 could therefore change that count
+while the key still reported a match, and cached answers would be read against the wrong
+regions, silently. `classify_regions` now compares the count and re-classifies on disagreement.
+
+**A bug in the migration, worth recording because it nearly shipped.** `backfill_regions.py`
+first segmented without excluding the patched ground-contact face, while the pipeline excludes
+it. That produced a different partition with different region ids, so every value written was
+attached to the wrong region, across all twelve records. It surfaced only because a pipe
+opening known to exist on FS-002 failed to link. The fields were stripped and rewritten, and
+the script now refuses to write unless the fresh partition reproduces the saved one on kind and
+area for every region.
+
+---
+
+## [v2.0.4] 2026-08-27 — Texture gates were masking pixels they never measured
+
+**`directional_smear` and `featureless_fill` dilated past their own `valid` mask.** Both apply
+`& valid` when building the mask, then run a morphological close, and `directional_smear`
+additionally fills holes. Neither clipped back afterwards, so the mask spilled onto pixels
+outside the surface it was measured against. On FS-001 the smear mask covered 105% of the real
+surface atlas-wide, and the spilled pixels were charged to the region as unusable.
+
+Every smear and featureless fraction recorded before this date is therefore overstated, and
+regions were being withheld on inflated numbers. Both functions now clip to `valid` on return.
+Blobs are still kept whole, which was the reason the close was there.
+
+Related but separate: an earlier fix this month corrected the *reported fraction* to be measured
+on-mask, after a face printed "109% of the face is unusable texture". That addressed the
+arithmetic and left the mask itself growing, which is the cause fixed here.
+
+**No fragment has been re-run.** The region cache keys on the region partition and the prompt,
+not on the crop images, so a re-run would replay old answers against new crops. All twelve
+records still carry the inflated figures and are at least consistent with each other.
+
+Found while tracing why a pipe opening plainly visible in FS-001's atlas is never classified.
+It is not the cause of that: the opening's own texture passes every gate, and it is discarded
+because the smear gate drops whole regions and it shares one with a smeared area. See
+`06_validation/deferred_defects_2026-08-27.md`.
+
+---
+
+## [v2.0.3] 2026-08-27 — The geometry-only baseline was never withholding anything
+
+**`query.strip_surface` leaked the surface classification into the control condition.** It
+removed `surface_label` and `anomalies` from each face but not `features`. The design rules
+migrated to the multi-label `features` set on 2026-08-20 and the baseline was not updated with
+them, so `design_assignment` still returned `show_face` under `--geometry-only`. Every
+geometry-only run before this date was answered with the vision output in place, and any
+full-versus-baseline comparison drawn from one is void.
+
+Found while running the first query validation over the Study 1 decision ledger: all six
+queries returned identical sets under both conditions, which is not a plausible result.
+
+**Fixed at source.** The surface-derived face keys are now declared once as
+`descriptors.design_factors.SURFACE_FACE_KEYS`, beside the rules that read them, and
+`strip_surface` iterates that list rather than naming keys itself. A rule that starts reading
+a new surface key has to add it there or the baseline leaks it. After the fix, D6
+(`--assignment show_face`) drops from 2 fragments to 0 under `--geometry-only` and the other
+five queries are unchanged, so surface characterization alters the outcome of one query in six
+on this corpus.
+
+Results in `06_validation/query_validation_2026-08-27.md`.
+
+---
+
 ## [v2.0.2] 2026-08-25 — First clean corpus run; three root-cause fixes it exposed
 
 The 2026-08-25 batch completed on all eleven textured fragments with the new taxonomy reaching

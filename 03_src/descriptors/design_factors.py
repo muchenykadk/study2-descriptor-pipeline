@@ -35,11 +35,12 @@ _FACTORS_PATH = Path(__file__).resolve().parents[2] / "env" / "design_factors.js
 _WITHHELD = {
     "value": None,
     "data_status": "withheld",
-    "reason": ("Depends on rebar_visible, which the region pass has never "
-               "reported and the whole-atlas pass reports on 4 of 12 "
-               "fragments. Drilling and finishing guidance derived from that "
-               "reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md "
-               "§7. Withheld 2026-08-25."),
+    "reason": ("Depends on rebar_visible. On the 2026-08-27 corpus the region "
+               "pass reports it on 2 of 134 regions and on no planar face, so "
+               "no face-level rule can read it, and the classifier producing "
+               "it does not exceed a null baseline. Drilling and finishing "
+               "guidance resting on that would be unsafe. See "
+               "04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25."),
 }
 
 
@@ -110,6 +111,17 @@ def face_features(face: dict) -> set:
     if face.get("surface_label"):
         out.add(face["surface_label"])
     return out
+
+
+#: Every key on a face that carries something the vision model contributed.
+#: The geometry-only baseline in `query.strip_surface` removes exactly these, so
+#: a rule that starts reading a new surface-derived key must add it here or the
+#: baseline will leak that key. Listed beside the rules that read them for that
+#: reason: on 2026-08-27 the baseline was found to be withholding
+#: `surface_label` while the rules had already migrated to `features`, so
+#: `design_assignment` still returned `show_face` with the surface descriptors
+#: supposedly withheld and the two evaluation conditions were identical.
+SURFACE_FACE_KEYS = ("surface_label", "features", "anomalies")
 
 
 def handling_class(mass_kg: float | None, obb_dims_mm: list | None,
@@ -260,6 +272,7 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
     bounding = descriptors.get("bounding", {}) or {}
     faces    = descriptors.get("planarity", []) or []
     curv     = descriptors.get("curvature", {}) or {}
+    regions  = ((descriptors.get("vision") or {}).get("regions") or [])
 
     dims      = sorted(bounding.get("obb_dims_mm") or [])
     thickness = dims[0] if dims else None
@@ -318,27 +331,77 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
             out.append(i)
         return out
 
+    def _regions_matching(fr: dict) -> list:
+        """Region ids satisfying a rule that makes no demand on flatness.
+
+        A face here is a RANSAC plane's inlier set. Measured over the twelve
+        fragment corpus those sets are not surfaces: they hold 51 to 372
+        disconnected patches, their UV footprint scatters across the atlas, and
+        77% are withheld before classification for a median fill of 0.11.
+        Cluster regions are single connected patches, fill 0.41, and 75% are
+        classified, but they carry no `plane_index` and so reached no rule at
+        all. 49 of 65 successful classifications were discarded that way.
+
+        A rule that specifies `max_fit_rms_mm` is asking for a flat surface,
+        because something rests or bears on it, and only a plane will do. A rule
+        that specifies none is asking about surface character, and a fracture
+        surface answers it as well as a cast one. `rough_feature` is the clearest
+        case: it asks for `broken_face` and `exposed_aggregate` and could not
+        fire on a broken face.
+
+        This does not move a feature onto a surface that lacks it. The
+        classification stays on the region the model was shown, and the rule
+        reads it there.
+        """
+        out = []
+        for r in regions:
+            feats = {f["id"] if isinstance(f, dict) else f
+                     for f in (r.get("features") or [])}
+            if not feats:
+                continue
+            if "labels" in fr and not (feats & set(fr["labels"])):
+                continue
+            if "exclude_labels" in fr and (feats & set(fr["exclude_labels"])):
+                continue
+            if "min_area_m2" in fr:
+                a = r.get("area_m2")
+                if a is None or a < fr["min_area_m2"]:
+                    continue
+            out.append(r.get("region_id"))
+        return out
+
     out = []
     for rule in cfg.get("rules", []):
         if not _frag_ok(rule.get("requires_fragment") or {}):
             continue
 
+        matched_regions = []
         if "requires_no_face" in rule:
             if _faces_matching(rule["requires_no_face"]):
                 continue          # such a face exists, so the rule does not apply
             matched = []
         else:
-            matched = _faces_matching(rule.get("requires_face") or {})
-            if not matched:
+            fr = rule.get("requires_face") or {}
+            matched = _faces_matching(fr)
+            # No flatness requirement means the rule is about surface character,
+            # so a non-planar region can satisfy it too.
+            if "max_fit_rms_mm" not in fr:
+                matched_regions = _regions_matching(fr)
+            if not matched and not matched_regions:
                 continue
 
-        out.append({
+        entry = {
             "id":     rule["id"],
             "label":  rule.get("label", rule["id"]),
             "faces":  matched,
             "note":   rule.get("note", ""),
             "caveat": rule.get("caveat"),
-        })
+        }
+        if matched_regions:
+            # Kept separate from `faces` so a reader can always tell whether the
+            # evidence sits on a planar face or on a fracture surface.
+            entry["regions"] = matched_regions
+        out.append(entry)
     return out
 
 

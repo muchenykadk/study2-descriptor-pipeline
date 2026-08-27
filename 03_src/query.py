@@ -37,7 +37,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
-from descriptors.design_factors import derive as derive_design_factors, load_factors
+from descriptors.design_factors import (
+    derive as derive_design_factors,
+    load_factors,
+    SURFACE_FACE_KEYS,
+)
 
 DEFAULT_DIR = REPO_ROOT / "05_output" / "descriptors"
 
@@ -66,12 +70,18 @@ def strip_surface(record: dict) -> dict:
     contributed is removed, and the design factors are re-derived from geometry
     alone, so the difference between the two runs isolates what surface
     characterization adds.
+
+    The face keys removed are `design_factors.SURFACE_FACE_KEYS`, kept beside
+    the rules that read them so the two cannot drift apart. They did drift: this
+    function named `surface_label` and `anomalies` only, while the rules had
+    migrated to the multi-label `features`, so every geometry-only run before
+    2026-08-27 was answered with the surface classification still in place.
     """
     r = copy.deepcopy(record)
     r.pop("vision", None)
     for face in r.get("planarity", []) or []:
-        face.pop("surface_label", None)
-        face.pop("anomalies", None)
+        for k in SURFACE_FACE_KEYS:
+            face.pop(k, None)
     derive_design_factors(r)
     return r
 
@@ -83,14 +93,30 @@ def _uses(record: dict) -> list:
 
 
 def _face_matches(record: dict, label=None, min_area=None,
-                  max_rms=None, anomaly=None, reliable_only=False) -> list:
-    """Indices of faces satisfying the given conditions."""
+                  max_rms=None, anomaly=None, reliable_only=False,
+                  include_adjacent=False) -> list:
+    """Indices of faces satisfying the given conditions.
+
+    `include_adjacent` widens a label test to features observed on a surface
+    that meets the face, not only on the face itself. Without it, a feature
+    classified on a fracture cluster is unreachable: on FS-010 the model reads
+    `brick_inclusion` correctly and `--label brick_inclusion` returns nothing,
+    because clusters carry no `plane_index` and so put nothing on any face.
+
+    It is off by default and must stay off wherever the answer feeds a rule
+    about bearing or fixing, since a broken surface meeting a formwork face does
+    not make that face broken. It is on for attribute filtering, where the
+    question is which pieces show a condition and the answer is yes.
+    """
     hits = []
     for i, f in enumerate(record.get("planarity", []) or []):
-        if label and label not in (set(f.get("features") or [])
-                                   | ({f["surface_label"]}
-                                      if f.get("surface_label") else set())):
-            continue
+        if label:
+            on_face = (set(f.get("features") or [])
+                       | ({f["surface_label"]} if f.get("surface_label") else set()))
+            if include_adjacent:
+                on_face |= set(f.get("adjacent_features") or [])
+            if label not in on_face:
+                continue
         if min_area is not None and not (f.get("area_m2_est") or 0) >= min_area:
             continue
         if max_rms is not None and not (f.get("fit_rms_mm") or 1e9) <= max_rms:
@@ -137,9 +163,23 @@ def select(records: list, use=None, label=None, anomaly=None,
         if label or anomaly or min_face_area or max_face_rms or reliable_only:
             hits = _face_matches(r, label, min_face_area, max_face_rms,
                                  anomaly, reliable_only)
-            if not hits:
+            adj_hits = []
+            if label and not hits:
+                # Nothing on a face. The feature may still have been read on a
+                # surface meeting one, which is the common case: three quarters
+                # of successful classifications land on non-planar regions.
+                # Reported separately so a face match and an adjacency match are
+                # never confused.
+                adj_hits = [i for i in _face_matches(
+                    r, label, min_face_area, max_face_rms, anomaly,
+                    reliable_only, include_adjacent=True) if i not in hits]
+            if not hits and not adj_hits:
                 continue
-            why.append(", ".join(f"region {i+1}" for i in hits))
+            if hits:
+                why.append(", ".join(f"region {i+1}" for i in hits))
+            if adj_hits:
+                why.append("on a surface meeting "
+                           + ", ".join(f"region {i+1}" for i in adj_hits))
 
         if min_mass is not None and not (mass is not None and mass >= min_mass):
             continue

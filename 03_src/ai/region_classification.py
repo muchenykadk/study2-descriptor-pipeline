@@ -334,7 +334,12 @@ def directional_smear(crop: np.ndarray, valid: np.ndarray,
         sizes = ndimage.sum(smear, lab, range(1, n + 1))
         keep  = 1 + np.where(sizes > SMEAR_MIN_FRAC * max(valid.sum(), 1))[0]
         smear = np.isin(lab, keep)
-    return smear
+    # `& valid` on the way in is not enough: the close and the hole fill both
+    # dilate, so the mask spills past the surface it was measured against. On
+    # FS-001 that came to 105% of the real surface atlas-wide, and the spilled
+    # pixels are charged to the region as unusable, inflating every smear
+    # fraction in the corpus. Blobs stay whole; only the overspill is trimmed.
+    return smear & valid
 
 
 def featureless_fill(crop: np.ndarray, valid: np.ndarray,
@@ -371,7 +376,7 @@ def featureless_fill(crop: np.ndarray, valid: np.ndarray,
         sizes = ndimage.sum(flat, lab, range(1, n + 1))
         keep  = 1 + np.where(sizes > SMEAR_MIN_FRAC * max(valid.sum(), 1))[0]
         flat  = np.isin(lab, keep)
-    return flat
+    return flat & valid          # the close dilates past `valid`; see directional_smear
 
 
 def region_colour_entropy(texture_img: Image.Image, crops: list) -> dict:
@@ -849,8 +854,22 @@ def classify_regions(texture_path: Path, mesh, regions: list,
                                f"b{BATCH_SIZE}_"
                                f"{provider}_{model.replace('/', '-')}.json")
         if cache_p.exists():
-            runs.append(json.loads(cache_p.read_text(encoding="utf-8")))
-            continue
+            _cached = json.loads(cache_p.read_text(encoding="utf-8"))
+            # The key covers the texture, the region partition and the prompt.
+            # It does not cover which regions passed the texture gates, and the
+            # crops are numbered 1..k over the regions that did. So a change in
+            # gate behaviour, such as the smear-mask fix of 2026-08-27, alters k
+            # while the key still reports a match, and the cached answers would
+            # be read against the wrong regions. Silent, and it would corrupt
+            # every downstream result. Check k before trusting the file.
+            _want = {str(i) for i in range(1, len(numbered) + 1)}
+            _have = {k for k in _cached if str(k).isdigit()}
+            if _have and not _have <= _want:
+                print(f"      run {run}/{n_votes}: cache holds {len(_have)} regions, "
+                      f"this run has {len(numbered)} — re-classifying")
+            else:
+                runs.append(_cached)
+                continue
         print(f"      run {run}/{n_votes}: {len(batches)} batch(es) ...",
               end=" ", flush=True)
         result: dict = {}
@@ -893,7 +912,8 @@ def classify_regions(texture_path: Path, mesh, regions: list,
 
 def _region_meta(reg: dict) -> dict:
     return {"region_id": reg["region_id"], "kind": reg["kind"],
-            "plane_index": reg["plane_index"], "area_frac": reg["area_frac"]}
+            "plane_index": reg["plane_index"], "area_frac": reg["area_frac"],
+            "area_m2": reg.get("area_m2")}
 
 
 # ── Grid backfill (keeps viewer / feature-texture pipeline unchanged) ────────

@@ -98,6 +98,11 @@ def segment_regions(mesh: trimesh.Trimesh,
     total_area = float(areas[valid].sum()) or 1.0
     for r in regions:
         r["area_frac"] = round(float(areas[r["face_idx"]].sum()) / total_area, 4)
+        # Absolute area as well as the fraction. Use rules state their area
+        # thresholds in m² (`min_area_m2`), so a rule that evaluates over
+        # regions rather than only planar faces needs the same unit to compare
+        # against. Mesh is in mm, so mm² → m².
+        r["area_m2"] = round(float(areas[r["face_idx"]].sum()) / 1e6, 4)
 
     # ── 4. Merge tiny regions (< min_region_frac) into one residual ─────────
     # Keeps the vision batch small (~10 crops); tiny slivers are unreliable
@@ -111,13 +116,15 @@ def segment_regions(mesh: trimesh.Trimesh,
         if existing_res is not None:
             existing_res["face_idx"] = np.concatenate(
                 [existing_res["face_idx"], res_faces])
-            existing_res["area_frac"] = round(
-                float(areas[existing_res["face_idx"]].sum()) / total_area, 4)
+            _a = float(areas[existing_res["face_idx"]].sum())
+            existing_res["area_frac"] = round(_a / total_area, 4)
+            existing_res["area_m2"]   = round(_a / 1e6, 4)
         else:
+            _a = float(areas[res_faces].sum())
             keep.append({"region_id": -1, "kind": "residual",
                          "plane_index": None, "face_idx": res_faces,
-                         "area_frac": round(
-                             float(areas[res_faces].sum()) / total_area, 4)})
+                         "area_frac": round(_a / total_area, 4),
+                         "area_m2":   round(_a / 1e6, 4)})
     regions = keep
 
     regions.sort(key=lambda r: -r["area_frac"])
@@ -171,3 +178,75 @@ def propagate_labels(mesh, face_label: "np.ndarray", n_labels: int = 8,
         face_label[gaps[has]] = best[has]
         inferred[gaps[has]]   = True
     return face_label, inferred
+
+
+
+# ── Which face does a non-planar region meet? ─────────────────────────────────
+
+ADJ_MIN_SHARE = 0.50   # a cluster attaches only where one face takes this share
+                       # of its shared boundary, so a region straddling several
+                       # faces evenly attaches to none
+
+
+def adjacent_faces(mesh, regions) -> dict:
+    """For each non-planar region, the face it meets along most of its boundary.
+
+    Why adjacency and not proximity. An earlier attempt asked whether a cluster's
+    triangles *lie on* a plane, by distance to the plane equation, and nothing
+    qualified: measured across the corpus the clusters sit 27 to 323 mm from the
+    nearest plane at 35° to 141°. That is the correct answer to the wrong
+    question. A fracture surface is a different surface from the cast face beside
+    it, so it does not lie on it. What it does do is meet it, along a shared
+    edge in the mesh.
+
+    A cluster can meet several faces. On FS-010, region 3 touches four. So the
+    shared boundary is weighted and a face claims the region only if it takes
+    `ADJ_MIN_SHARE` of it; a cluster split evenly across four faces attaches to
+    none, which is the honest outcome. On the same fragment the region carrying
+    `brick_inclusion` shares 100% of its boundary with one face.
+
+    This records that two surfaces meet. It does not claim the face carries the
+    feature: a broken surface meeting a formwork face does not make that face
+    broken. The caller keeps the two apart.
+
+    Returns {region_id: {"face": int, "share": float, "faces_touched": int}}
+    for regions where one face is dominant.
+    """
+    import numpy as np
+
+    owner = np.full(len(mesh.faces), -1, dtype=int)
+    plane_of = {}
+    for k, r in enumerate(regions):
+        owner[np.asarray(r["face_idx"], dtype=int)] = k
+        plane_of[k] = r["plane_index"]
+
+    adj = mesh.face_adjacency
+    if len(adj) == 0:
+        return {}
+    left, right = owner[adj[:, 0]], owner[adj[:, 1]]
+
+    out = {}
+    for k, r in enumerate(regions):
+        if r["plane_index"] is not None:
+            continue
+        # neighbours across every edge where exactly one side is this region
+        nb = np.concatenate([right[left == k], left[right == k]])
+        nb = nb[(nb >= 0) & (nb != k)]
+        if nb.size == 0:
+            continue
+        counts = {}
+        for o in np.unique(nb):
+            pi = plane_of.get(int(o))
+            if pi is None:
+                continue                      # neighbour is another cluster
+            counts[pi] = counts.get(pi, 0) + int((nb == o).sum())
+        total = sum(counts.values())
+        if not total:
+            continue
+        face, n = max(counts.items(), key=lambda kv: kv[1])
+        share = n / total
+        if share >= ADJ_MIN_SHARE:
+            out[r["region_id"]] = {"face": int(face),
+                                   "share": round(float(share), 3),
+                                   "faces_touched": len(counts)}
+    return out

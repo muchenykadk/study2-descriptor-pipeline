@@ -57,7 +57,8 @@ from ai.region_classification import (classify_regions, cells_from_regions,
                                       region_colour_entropy,
                                       GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
-from descriptors.regions import segment_regions, propagate_labels
+from descriptors.regions import (segment_regions, propagate_labels,
+                                 adjacent_faces)
 from descriptors.design_factors import derive as derive_design_factors
 from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 
@@ -759,7 +760,8 @@ def run_single(frag_id: str, args: argparse.Namespace,
                                                  _crops)
                 descriptors["vision"]["regions"] = [
                     dict({k: r[k] for k in ("region_id", "kind", "plane_index",
-                                            "area_frac", "label", "anomalies",
+                                            "area_frac", "area_m2",
+                                            "label", "anomalies",
                                             "features", "n_features",
                                             "n_label_votes", "uv_coherence",
                                             "uv_fill", "smear_frac",
@@ -784,6 +786,42 @@ def run_single(frag_id: str, args: argparse.Namespace,
                     # texture is what makes a planter reuse proposable).
                     if _res.get("anomalies"):
                         _face["anomalies"] = _res["anomalies"]
+                # A classification made on a cluster reaches no design rule,
+                # because rules are written over planar faces and a cluster has
+                # no plane_index. Moving the feature onto the nearest plane was
+                # tried on 2026-08-27 and rejected: the clusters sit 27 to 323 mm
+                # from their nearest plane at 35° to 141°, so that would record a
+                # condition on a surface which does not have it.
+                #
+                # What is true, and useful, is that the two surfaces meet. Record
+                # the adjacency instead, kept in its own field so nothing reads it
+                # as a property of the face. `features` still means "observed on
+                # this face" and the bearing rules are untouched.
+                _adj = adjacent_faces(source, _regions)
+                _n_adj = 0
+                for _res in _results:
+                    _link = _adj.get(_res.get("region_id"))
+                    if not _link or not _res.get("features"):
+                        continue
+                    _face = descriptors["planarity"][_link["face"]]
+                    _own  = set(_face.get("features") or [])
+                    _new  = [f["id"] for f in _res["features"] if f["id"] not in _own]
+                    if not _new:
+                        continue
+                    _face.setdefault("adjacent_features", [])
+                    _face["adjacent_features"] += [
+                        f for f in _new if f not in _face["adjacent_features"]]
+                    _face.setdefault("adjacent_sources", []).append(
+                        {"region_id": _res.get("region_id"),
+                         "kind": _res.get("kind"),
+                         "boundary_share": _link["share"],
+                         "faces_touched": _link["faces_touched"],
+                         "features": _new})
+                    _n_adj += 1
+                if _n_adj:
+                    print(f"    adjacency: {_n_adj} cluster classification(s) linked "
+                          f"to the face they meet")
+
                 # Faces in regions too fragmented to classify inherit the
                 # dominant label of their neighbours, flagged as inferred.
                 _t_idx = {l: i for i, l in enumerate(_TAXONOMY)}

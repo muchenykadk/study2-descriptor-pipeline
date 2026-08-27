@@ -4,7 +4,7 @@
   "archetype_label": "Floor Slab",
   "input_type": "mesh",
   "pipeline_version": "v0.2",
-  "computed_at": "2026-08-25T08:58:04.700050+00:00",
+  "computed_at": "2026-08-27T08:44:05.146610+00:00",
   "ransac_threshold_mm": 3.0,
   "bounding": {
     "obb_dims_mm": [
@@ -33,8 +33,8 @@
     "volume_m3": 0.072341,
     "volume_source": "mesh_nearly_closed",
     "convexity": 0.7064,
-    "mass_kg_est": 173.618,
-    "mass_data_status": "pseudo",
+    "mass_kg_est": 180.852,
+    "mass_data_status": "assumed_density",
     "watertight": false,
     "data_status": "computed"
   },
@@ -61,16 +61,20 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.323 m2 >= 0.1; RMS 1.77 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
       }
@@ -97,19 +101,41 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.200 m2 >= 0.1; RMS 1.68 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "adjacent_features": [
+        "tile_remnant",
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "adjacent_sources": [
+        {
+          "region_id": 2,
+          "kind": "cluster",
+          "boundary_share": 0.823,
+          "faces_touched": 3,
+          "features": [
+            "tile_remnant",
+            "exposed_aggregate",
+            "broken_face"
+          ]
+        }
+      ]
     },
     {
       "plane_abcd": [
@@ -133,16 +159,20 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.184 m2 >= 0.1; RMS 1.70 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
       }
@@ -169,19 +199,50 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.154 m2 >= 0.1; RMS 1.55 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "adjacent_features": [
+        "exposed_aggregate",
+        "broken_face",
+        "paste_dominant"
+      ],
+      "adjacent_sources": [
+        {
+          "region_id": 4,
+          "kind": "cluster",
+          "boundary_share": 0.767,
+          "faces_touched": 4,
+          "features": [
+            "exposed_aggregate",
+            "broken_face"
+          ]
+        },
+        {
+          "region_id": 14,
+          "kind": "cluster",
+          "boundary_share": 0.969,
+          "faces_touched": 2,
+          "features": [
+            "paste_dominant",
+            "broken_face"
+          ]
+        }
+      ]
     },
     {
       "plane_abcd": [
@@ -205,19 +266,39 @@
       "procedural": {
         "connection_strategy": {
           "value": "gravity_only",
-          "rule": "face not captured by the scan; geometry unverified"
+          "rule": "connection_strategy#1",
+          "note": "face not captured by the scan; geometry unverified",
+          "reason": "face scan_reliable = False"
         },
         "design_assignment": {
           "value": "buried",
-          "rule": "ground-contact face, not observed"
+          "rule": "design_assignment#1",
+          "note": "ground-contact face, not observed",
+          "reason": "face scan_reliable = False"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "adjacent_features": [
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "adjacent_sources": [
+        {
+          "region_id": 6,
+          "kind": "cluster",
+          "boundary_share": 1.0,
+          "faces_touched": 1,
+          "features": [
+            "exposed_aggregate",
+            "broken_face"
+          ]
+        }
+      ]
     },
     {
       "plane_abcd": [
@@ -241,16 +322,20 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.123 m2 >= 0.1; RMS 1.70 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
       }
@@ -281,16 +366,20 @@
       "procedural": {
         "connection_strategy": {
           "value": "direct_bolt",
-          "rule": "flat, large enough to seat a fixing plate"
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.109 m2 >= 0.1; RMS 1.67 mm <= 5.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
       }
@@ -317,16 +406,20 @@
       "procedural": {
         "connection_strategy": {
           "value": "adaptive_bracket",
-          "rule": "moderately flat; bracket absorbs tolerance"
+          "rule": "connection_strategy#3",
+          "note": "moderately flat; bracket absorbs tolerance",
+          "reason": "area 0.089 m2 >= 0.05; RMS 1.66 mm <= 12.0"
         },
         "design_assignment": {
           "value": "unassigned",
-          "rule": "no rule applies"
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
         },
         "finishing_requirement": {
           "value": null,
           "data_status": "withheld",
-          "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
       }
@@ -364,36 +457,36 @@
     "label_details": {
       "broken_face": {
         "subtype": "unknown",
-        "notes": "Irregular surfaces with rough texture, light grey to brown coloration, medium size."
+        "notes": "Irregular surfaces with rough texture, light grey to brown coloration."
       },
       "exposed_aggregate": {
         "subtype": "unknown",
-        "notes": "Visible aggregate with coarse texture, mixed colors, moderate size."
+        "notes": "Visible aggregate with medium size, mixed colors."
       },
       "tile_remnant": {
         "subtype": "unknown",
-        "notes": "Distinct patterned surface, multicolored, small size."
+        "notes": "Patterned surface with multicolored stripes, small area."
       }
     },
     "cracks": {
-      "present": true,
+      "present": "yes",
       "pattern": "network",
       "coverage_pct": 20
     },
     "aggregate": {
-      "visible": true,
-      "estimated_size": "coarse"
+      "visible": "yes",
+      "estimated_size": "medium"
     },
     "surface_condition": "moderate",
-    "color_notes": "Dominant grey and brown tones with some multicolored patterns.",
-    "reuse_notes": "The presence of tile remnants suggests potential for decorative reuse. Exposed aggregate may be suitable for structural applications if integrity is confirmed.",
+    "color_notes": "Dominant light grey and brown with some multicolored patterns.",
+    "reuse_notes": "The presence of tile remnants suggests potential for decorative reuse. Moderate condition may require surface treatment.",
     "confidence": "medium",
     "n_runs": 3,
     "n_total": 3,
     "provider": "openai",
     "model": "gpt-4o",
     "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-012\\FRAG-S1-FS-012_texture.png",
-    "data_status": "computed",
+    "data_status": "ai-annotated",
     "regions": [
       {
         "region_id": 0,
@@ -408,7 +501,9 @@
         "uv_coherence": 0.168,
         "uv_fill": null,
         "smear_frac": null,
-        "skipped": "fragmented_uv"
+        "skipped": "fragmented_uv",
+        "colour_entropy_bits": 2.811,
+        "area_m2": 0.219
       },
       {
         "region_id": 1,
@@ -432,7 +527,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.585,
         "smear_frac": 0.089,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.314,
+        "area_m2": 0.2062
       },
       {
         "region_id": 2,
@@ -460,7 +557,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.272,
         "smear_frac": 0.471,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.536,
+        "area_m2": 0.1056
       },
       {
         "region_id": 3,
@@ -480,7 +579,9 @@
         "uv_coherence": 0.999,
         "uv_fill": 0.495,
         "smear_frac": 0.082,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 1.883,
+        "area_m2": 0.0899
       },
       {
         "region_id": 4,
@@ -504,7 +605,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.388,
         "smear_frac": 0.39,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.531,
+        "area_m2": 0.0607
       },
       {
         "region_id": 5,
@@ -519,7 +622,9 @@
         "uv_coherence": 0.845,
         "uv_fill": 0.259,
         "smear_frac": 0.762,
-        "skipped": "unreliable_texture"
+        "skipped": "unreliable_texture",
+        "colour_entropy_bits": 0.594,
+        "area_m2": 0.0534
       },
       {
         "region_id": 6,
@@ -543,7 +648,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.367,
         "smear_frac": 0.219,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.806,
+        "area_m2": 0.0522
       },
       {
         "region_id": 7,
@@ -558,7 +665,9 @@
         "uv_coherence": 0.98,
         "uv_fill": 0.19,
         "smear_frac": null,
-        "skipped": "sparse_uv"
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 0.786,
+        "area_m2": 0.051
       },
       {
         "region_id": 8,
@@ -573,7 +682,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.156,
         "smear_frac": null,
-        "skipped": "sparse_uv"
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 2.074,
+        "area_m2": 0.0459
       },
       {
         "region_id": 9,
@@ -597,7 +708,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.596,
         "smear_frac": 0.062,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.384,
+        "area_m2": 0.0407
       },
       {
         "region_id": 10,
@@ -612,7 +725,9 @@
         "uv_coherence": 0.954,
         "uv_fill": 0.018,
         "smear_frac": null,
-        "skipped": "sparse_uv"
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 1.326,
+        "area_m2": 0.0378
       },
       {
         "region_id": 11,
@@ -627,7 +742,9 @@
         "uv_coherence": 0.627,
         "uv_fill": 0.08,
         "smear_frac": null,
-        "skipped": "sparse_uv"
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 1.163,
+        "area_m2": 0.0378
       },
       {
         "region_id": 12,
@@ -642,7 +759,9 @@
         "uv_coherence": 0.853,
         "uv_fill": 0.084,
         "smear_frac": null,
-        "skipped": "sparse_uv"
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 2.461,
+        "area_m2": 0.0337
       },
       {
         "region_id": 13,
@@ -657,7 +776,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.438,
         "smear_frac": 0.509,
-        "skipped": "unreliable_texture"
+        "skipped": "unreliable_texture",
+        "colour_entropy_bits": 1.269,
+        "area_m2": 0.0286
       },
       {
         "region_id": 14,
@@ -681,7 +802,9 @@
         "uv_coherence": 1.0,
         "uv_fill": 0.532,
         "smear_frac": 0.0,
-        "skipped": null
+        "skipped": null,
+        "colour_entropy_bits": 2.162,
+        "area_m2": 0.0282
       }
     ],
     "face_labels": {
@@ -1005,13 +1128,14 @@
   "procedural": {
     "handling_class": {
       "value": "excavator",
-      "rule": "machine handling required",
-      "reason": "estimated mass 173.6 kg"
+      "rule": "handling_class#3",
+      "note": "machine handling required",
+      "reason": "estimated mass 180.9 kg, above every band"
     },
     "drill_zone": {
       "value": null,
       "data_status": "withheld",
-      "reason": "Depends on rebar_visible, which the region pass has never reported and the whole-atlas pass reports on 4 of 12 fragments. Drilling and finishing guidance derived from that reading would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+      "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
     },
     "use_suggestions": [
       {
@@ -1023,6 +1147,27 @@
         ],
         "note": "large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified",
         "caveat": "orientation unverified"
+      },
+      {
+        "id": "exposed_face",
+        "label": "Exposed face, material history visible",
+        "faces": [],
+        "note": "a face whose material history is legible: formwork marks, adhering tile, or cast-in brick. Condition (weathering, staining) is now reported as a localized anomaly rather than a surface label.",
+        "caveat": null,
+        "regions": [
+          2
+        ]
+      },
+      {
+        "id": "rough_feature",
+        "label": "Textured feature surface",
+        "faces": [],
+        "note": "deliberately rough face, exposing the break and aggregate as visible and tactile character",
+        "caveat": null,
+        "regions": [
+          1,
+          2
+        ]
       },
       {
         "id": "seat_block",

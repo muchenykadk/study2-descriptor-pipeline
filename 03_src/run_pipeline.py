@@ -46,12 +46,15 @@ import numpy as np
 import open3d as o3d
 import trimesh
 from descriptors.geometry import (bounding_descriptors, bounding_descriptors_pcd,
-                                   planar_regions, curvature_stats)
-from descriptors.feature_texture import build_feature_textures
+                                   planar_regions, curvature_stats, RANSAC_SEED)
+from descriptors.feature_texture import (build_feature_textures,
+                                         label_map_from_regions,
+                                         masks_by_feature)
 from report import generate_report, open_report, update_inventory
 from ai.vision_client import classify_texture
 from ai.texture_segmentation import classify_texture_grid
 from ai.region_classification import (classify_regions, cells_from_regions,
+                                      region_colour_entropy,
                                       GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
 from descriptors.regions import segment_regions, propagate_labels
@@ -184,15 +187,36 @@ def _print_phase2_summary(bounding: dict, planes: list, curv: dict) -> None:
               f"coarse mean {curv['coarse_mm']['mean_rad']:.4f} rad")
 
 
+def _timed(label: str, fn, *args, **kwargs):
+    """Run fn, printing the step name before and its duration after.
+
+    The name is printed and flushed BEFORE the work starts, so whatever is on
+    screen is always the step actually running.
+    """
+    import time as _time
+    print(f"  {label} ...", end=" ", flush=True)
+    t0 = _time.perf_counter()
+    result = fn(*args, **kwargs)
+    dt = _time.perf_counter() - t0
+    print(f"{dt:.1f}s" if dt < 90 else f"{dt / 60:.1f} min")
+    return result
+
+
 def run_phase2(frag_id: str, mesh: trimesh.Trimesh,
                ransac_threshold: float = 3.0) -> dict:
     print("\n  ── Phase 2: geometric descriptors (mesh) ──")
-    print("  Computing bounding geometry ...", end=" ", flush=True)
-    bounding = bounding_descriptors(mesh)
-    planes = planar_regions(mesh, distance_threshold_mm=ransac_threshold)
-    print("  Computing curvature ...", end=" ", flush=True)
-    curv = curvature_stats(mesh)
-    print("done")
+    # Each step announces itself and reports how long it took.
+    #
+    # Previously "Computing bounding geometry ..." was printed, then RANSAC ran
+    # with no output of its own, then curvature. So a run sitting in the plane
+    # search showed a line naming the step BEFORE it, with no newline, and was
+    # indistinguishable from a hang. At 3.3M faces these steps take minutes, and
+    # there was no way to tell slow from stuck without attaching a debugger.
+    print(f"  {len(mesh.faces):,} faces")
+    bounding = _timed("bounding geometry", bounding_descriptors, mesh)
+    planes   = _timed("RANSAC planes", planar_regions, mesh,
+                      distance_threshold_mm=ransac_threshold)
+    curv     = _timed("curvature", curvature_stats, mesh)
     _print_phase2_summary(bounding, planes, curv)
     arch_code, arch_label = _parse_archetype(frag_id)
     return {
@@ -282,6 +306,7 @@ def unscanned_face_idx(mesh: trimesh.Trimesh,
 def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
                       unscanned_sidecar: dict | None = None,
                       grid_data: dict | None = None,
+                      face_labels: "np.ndarray | None" = None,
                       texture_path: "Path | None" = None) -> dict:
     """Sample mesh surface, assign region IDs. Points in [-1, 1].
 
@@ -289,16 +314,26 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
     the recorded UNSCANNED normal are assigned VIEWER_UNSCANNED_ID (100) and
     rendered grey in the viewer — bypassing RANSAC entirely.
 
-    If grid_data is provided, per-point feature_ids are derived per mesh face:
-    the face's UV centroid selects its grid cell → label → TAXONOMY index, and
-    each sampled point inherits the label of the face it was sampled from.
-    Labels therefore follow the actual texture locations on the 3D surface
-    (no spatial-grid smearing).
+    Feature labels come from `face_labels` when given: one taxonomy index per
+    mesh face, exactly as region classification decided it. Each sampled point
+    inherits the label of the face it was sampled from.
+
+    `grid_data` is the fallback for the legacy grid path. It re-derives the
+    label from the face's UV centroid via a 16x16 grid over the ATLAS, which
+    scrambles labels across the fragment because atlas adjacency has nothing to
+    do with surface adjacency. See the note at the branch below.
     """
     if not planes:
         return {"points": [], "n_regions": 0, "color_mode": "region"}
 
-    points, face_indices = trimesh.sample.sample_surface(mesh, n_points)
+    # Seeded for the same reason as the geometry phase: two runs of one fragment
+    # should differ only where the model differs. See RANSAC_SEED.
+    try:
+        points, face_indices = trimesh.sample.sample_surface(
+            mesh, n_points, seed=RANSAC_SEED)
+    except TypeError:
+        np.random.seed(RANSAC_SEED)
+        points, face_indices = trimesh.sample.sample_surface(mesh, n_points)
     region_ids = np.full(len(points), -1, dtype=int)
     best_dist  = np.full(len(points), np.inf)
 
@@ -365,7 +400,34 @@ def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
     # are additionally forced to -1 below.
     feature_ids  = np.full(len(points), -1, dtype=int)
     has_features = False
-    if grid_data is not None:
+
+    # ── Preferred path: per-face labels straight from region membership ──────
+    # `face_labels` is what segment_regions + classify_regions actually decided,
+    # one taxonomy index per face.  Use it directly.
+    #
+    # The grid path below is the fallback, and it is lossy in a way that is not
+    # obvious.  It re-derives each face's label from whichever 16x16 ATLAS cell
+    # its UV centroid lands in, and cells are won outright by whichever region
+    # covers the most pixels in them.  Smart UV Project packs islands for space,
+    # not by where they sit on the fragment, so one cell routinely straddles
+    # islands from opposite ends of the piece and hands them all one label.
+    #
+    # Measured on FS-002: of the faces the map coloured, 65.5% were right,
+    # 14.7% carried another region's label, and 19.8% were on regions the
+    # pipeline had explicitly declined to classify and should have stayed dark.
+    # 39% of the pixels shown as `pipe_opening` were not pipe openings.  The
+    # region labels were correct throughout; only this lookup was wrong.
+    if face_labels is not None and len(face_labels) == len(mesh.faces):
+        face_fid = np.asarray(face_labels, dtype=int).copy()
+        if us_face_set is not None:
+            face_fid[us_face_set] = -1
+        feature_ids  = face_fid[face_indices]
+        n_labeled    = int((feature_ids >= 0).sum())
+        has_features = n_labeled > 0
+        print(f"  (Feature labels: {n_labeled}/{len(points)} points labeled "
+              f"from {int((face_fid >= 0).sum())}/{len(face_fid)} labeled faces, "
+              f"per-face)")
+    elif grid_data is not None:
         vis = getattr(mesh, "visual", None)
         if vis is not None and hasattr(vis, "uv") and vis.uv is not None:
             grid_n   = grid_data["grid_n"]
@@ -593,6 +655,13 @@ def run_single(frag_id: str, args: argparse.Namespace,
     print(f"  Fragment: {frag_id}")
     print(f"{'='*50}")
 
+    # The pre-flight gate was removed on 2026-08-25. It was a development aid
+    # for troubleshooting Blender exports and never blocked anything in normal
+    # use: it printed warnings and ended with "Processing can continue".
+    # `preflight.py` remains as a library, called by `build_reference_set.py`
+    # to skip fragments whose texture is unusable, and runnable by hand when a
+    # new scan arrives.
+
     # ── Load ─────────────────────────────────────────────────────────────────
     print("\n  Loading input ...")
     source, input_type = load_input(frag_id, processed_dir)
@@ -631,6 +700,9 @@ def run_single(frag_id: str, args: argparse.Namespace,
 
     # ── Phase 3B: spatial feature localization ───────────────────────────────
     grid_data: dict | None = None      # set below if Phase 3B classification runs
+    face_label_ids = None              # per-face taxonomy index; the viewer's source of truth
+    label_map = None                   # per-pixel atlas labels; the combined map's source
+    feature_masks = None               # one mask per feature, for the per-feature highlights
     feature_texture_paths: dict = {}
     if args.phase3 and descriptors.get("vision"):
         texture_path_3b = processed_dir / frag_id / f"{frag_id}_texture.png"
@@ -658,12 +730,15 @@ def run_single(frag_id: str, args: argparse.Namespace,
                 _results, _crops = classify_regions(texture_path_3b, source,
                                                     _regions)
                 for _res in _results:
-                    if _res["label"]:
-                        _an = (f" +{len(_res['anomalies'])} anomalies"
-                               if _res["anomalies"] else "")
+                    _fs = _res.get("features") or []
+                    if _fs:
+                        _txt = ", ".join(
+                            f"{f['id']}{' ◻' if f.get('box_pct') else ''}"
+                            f"({f.get('votes')}/{ _res.get('n_label_votes') or 3})"
+                            for f in _fs)
                         print(f"    region #{_res['region_id']} "
                               f"({_res['kind']}, {_res['area_frac']*100:.0f}%)"
-                              f" → {_res['label']}{_an}")
+                              f" → {_txt}")
                 from PIL import Image as _PIL
                 _tex_size = _PIL.open(texture_path_3b).size[0]
                 _cells = cells_from_regions(_results, _crops, _tex_size,
@@ -671,10 +746,26 @@ def run_single(frag_id: str, args: argparse.Namespace,
                 grid_data = {"grid_n": REGION_GRID_N, "cells": _cells,
                              "method": "region"}
                 # per-region results into descriptors + planarity linkage
+                # Keep the diagnostic fields. Filtering them out meant the
+                # texture-quality gates ran but recorded nothing, so a region
+                # could come back unlabelled with no stored reason, and the
+                # report's Masked column was always empty.
+                # Colour entropy is measured for every region, including the
+                # ones declined for classification, because it needs only the
+                # mask and the pixels. It answers the Study 1 colour
+                # requirement at face level, where the design rules can read
+                # it; the whole-atlas `color_notes` sentence never could.
+                _entropy = region_colour_entropy(_PIL.open(texture_path_3b),
+                                                 _crops)
                 descriptors["vision"]["regions"] = [
-                    {k: r[k] for k in ("region_id", "kind", "plane_index",
-                                       "area_frac", "label", "anomalies",
-                                       "n_label_votes")}
+                    dict({k: r[k] for k in ("region_id", "kind", "plane_index",
+                                            "area_frac", "label", "anomalies",
+                                            "features", "n_features",
+                                            "n_label_votes", "uv_coherence",
+                                            "uv_fill", "smear_frac",
+                                            "flat_frac", "skipped")
+                          if k in r},
+                         colour_entropy_bits=_entropy.get(r["region_id"]))
                     for r in _results
                 ]
                 for _res in _results:
@@ -683,6 +774,11 @@ def run_single(frag_id: str, args: argparse.Namespace,
                     _face = descriptors["planarity"][_res["plane_index"]]
                     if _res["label"]:
                         _face["surface_label"] = _res["label"]
+                    # The full multi-label set, so design factors and query.py
+                    # can ask "does this face show aggregate" without having to
+                    # guess from a single winning label.
+                    if _res.get("features"):
+                        _face["features"] = [f["id"] for f in _res["features"]]
                     # Carry the localized anomalies onto the face as well: the
                     # design factors read them (an opening detected in the
                     # texture is what makes a planter reuse proposable).
@@ -708,6 +804,19 @@ def run_single(frag_id: str, args: argparse.Namespace,
                 print(f"  (Face labels: {len(_face_lbl) - _n_gap:,} classified, "
                       f"{int(_inferred.sum()):,} inferred, "
                       f"{int((_face_lbl < 0).sum()):,} unlabeled)")
+                # Hand these to the viewer instead of letting it re-derive
+                # labels from the atlas grid, which loses a third of them.
+                face_label_ids = _face_lbl
+                # Same reasoning for the atlas overlays in the report: paint
+                # from the region masks, which are exact, rather than from the
+                # grid cells, which are a 256 px quantisation of them.
+                label_map = label_map_from_regions(_results, _crops, _tex_size,
+                                                   unscanned_mask=_tex_mask)
+                # And one mask per feature, so a region that carries several
+                # appears under each of them rather than only the one that wins
+                # display precedence.
+                feature_masks = masks_by_feature(_results, _crops, _tex_size,
+                                                 unscanned_mask=_tex_mask)
             else:
                 # ── Legacy grid classification (--grid-legacy / point cloud) ─
                 _excl: set = set()
@@ -729,6 +838,8 @@ def run_single(frag_id: str, args: argparse.Namespace,
                 grid_data["cells"],
                 output_dir,
                 frag_id,
+                label_map=label_map,
+                feature_masks=feature_masks,
             )
         else:
             print("  ⚠ Phase 3B skipped: texture PNG not found")
@@ -787,6 +898,7 @@ def run_single(frag_id: str, args: argparse.Namespace,
     else:
         viewer_data = build_viewer_data(
             source, planes, unscanned_sidecar=_sidecar, grid_data=grid_data,
+            face_labels=face_label_ids,
             texture_path=processed_dir / frag_id / f"{frag_id}_texture.png")
     print(f"{len(viewer_data['points'])} points packed  ({viewer_data['color_mode']} colors)")
 
@@ -924,8 +1036,28 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
              "Increase for noisier scans; decrease for cleaner meshes."
     )
     parser.add_argument(
+        "--exclude", default="",
+        help=("comma-separated fragment ids to skip in --batch. Their existing "
+              "records are left untouched. Use for fragments that are sound as "
+              "geometry but cannot be reprocessed, e.g. FRAG-S1-FS-001, whose "
+              "dense textured source was not retained."))
+    parser.add_argument(
+        "--no-browser", action="store_true",
+        help=("write the outputs and exit. By default a run opens a browser on "
+              "an ephemeral port and then blocks on Enter to keep that server "
+              "alive, which is confusing when you are already serving the "
+              "folder yourself with `python -m http.server 8000 --bind "
+              "127.0.0.1`. The port changes every run, so a bookmarked URL from "
+              "an earlier run will always refuse to connect."))
+    parser.add_argument(
         "--serve", action="store_true",
         help="Open the report in the browser. Alone: skip all calculations and show the existing output. With a fragment ID or --batch: process first, then open."
+    )
+    parser.add_argument(
+        "--no-references", action="store_true",
+        help="Classify without the exemplar reference set. The control for the "
+             "calibrated run: if a label only holds when its own fragment supplied "
+             "the exemplar, that is leakage rather than recognition."
     )
     parser.add_argument(
         "--grid-legacy", action="store_true",
@@ -933,6 +1065,13 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
              "region-based classification."
     )
     args = parser.parse_args()
+
+    # The reference set is part of the standard, so switching it off has to reach
+    # the cache key too; reference_signature() returns "none" when disabled.
+    if getattr(args, "no_references", False):
+        import ai.region_classification as _rc
+        _rc.USE_REFERENCES = False
+        print("\n  Reference set disabled: classifying uncalibrated.")
     args.phase3 = not args.geometry_only
 
     # ── Validation ────────────────────────────────────────────────────────────
@@ -957,6 +1096,18 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
         if not all_frags:
             print(f"\n  No fragments found in {processed_dir}")
             sys.exit(0)
+
+        # A fragment can be sound as geometry and unusable as texture. FS-001
+        # was digitised in an earlier campaign whose dense textured source was
+        # not retained: its raw export is a Rhino OBJ with 20,857 sparse faces
+        # and no material, so it cannot be remeshed or re-baked. Its existing
+        # record is valid and stays in the corpus; it simply must not be
+        # reprocessed, and it should not stop the batch either.
+        _skip = {x.strip() for x in (args.exclude or "").split(",") if x.strip()}
+        if _skip:
+            all_frags = [f for f in all_frags if f not in _skip]
+            for f in sorted(_skip):
+                print(f"  {f}: excluded by --exclude, existing record left as is")
 
         if args.force:
             queue = all_frags
@@ -993,7 +1144,7 @@ Fragment ID format: FRAG-S1-{ARCHETYPE}-{###}
 
     # ── Single fragment ───────────────────────────────────────────────────────
     run_single(args.frag_id, args, processed_dir, output_dir,
-               open_browser=not args.serve)
+               open_browser=not (args.serve or args.no_browser))
     if args.serve:
         _serve_output(output_dir, args.frag_id)
 

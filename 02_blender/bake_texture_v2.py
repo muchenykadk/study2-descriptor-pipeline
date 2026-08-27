@@ -35,8 +35,13 @@ import mathutils
 # ── Configuration ──────────────────────────────────────────────────────────────
 FRAG_ID    = "FRAG-S1-FS-003"
 VOXEL_SIZE = 0.002    # metres — 2 mm; increase to 0.005 for very noisy scans
-BAKE_RES   = 1080     # texture resolution (pixels)
+BAKE_RES   = 4096     # texture resolution (px). Measured on FS-002: at 1080 the
+                      # atlas gives 0.07 px per face, so islands of a few faces
+                      # average to one colour and the bake margin bleeds each into
+                      # a flat diamond. 4096 gives 1.03 px per face. The manual
+                      # workflow always specified 4096; the script did not.
 EXTRUSION  = 0.05     # metres — increase to 0.10 if bake has black patches
+BAKE_MARGIN = 32      # px of edge bleed into the empty atlas (see set_bake_mode)
 REPO_ROOT  = r"C:\Users\muche\Documents\Austria\Research\Research Concrete upcycling\Study2_Descriptor_Pipeline"
 
 
@@ -62,7 +67,11 @@ def smart_uv_project(obj):
     set_active(obj)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(island_margin=0.02, angle_limit=89)
+    # island_margin is a FRACTION OF THE ATLAS, not pixels. 0.02 leaves 2% of the
+    # sheet width between every pair of islands, and measured on FS-002 that left
+    # only 20% of the atlas carrying any UV at all: 80% was margin and packing
+    # waste, which the bake margin then filled with flat bled colour.
+    bpy.ops.uv.smart_project(island_margin=0.002, angle_limit=89)
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def add_blank_image_node(mat, name, location=(0, 0)):
@@ -101,6 +110,14 @@ def set_bake_mode(selected_to_active):
     bake.use_pass_indirect      = False
     bake.use_pass_color         = True
     bake.use_selected_to_active = selected_to_active
+    # Bleed each island's edge colour outward into the empty atlas.  Blender's
+    # default margin type only bleeds across shared UV edges, which leaves the
+    # space between islands pure black.  The descriptor pipeline crops a region
+    # out of this atlas, so that black lands inside the crop and a vision model
+    # reads it as voids in the concrete.  EXTEND fills it with real surface
+    # colour instead.
+    bake.margin      = BAKE_MARGIN
+    bake.margin_type = 'EXTEND'
     if selected_to_active:
         bake.cage_extrusion = EXTRUSION
 
@@ -193,9 +210,33 @@ print(f"  Max dim     : {max_dim:.4f} units  =  {max_dim_m*1000:.1f} mm  =  {max
 print(f"  Object scale: {obj.scale.x:.4f}, {obj.scale.y:.4f}, {obj.scale.z:.4f}  (should be 1,1,1)")
 print(f"  Vertices    : {len(obj.data.vertices):,}   Faces: {len(obj.data.polygons):,}")
 
-if obj.scale.x != 1.0 or obj.scale.y != 1.0 or obj.scale.z != 1.0:
-    print(f"  ⚠  UNAPPLIED SCALE detected — apply before baking:")
-    print(f"     Object Mode → Ctrl+A → Apply → Scale")
+# Unapplied scale is a hard stop, not a warning.
+#
+# The Remesh modifier works in the object's LOCAL space, but obj.dimensions
+# reports the scaled size. So an object imported in millimetres and then scaled
+# by 0.001 passes every check above — dimensions say 2.841 m — while the mesh
+# data underneath is still 2841 units across. Voxelising that at VOXEL_SIZE
+# asks for a thousand times too many voxels per axis, Blender clamps, and the
+# result is a few thousand faces with no obvious cause.
+#
+# This cost an afternoon on FS-001, where the remesh returned 16,358 faces and
+# the failure looked like a memory ceiling. The warning was printed and scrolled
+# past. Stopping is the only thing that works.
+_sc = obj.scale
+if abs(_sc.x - 1.0) > 1e-6 or abs(_sc.y - 1.0) > 1e-6 or abs(_sc.z - 1.0) > 1e-6:
+    _local = max(obj.data.vertices[i].co.length for i in
+                 range(0, len(obj.data.vertices), max(1, len(obj.data.vertices)//1000))) * 2
+    raise RuntimeError(
+        f"UNAPPLIED SCALE: object scale is "
+        f"({_sc.x:.4f}, {_sc.y:.4f}, {_sc.z:.4f}), not (1, 1, 1).\n"
+        f"    Displayed dimensions are {max_dim_m*1000:.0f} mm, but the mesh data "
+        f"underneath spans roughly {_local:.0f} local units.\n"
+        f"    The Remesh modifier works in LOCAL space, so VOXEL_SIZE="
+        f"{VOXEL_SIZE} would be applied to that number and Blender will clamp it "
+        f"to something far coarser.\n\n"
+        f"    Fix: Object Mode, select the mesh, Ctrl+A, Apply, Scale. Then run "
+        f"again.\n"
+    )
 
 if max_dim_m < 0.01:
     raise RuntimeError(
@@ -215,20 +256,30 @@ else:
     print(f"  ✓  Scale OK  ({max_dim_m*1000:.0f} mm)")
 
 
-# ── 2: Duplicate → rename → hide (becomes bake source) ────────────────────────
+# ── 2: Duplicate → the COPY is remeshed, the import is kept ───────────────────
+# The remesh is destructive: applying the modifier replaces the geometry.  It is
+# therefore done on a duplicate, so the object that was imported survives intact
+# and can be re-exported later without re-importing the scan.  It is hidden
+# during the run because the bake needs it out of the viewport, and unhidden
+# again at the end.
 
+_imported_name = obj.name
 set_active(obj)
 bpy.ops.object.duplicate()
-source = bpy.context.active_object    # duplicate is now active
-source.name          = f"{FRAG_ID}_source"
+_dup = bpy.context.active_object      # duplicate is now active
+
+source = obj                          # the import itself, kept as the bake source
+source.name          = f"{FRAG_ID}_original"
 source.hide_viewport = True
 source.hide_render   = False          # must remain renderable for baking
-print(f"\n  ✓  Bake source: '{source.name}'  (hidden)")
 
-# Switch back to original → this becomes the remesh target
-set_active(obj)
+obj = _dup                            # everything downstream works on the copy
 obj.name = f"{FRAG_ID}_remesh"
-print(f"  ✓  Remesh target: '{obj.name}'")
+
+print(f"\n  ✓  Kept intact : '{source.name}'  (was '{_imported_name}', hidden; "
+      f"also serves as the bake source)")
+print(f"  ✓  Remesh target: '{obj.name}'  (a copy; this is the one that gets "
+      f"remeshed and exported)")
 
 
 # ── 2.5: Detect UNSCANNED ground-contact face (NEW in v2) ────────────────────
@@ -401,13 +452,34 @@ print(f"     ✓  Removed {_v_before - _v_after:,} duplicate verts")
 # face detected above). If this step produces 0 faces (point cloud), try
 # increasing VOXEL_SIZE to 0.005 at the top of the script.
 
+# VOXEL_SIZE is written in METRES, but mod.voxel_size is in BLENDER UNITS, and
+# the two are only the same when the scene unit scale is 1.0.
+#
+# FS-001 lives in a .blend whose unit scale is 0.001, so its mesh is 2841 units
+# across and displays as 2841 mm. Object scale was a clean (1, 1, 1) and every
+# check passed, because obj.dimensions is unit-aware. Passing 0.002 straight
+# through then asked for a voxel of 0.002 UNITS on a 2841-unit mesh: 1.4 million
+# voxels per axis, which Blender clamped to roughly 32 mm, giving 23,646 faces
+# where 6 million were expected.
+#
+# Converting here makes the script work in any scene unit setting, which is the
+# real fix. Checking object scale is not enough: scale can be applied and the
+# mesh still be in millimetres.
+_voxel_units = VOXEL_SIZE / scene_unit_scale
+_across_calc = max_dim / _voxel_units
+
 print(f"\n  ── Voxel remesh ─────────────────────────────────────────")
-print(f"     Voxel size : {VOXEL_SIZE * 1000:.1f} mm  ({VOXEL_SIZE} m)")
-print(f"     Mesh size  : {max_dim_m * 1000:.0f} mm  →  ~{int(max_dim_m / VOXEL_SIZE)} voxels across longest axis")
+print(f"     Voxel size : {VOXEL_SIZE * 1000:.1f} mm  ({_voxel_units:g} Blender units "
+      f"at scene scale {scene_unit_scale:g})")
+print(f"     Mesh size  : {max_dim_m * 1000:.0f} mm  ({max_dim:g} units)  →  "
+      f"~{int(_across_calc)} voxels across longest axis")
+if scene_unit_scale != 1.0:
+    print(f"     NOTE: scene is not in metres; VOXEL_SIZE converted "
+          f"{VOXEL_SIZE} m → {_voxel_units:g} units")
 
 mod              = obj.modifiers.new(name="Remesh", type='REMESH')
 mod.mode         = 'VOXEL'
-mod.voxel_size   = VOXEL_SIZE
+mod.voxel_size   = _voxel_units
 mod.use_smooth_shade = True
 _apply_result = bpy.ops.object.modifier_apply(modifier=mod.name)
 print(f"     modifier_apply returned: {_apply_result}")
@@ -419,17 +491,52 @@ _dims_after = obj.dimensions
 print(f"     After remesh: {_vert_count:,} vertices  {_poly_count:,} faces")
 print(f"     Dimensions  : X={_dims_after.x:.4f}  Y={_dims_after.y:.4f}  Z={_dims_after.z:.4f}")
 
+# A fixed floor of 100 faces is not a useful test: FRAG-S1-FS-003 came out at
+# 3,016 faces and passed it, then produced planes matching under 4% of its
+# geometry and no surface classification at all.  The check has to scale with
+# the mesh, because the expected face count is set by how many voxels span it.
+_across   = max_dim_m / VOXEL_SIZE
+_expected = 3.0 * _across ** 2          # calibrated on FS-006: 831 across → 2.1M faces
+_ratio    = _poly_count / max(_expected, 1.0)
+print(f"     Expected    : ~{int(_expected):,} faces for {int(_across)} voxels across "
+      f"→ got {_ratio:.0%}")
+
 if _poly_count == 0:
     raise RuntimeError(
         f"Voxel remesh produced 0 faces (point cloud). "
         f"VOXEL_SIZE={VOXEL_SIZE} may be wrong for this mesh. "
-        f"Try VOXEL_SIZE = {max_dim_m / 200:.4f} (1/200th of max dim)."
+        f"Try VOXEL_SIZE = {max_dim_m / 400:.4f} (1/400th of max dim)."
     )
-elif _poly_count < 100:
-    print(f"  ⚠  Only {_poly_count} faces — remesh is very coarse. "
-          f"VOXEL_SIZE may be too large for this mesh scale.")
-else:
-    print(f"  ✓  Voxel remesh OK  ({_poly_count:,} faces)")
+if _ratio < 0.20:
+    # Two causes produce this, and the message used to assert the first one.
+    # That sent Muchen looking for a unit error on FS-001 when the scale check
+    # had already passed and the object really was in metres.
+    _voxels = _across ** 3
+    _unit_suspect = max_dim > 100.0        # scene units, not metres
+    raise RuntimeError(
+        f"Voxel remesh produced {_poly_count:,} faces, only {_ratio:.0%} of the "
+        f"~{int(_expected):,} expected for a {max_dim_m * 1000:.0f} mm mesh at "
+        f"VOXEL_SIZE={VOXEL_SIZE} m ({int(_across)} voxels across, "
+        f"{_voxels / 1e9:.1f} billion voxels).\n\n"
+        + (f"    LIKELY A UNIT MISMATCH. The object measures {max_dim:.0f} Blender "
+           f"units, so it is in millimetres while VOXEL_SIZE is written in metres.\n"
+           f"    Fix: Object Mode, S, 0.001, Enter, then Ctrl+A, Apply, Scale.\n"
+           if _unit_suspect else
+           f"    NOT a unit mismatch: the object measures {max_dim:.3f} Blender "
+           f"units, which is metres, and the scale check passed.\n"
+           f"    The mesh is simply too large to voxelise at this size. Blender ran\n"
+           f"    out of headroom and fell back to a coarser voxel. A typical\n"
+           f"    fragment here asks for 0.05 to 0.5 billion voxels; this one asks\n"
+           f"    for {_voxels / 1e9:.1f} billion.\n"
+           f"    Options: close other applications and retry, or raise VOXEL_SIZE\n"
+           f"    for this fragment. VOXEL_SIZE = {max_dim_m / 500:.4f} gives 500 voxels\n"
+           f"    across and about 750,000 faces, which is coarser than the rest of\n"
+           f"    the corpus and makes this fragment's geometry not directly\n"
+           f"    comparable. Record that if you use it.\n")
+        + f"\n    Do not continue as-is: this mesh is too coarse for region "
+        f"segmentation or surface classification."
+    )
+print(f"  ✓  Voxel remesh OK  ({_poly_count:,} faces)")
 
 
 # ── 4: Make remesh material independent ───────────────────────────────────────
@@ -522,7 +629,12 @@ else:
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 
-source.hide_viewport = True   # tidy up
+# Leave the untouched import visible at the end: it is the thing to go back to
+# for a re-export, and a hidden object is easy to forget you still have.
+source.hide_viewport = False
+obj.hide_viewport    = True    # hide the remesh so the two do not overlap in view
+print(f"\n  The original import is back in the viewport as '{source.name}'.")
+print(f"  The remeshed copy '{obj.name}' is hidden; unhide it with Alt+H if needed.")
 
 print(f"\n{'='*56}")
 print(f"  Done!")

@@ -1,201 +1,379 @@
 {
   "fragment_id": "FRAG-S1-FS-002",
-  "input_type": "point_cloud",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
   "pipeline_version": "v0.2",
-  "computed_at": "2026-07-13T13:55:33.580095+00:00",
+  "computed_at": "2026-08-25T07:27:37.109536+00:00",
   "ransac_threshold_mm": 3.0,
   "bounding": {
     "obb_dims_mm": [
-      976.1,
-      919.9,
-      723.5
+      1629.9,
+      933.5,
+      706.3
     ],
-    "volume_mm3": 336511883.5,
-    "volume_m3": 0.336512,
-    "volume_source": "convex_hull",
-    "convexity": null,
-    "mass_kg_est": 807.629,
+    "obb_axes_xyz": [
+      [
+        0.6845,
+        0.0041,
+        0.729
+      ],
+      [
+        -0.729,
+        -0.0019,
+        0.6845
+      ],
+      [
+        -0.0042,
+        1.0,
+        -0.0017
+      ]
+    ],
+    "volume_mm3": 611772825.8,
+    "volume_m3": 0.611773,
+    "volume_source": "mesh_nearly_closed",
+    "convexity": 0.9086,
+    "mass_kg_est": 1468.255,
     "mass_data_status": "pseudo",
-    "watertight": null,
-    "input_type": "point_cloud",
+    "watertight": false,
     "data_status": "computed"
   },
   "planarity": [
     {
       "plane_abcd": [
-        -0.049043,
-        0.9885,
-        0.143051,
-        -135.365171
+        -0.005417,
+        0.999877,
+        0.014723,
+        -61.852346
       ],
       "normal_xyz": [
-        -0.049,
-        0.9885,
-        0.1431
+        -0.0054,
+        0.9999,
+        0.0147
       ],
-      "inlier_count": 7710,
-      "inlier_fraction": 0.154,
-      "area_m2_est": 0.513295,
-      "fit_rms_mm": 1.644,
-      "data_status": "computed"
+      "inlier_count": 1360,
+      "inlier_fraction": 0.027,
+      "area_m2_est": 1.090878,
+      "fit_rms_mm": 1.489,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.7,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
     },
     {
       "plane_abcd": [
-        -0.110753,
-        0.97976,
-        0.166742,
-        -100.991349
+        -0.000129,
+        0.999827,
+        0.018626,
+        -10.843622
       ],
       "normal_xyz": [
-        -0.1108,
-        0.9798,
-        0.1667
+        -0.0001,
+        0.9998,
+        0.0186
       ],
-      "inlier_count": 2146,
-      "inlier_fraction": 0.043,
-      "area_m2_est": 0.507251,
-      "fit_rms_mm": 1.736,
-      "data_status": "computed"
+      "inlier_count": 6354,
+      "inlier_fraction": 0.127,
+      "area_m2_est": 1.020573,
+      "fit_rms_mm": 1.519,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.5,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
     },
     {
       "plane_abcd": [
-        -0.078936,
-        0.983094,
-        0.165211,
-        -117.667053
+        -0.230851,
+        0.945112,
+        -0.231236,
+        -3374.87986
       ],
       "normal_xyz": [
-        -0.0789,
-        0.9831,
-        0.1652
-      ],
-      "inlier_count": 1597,
-      "inlier_fraction": 0.032,
-      "area_m2_est": 0.503292,
-      "fit_rms_mm": 1.673,
-      "data_status": "computed"
-    },
-    {
-      "plane_abcd": [
-        0.005327,
-        0.988949,
-        0.148157,
-        -130.533985
-      ],
-      "normal_xyz": [
-        0.0053,
-        0.9889,
-        0.1482
-      ],
-      "inlier_count": 2978,
-      "inlier_fraction": 0.06,
-      "area_m2_est": 0.463002,
-      "fit_rms_mm": 1.619,
-      "data_status": "computed"
-    },
-    {
-      "plane_abcd": [
-        -0.081592,
-        0.980958,
-        0.176253,
-        -127.429979
-      ],
-      "normal_xyz": [
-        -0.0816,
-        0.981,
-        0.1763
-      ],
-      "inlier_count": 1707,
-      "inlier_fraction": 0.034,
-      "area_m2_est": 0.449373,
-      "fit_rms_mm": 1.634,
-      "data_status": "computed"
-    },
-    {
-      "plane_abcd": [
-        -0.024308,
-        0.972596,
-        -0.231226,
-        205.9343
-      ],
-      "normal_xyz": [
-        -0.0243,
-        0.9726,
+        -0.2309,
+        0.9451,
         -0.2312
       ],
-      "inlier_count": 5424,
-      "inlier_fraction": 0.108,
-      "area_m2_est": 0.41526,
-      "fit_rms_mm": 1.33,
-      "data_status": "computed"
+      "inlier_count": 1548,
+      "inlier_fraction": 0.031,
+      "area_m2_est": 0.96386,
+      "fit_rms_mm": 1.708,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 77.3,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
     },
     {
       "plane_abcd": [
-        0.058002,
-        0.939241,
-        -0.338322,
-        166.778457
+        -0.227475,
+        0.944525,
+        -0.236914,
+        -3449.693939
       ],
       "normal_xyz": [
-        0.058,
-        0.9392,
-        -0.3383
+        -0.2275,
+        0.9445,
+        -0.2369
       ],
-      "inlier_count": 1590,
-      "inlier_fraction": 0.032,
-      "area_m2_est": 0.413753,
-      "fit_rms_mm": 1.671,
-      "data_status": "computed"
+      "inlier_count": 3679,
+      "inlier_fraction": 0.074,
+      "area_m2_est": 0.861963,
+      "fit_rms_mm": 1.528,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 76.9,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
     },
     {
       "plane_abcd": [
-        0.99849,
-        0.033068,
-        0.043866,
-        368.328892
+        -0.000181,
+        0.999904,
+        0.013879,
+        -61.631531
       ],
       "normal_xyz": [
-        0.9985,
-        0.0331,
-        0.0439
+        -0.0002,
+        0.9999,
+        0.0139
       ],
-      "inlier_count": 3393,
-      "inlier_fraction": 0.068,
-      "area_m2_est": 0.155561,
-      "fit_rms_mm": 1.316,
-      "data_status": "computed"
+      "inlier_count": 3149,
+      "inlier_fraction": 0.063,
+      "area_m2_est": 0.78182,
+      "fit_rms_mm": 0.913,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.7,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        0.7349,
+        0.001711,
+        -0.678173,
+        -8413.881488
+      ],
+      "normal_xyz": [
+        0.7349,
+        0.0017,
+        -0.6782
+      ],
+      "inlier_count": 2347,
+      "inlier_fraction": 0.047,
+      "area_m2_est": 0.46715,
+      "fit_rms_mm": 1.436,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 46.5,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        0.643112,
+        0.342893,
+        0.684712,
+        7061.867311
+      ],
+      "normal_xyz": [
+        0.6431,
+        0.3429,
+        0.6847
+      ],
+      "inlier_count": 2212,
+      "inlier_fraction": 0.044,
+      "area_m2_est": 0.451384,
+      "fit_rms_mm": 1.527,
+      "data_status": "computed",
+      "surface_label": "brick_inclusion",
+      "features": [
+        "brick_inclusion",
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "angle_to_unscanned_deg": 47.3,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "show_face",
+          "rule": "carries visible material history: a cast face, adhering tile, or brick cast into the concrete"
+        },
+        "finishing_requirement": {
+          "value": "ease_sharp_arrises",
+          "rule": "rough break with sharp edges: ease arrises on any face within reach in public use"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        0.72313,
+        -0.002594,
+        -0.690707,
+        -7641.459668
+      ],
+      "normal_xyz": [
+        0.7231,
+        -0.0026,
+        -0.6907
+      ],
+      "inlier_count": 3547,
+      "inlier_fraction": 0.071,
+      "area_m2_est": 0.425938,
+      "fit_rms_mm": 1.397,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 45.5,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
     }
   ],
   "curvature": {
     "fine_mm": {
-      "mean_rad": 0.65846,
-      "std_rad": 0.5436,
-      "p25_rad": 0.03479,
-      "p75_rad": 1.15161,
+      "mean_rad": 0.39842,
+      "std_rad": 0.58302,
+      "p25_rad": 0.00717,
+      "p75_rad": 1.13147,
       "radius_mm": 20.0
     },
     "coarse_mm": {
-      "mean_rad": 0.84039,
-      "std_rad": 0.33637,
-      "p25_rad": 0.66268,
-      "p75_rad": 1.06581,
+      "mean_rad": 0.81449,
+      "std_rad": 0.41719,
+      "p25_rad": 0.56469,
+      "p75_rad": 1.13127,
       "radius_mm": 60.0
     },
     "data_status": "computed"
   },
   "vision": {
-    "dominant_label": "fracture_surface",
+    "dominant_label": "broken_face",
     "labels_present": [
+      "broken_face",
       "exposed_aggregate",
-      "fracture_surface",
-      "staining",
-      "weathered"
+      "rebar_visible",
+      "tile_remnant"
     ],
     "label_coverage": {
-      "fracture_surface": 43,
-      "exposed_aggregate": 30,
-      "weathered": 20,
-      "staining": 10
+      "broken_face": 43,
+      "exposed_aggregate": 23,
+      "rebar_visible": 13,
+      "tile_remnant": 20
+    },
+    "label_details": {
+      "broken_face": {
+        "subtype": "unknown",
+        "notes": "Rough texture with irregular edges, light grey color, approximately 30 cm in size."
+      },
+      "exposed_aggregate": {
+        "subtype": "unknown",
+        "notes": "Visible small stones, grey and brown, embedded in the surface."
+      },
+      "rebar_visible": {
+        "subtype": "unknown",
+        "notes": "Corroded metal bars, rust-colored, partially exposed."
+      },
+      "tile_remnant": {
+        "subtype": "unknown",
+        "notes": "White and orange tile fragments, adhered to the surface, approximately 10 cm in size."
+      }
     },
     "cracks": {
       "present": true,
@@ -207,22 +385,255 @@
       "estimated_size": "medium"
     },
     "surface_condition": "moderate",
-    "color_notes": "Dominant grey with orange and black staining, some carbonation visible",
-    "reuse_notes": "The presence of exposed aggregate and moderate surface condition suggests potential for reuse in non-structural applications. Staining may require cleaning.",
-    "confidence": "high",
+    "color_notes": "Dominant light grey with orange and rust stains, some carbonation visible.",
+    "reuse_notes": "The presence of rebar and tile remnants may complicate reuse. Surface condition is moderate, suitable for non-structural applications.",
+    "confidence": "medium",
     "n_runs": 3,
     "n_total": 3,
     "provider": "openai",
     "model": "gpt-4o",
     "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-002\\FRAG-S1-FS-002_texture.png",
     "data_status": "computed",
+    "regions": [
+      {
+        "region_id": 0,
+        "kind": "residual",
+        "plane_index": null,
+        "area_frac": 0.2424,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.21,
+        "uv_fill": null,
+        "smear_frac": null,
+        "skipped": "fragmented_uv"
+      },
+      {
+        "region_id": 1,
+        "kind": "plane",
+        "plane_index": 3,
+        "area_frac": 0.127,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.997,
+        "uv_fill": 0.187,
+        "smear_frac": null,
+        "skipped": "sparse_uv"
+      },
+      {
+        "region_id": 2,
+        "kind": "plane",
+        "plane_index": 5,
+        "area_frac": 0.1162,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.122,
+        "smear_frac": null,
+        "skipped": "sparse_uv"
+      },
+      {
+        "region_id": 3,
+        "kind": "plane",
+        "plane_index": 7,
+        "area_frac": 0.1086,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.42,
+        "uv_fill": null,
+        "smear_frac": null,
+        "skipped": "fragmented_uv"
+      },
+      {
+        "region_id": 4,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0953,
+        "label": "brick_inclusion",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "brick_inclusion",
+            "votes": 3
+          },
+          {
+            "id": "tile_remnant",
+            "votes": 3
+          },
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 4,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.369,
+        "smear_frac": 0.049,
+        "skipped": null
+      },
+      {
+        "region_id": 5,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0659,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.426,
+        "smear_frac": 0.551,
+        "skipped": "unreliable_texture"
+      },
+      {
+        "region_id": 6,
+        "kind": "plane",
+        "plane_index": 6,
+        "area_frac": 0.0648,
+        "label": "brick_inclusion",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "brick_inclusion",
+            "votes": 3
+          },
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 3,
+        "n_label_votes": 3,
+        "uv_coherence": 0.994,
+        "uv_fill": 0.349,
+        "smear_frac": 0.022,
+        "skipped": null
+      },
+      {
+        "region_id": 7,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0498,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.09,
+        "smear_frac": null,
+        "skipped": "sparse_uv"
+      },
+      {
+        "region_id": 8,
+        "kind": "plane",
+        "plane_index": 2,
+        "area_frac": 0.048,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.34,
+        "uv_fill": null,
+        "smear_frac": null,
+        "skipped": "fragmented_uv"
+      },
+      {
+        "region_id": 9,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0477,
+        "label": "pipe_opening",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "pipe_opening",
+            "votes": 3
+          },
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 3,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.299,
+        "smear_frac": 0.049,
+        "skipped": null
+      },
+      {
+        "region_id": 10,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0343,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.3,
+        "smear_frac": 0.0,
+        "skipped": null
+      }
+    ],
+    "face_labels": {
+      "classified_faces": 668540,
+      "inferred_faces": 76027,
+      "unlabeled_faces": 2560341,
+      "method": "region classification; gaps filled from adjacent faces and flagged as inferred"
+    },
     "grid_classification": {
-      "grid_n": 8,
+      "grid_n": 16,
       "cells": [
         [
-          "weathered",
-          "weathered",
-          "weathered",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           null,
           null,
           null,
@@ -230,78 +641,366 @@
           null
         ],
         [
-          "weathered",
-          "weathered",
-          "exposed_aggregate",
-          "exposed_aggregate",
-          "exposed_aggregate",
-          "exposed_aggregate",
-          "exposed_aggregate",
-          "weathered"
-        ],
-        [
-          "weathered",
-          "weathered",
-          "staining",
-          "staining",
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered"
-        ],
-        [
-          "weathered",
-          "exposed_aggregate",
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered"
-        ],
-        [
-          "weathered",
-          "weathered",
-          "weathered",
           null,
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered"
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
         ],
         [
-          "weathered",
-          "weathered",
-          "weathered",
           null,
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered"
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
         ],
         [
-          "weathered",
-          "weathered",
-          "weathered",
           null,
-          "weathered",
-          "weathered",
-          "weathered",
-          "exposed_aggregate"
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
         ],
         [
-          "weathered",
-          "weathered",
-          "weathered",
           null,
-          "weathered",
-          "weathered",
-          "weathered",
-          "weathered"
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "pipe_opening",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "pipe_opening",
+          "pipe_opening",
+          null,
+          "brick_inclusion",
+          "brick_inclusion",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "pipe_opening",
+          "pipe_opening",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          "pipe_opening",
+          null,
+          null,
+          null,
+          null,
+          null
         ]
-      ]
+      ],
+      "method": "region"
     }
   },
-  "archetype": "FS",
-  "archetype_label": "Floor Slab"
+  "scan_coverage": {
+    "has_unscanned_face": true,
+    "unscanned_avg_normal": [
+      0.0137,
+      -0.0081,
+      -0.9999
+    ],
+    "unscanned_avg_center": [
+      0.1525,
+      11.581,
+      0.2419
+    ],
+    "unscanned_face_count_original": 699,
+    "angle_threshold_deg": 25.0,
+    "notes": "Ground-contact face not captured during photogrammetry scanning. Descriptor values derived from reliable faces only. Planarity regions within angle_threshold_deg of unscanned normal are flagged scan_reliable: false and excluded from connection feasibility assessment.",
+    "data_status": "annotated"
+  },
+  "procedural": {
+    "handling_class": {
+      "value": "excavator",
+      "rule": "max_dim",
+      "reason": "longest dimension 1630 mm exceeds 800 mm"
+    },
+    "drill_zone": {
+      "value": "edge_mid_depth",
+      "rule": "no bars visible, but the section is deep enough for a steel-free core between the two mats; a hole entering the broken edge at mid-thickness runs parallel to and clear of both",
+      "clear_core_mm_est": 642.3,
+      "cover_mm_assumed": 20,
+      "entry_faces": [
+        5,
+        6,
+        7
+      ]
+    },
+    "use_suggestions": [
+      {
+        "id": "leaning_support",
+        "label": "Leaning or backrest surface",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "note": "large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified",
+        "caveat": "orientation unverified"
+      },
+      {
+        "id": "bar_table_stand",
+        "label": "Bar-table or high-table stand",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "note": "stands at counter height with a bearing face on top to carry a table plate",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "pedestal_support",
+        "label": "Pedestal or structural support",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "note": "broad flat bearing face and mass enough to carry a timber deck, plate or slab above",
+        "caveat": null
+      }
+    ],
+    "faces_evaluated": 8,
+    "data_status": "proposed",
+    "basis": "PROVISIONAL. Drawn from Study 1 site experience and general handling/fabrication practice. Not verified with domain experts. Every derived output carries data_status 'proposed'.",
+    "note": "Derived from the encoded design factors in env/design_factors.json. Provisional: the factors are drawn from Study 1 experience and general practice and are not expert-verified."
+  }
 }

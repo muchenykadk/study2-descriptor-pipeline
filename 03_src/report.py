@@ -27,20 +27,22 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 try:
-    from ai.taxonomy import TAXONOMY, LABEL_COLORS as _LABEL_COLORS, LABEL_DESCRIPTIONS
+    from ai.taxonomy import (TAXONOMY, ACTIVE as _ACTIVE,
+                             LABEL_COLORS as _LABEL_COLORS, LABEL_DESCRIPTIONS,
+                             GROUPS as _GROUPS)
 except ImportError:
     # Absolute fallback — should never happen in normal usage
     _LABEL_COLORS = {
-        "formwork_imprint":  "#60a5fa",
-        "fracture_surface":  "#f87171",
+        "formwork_face":     "#60a5fa",
+        "broken_face":       "#f87171",
         "exposed_aggregate": "#fbbf24",
         "rebar_visible":     "#f97316",
-        "weathered":         "#a3e635",
-        "staining":          "#c084fc",
-        "original_finish":   "#34d399",
+        "discolouration":    "#c084fc",
     }
     TAXONOMY = list(_LABEL_COLORS.keys())
+    _ACTIVE = list(TAXONOMY)
     LABEL_DESCRIPTIONS = {k: "" for k in TAXONOMY}
+    _GROUPS = {k: "formation" for k in TAXONOMY}
 
 
 # ── Roughness grading standard ────────────────────────────────────────────────
@@ -139,6 +141,15 @@ body {
 
 /* ── Section ── */
 .section { margin-bottom: 28px; }
+details.fold > summary {
+  cursor: pointer; list-style: none; user-select: none;
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 4px 0; outline: none;
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "\25B8  "; color: #4b5268; }
+details.fold[open] > summary::before { content: "\25BE  "; }
+details.fold > summary:hover { color: var(--text); }
 .section-title {
   font-size: 11px;
   text-transform: uppercase;
@@ -364,16 +375,57 @@ def _bounding_section(b: dict) -> str:
     <div class="stat-card">
       <div class="stat-label">Mass Estimate</div>
       <div class="stat-value">{_fmt(mass, 3)}<span class="stat-unit"> kg</span></div>
-      <div class="stat-sub">@ 2400 kg/m³ concrete</div>
+      <div class="stat-sub">@ 2500 kg/m³ (EN 1991-1-1)</div>
     </div>
   </div>
 </div>"""
 
 
+def _region_hover_data(regions: list, vision: dict) -> list:
+    """Everything the hover panel shows for one region, in viewer index order.
+
+    The planar and design-factor tables carry the same numbers, but a table
+    forces the reader to hold a region number in their head while they look
+    from the 3D view to a row and back. Attaching the figures to the geometry
+    removes that step, so the tables below can be collapsed by default.
+    """
+    by_plane = {}
+    for r in (vision or {}).get("regions", []) or []:
+        if r.get("plane_index") is not None:
+            by_plane[r["plane_index"]] = r
+
+    out = []
+    for i, f in enumerate(regions):
+        proc = f.get("procedural") or {}
+        v = by_plane.get(i, {})
+        feats = [x["id"] if isinstance(x, dict) else x
+                 for x in (v.get("features") or [])]
+        if not feats and f.get("surface_label"):
+            feats = [f["surface_label"]]
+        nx, ny, nz = (f.get("normal_xyz") or [0, 0, 0])
+        out.append({
+            "n": i + 1,
+            "area": f.get("area_m2_est"),
+            "cov": f.get("inlier_fraction"),
+            "rms": f.get("fit_rms_mm"),
+            "normal": [round(nx, 2), round(ny, 2), round(nz, 2)],
+            "reliable": f.get("scan_reliable", True),
+            "features": feats,
+            "colors": [_LABEL_COLORS.get(x, "#94a3b8") for x in feats],
+            "conn": (proc.get("connection_strategy") or {}).get("value"),
+            "asg":  (proc.get("design_assignment") or {}).get("value"),
+            "fin":  (proc.get("finishing_requirement") or {}).get("value"),
+            "skipped": v.get("skipped"),
+            "fill": v.get("uv_fill"),
+        })
+    return out
+
+
 def _viewer_section(regions: list, viewer_data: dict,
                     glb_rel_path: str = "",
                     feat_tex_rels: dict = None,
-                    grid_data: dict = None) -> str:
+                    grid_data: dict = None,
+                    vision: dict = None) -> str:
     """
     Build the 3D viewer section HTML + embedded Three.js script.
 
@@ -387,6 +439,7 @@ def _viewer_section(regions: list, viewer_data: dict,
     point_json  = json.dumps(viewer_data["points"])
     color_mode  = viewer_data.get("color_mode", "region")
     scale_mm    = viewer_data.get("scale_mm", "?")
+    region_info_json = json.dumps(_region_hover_data(regions, vision or {}))
 
     # ── RANSAC region legend (point cloud mode) ──────────────────────────────
     legend_items = ""
@@ -425,7 +478,32 @@ def _viewer_section(regions: list, viewer_data: dict,
                 'style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;'
                 'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button>'
             )
-        for lbl in TAXONOMY:
+        # Grouped, because the groups are what the paper cites. The grouping
+        # carries no exclusivity: a region may hold features from all of them
+        # at once.
+        #
+        # Read the group names from the taxonomy rather than naming them here.
+        # The hard-coded list ("manufacture", "inclusion", "defect") survived
+        # the 2026-08-20 rebuild, which renamed the groups to formation /
+        # composition / inclusion / colour. Only `inclusion` still matched, so
+        # every other chip was dropped silently: on FS-010 the panel offered
+        # `brick_inclusion` alone and `broken_face` and `exposed_aggregate`,
+        # the two features actually covering the piece, had no chip and no
+        # colour key at all.
+        _order = []
+        for l in _ACTIVE:
+            g = _GROUPS.get(l)
+            if g and g not in _order:
+                _order.append(g)
+        _seen_group = None
+        for grp in _order:
+          for lbl in [l for l in _ACTIVE if _GROUPS.get(l) == grp]:
+            if grp != _seen_group:
+                _seen_group = grp
+                chips_html += (
+                    f'<div style="flex-basis:100%;height:0"></div>'
+                    f'<span style="font-size:9px;color:var(--muted);text-transform:uppercase;'
+                    f'letter-spacing:0.08em;align-self:center;margin-right:4px">{grp}</span>')
             col  = _LABEL_COLORS.get(lbl, "#b0b8d0")
             desc = LABEL_DESCRIPTIONS.get(lbl, "")
             if lbl in feat_tex_rels:
@@ -699,7 +777,7 @@ def _viewer_section(regions: list, viewer_data: dict,
             f'<div class="legend-item">'
             f'<div class="legend-dot" style="background:{_LABEL_COLORS.get(lbl, "#b0b8d0")}"></div>'
             f'{lbl.replace("_", " ")}</div>'
-            for lbl in TAXONOMY
+            for lbl in _ACTIVE
         ) + '<div class="legend-item"><div class="legend-dot" style="background:#111318"></div>Unlabeled</div>'
         feat_legend_html = (
             f'<div class="viewer-legend" id="feat-legend" style="display:none">{_fl_items}</div>'
@@ -825,6 +903,108 @@ def _viewer_section(regions: list, viewer_data: dict,
     camera.aspect = w / H; camera.updateProjectionMatrix(); renderer.setSize(w, H);
   }});
 
+  // ── Hover panel ───────────────────────────────────────────────────────────
+  // Raycast the point cloud, read the region id off the hit point, and show
+  // that region's planar geometry and design factors beside the cursor. The
+  // tables below carry the same figures, and are collapsed by default because
+  // reading them means holding a region number in your head while looking back
+  // and forth. Here the number is attached to the thing it describes.
+  var REGION_INFO = {region_info_json};
+  var hoverBox = document.createElement('div');
+  hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
+    + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
+    + 'padding:8px 10px;font-size:11px;color:#b0b8d0;min-width:190px;max-width:280px;'
+    + 'box-shadow:0 4px 18px rgba(0,0,0,0.55);line-height:1.5';
+  container.style.position = 'relative';
+  container.appendChild(hoverBox);
+
+  var ray = new THREE.Raycaster();
+  // The cloud carries ~2000 points over a model normalised to about 2 units,
+  // so mean spacing is near 0.05. A threshold below that misses on most
+  // pixels and the panel never appears.
+  ray.params.Points.threshold = 0.06;
+  var ndc = new THREE.Vector2(), hoverId = null;
+
+  function fmtRow(k, v) {{
+    return v === null || v === undefined || v === ''
+      ? '' : '<div><span style="color:#6b7390">' + k + '</span> ' + v + '</div>';
+  }}
+  function showHover(id, cx, cy) {{
+    var d = REGION_INFO[id];
+    if (!d) {{ hoverBox.style.display = 'none'; return; }}
+    var chips = '';
+    for (var i = 0; i < d.features.length; i++) {{
+      chips += '<span style="display:inline-block;margin:1px 3px 1px 0;padding:0 6px;'
+        + 'border-radius:9px;font-size:10px;border:1px solid ' + d.colors[i] + '55;'
+        + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
+        + d.features[i] + '</span>';
+    }}
+    if (!chips) {{
+      chips = '<span style="color:#6b7390;font-size:10px">'
+        + (d.skipped ? 'not classified (' + d.skipped
+              + (d.fill != null ? ', ' + Math.round(d.fill*100) + '% fill' : '') + ')'
+              : 'no features reported') + '</span>';
+    }}
+    hoverBox.innerHTML =
+      '<div style="color:' + COLORS[id % COLORS.length] + ';font-weight:bold;'
+        + 'margin-bottom:4px">Region ' + d.n
+        + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
+            + 'not scanned</span>') + '</div>'
+      + '<div style="margin-bottom:5px">' + chips + '</div>'
+      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
+      + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
+      + fmtRow('normal', d.normal.join(', '))
+      + (d.conn || d.asg || d.fin
+          ? '<div style="border-top:1px solid #2a2f3f;margin:6px 0 4px"></div>'
+            + '<div style="font-size:9px;color:#6b7390;text-transform:uppercase;'
+            + 'letter-spacing:0.06em;margin-bottom:3px">proposed</div>'
+            + fmtRow('connection', d.conn) + fmtRow('assignment', d.asg)
+            + fmtRow('finishing', d.fin)
+          : '');
+    var r = container.getBoundingClientRect();
+    var x = cx - r.left + 14, y = cy - r.top + 14;
+    if (x + 290 > r.width)  x = cx - r.left - 300;
+    if (y + 190 > r.height) y = Math.max(4, cy - r.top - 190);
+    hoverBox.style.left = x + 'px';
+    hoverBox.style.top  = y + 'px';
+    hoverBox.style.display = 'block';
+  }}
+
+  cvs.addEventListener('mousemove', function (e) {{
+    // Raycast the point cloud even in mesh mode. The default view is the GLB
+    // and the cloud is set invisible behind it, but the two occupy the same
+    // normalised space, and Raycaster.intersectObject does not skip an object
+    // for being invisible. Bailing on showMeshMode meant hover never fired in
+    // the view the report actually opens in.
+    if (isDragging) {{ hoverBox.style.display = 'none'; return; }}
+    var r = cvs.getBoundingClientRect();
+    ndc.x =  ((e.clientX - r.left) / r.width)  * 2 - 1;
+    ndc.y = -((e.clientY - r.top)  / r.height) * 2 + 1;
+    ray.setFromCamera(ndc, camera);
+    var hits = ray.intersectObject(cloud);
+    if (!hits.length) {{ hoverBox.style.display = 'none'; hoverId = null; return; }}
+    var rid = POINT_DATA[hits[0].index][3];
+    if (rid < 0 || rid >= REGION_INFO.length) {{
+      hoverBox.style.display = 'none'; hoverId = null; return;
+    }}
+    hoverId = rid;
+    showHover(rid, e.clientX, e.clientY);
+  }});
+  cvs.addEventListener('mouseleave', function () {{
+    hoverBox.style.display = 'none'; hoverId = null;
+  }});
+  // Clicking a hovered region pins it, the same as clicking its table row.
+  // Guarded by drag distance: rotating the view ends in a click event too, and
+  // without this every orbit would toggle whatever region ended up under the
+  // cursor.
+  var downX = 0, downY = 0;
+  cvs.addEventListener('mousedown', function (e) {{ downX = e.clientX; downY = e.clientY; }});
+  cvs.addEventListener('click', function (e) {{
+    var moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
+    if (moved < 5 && hoverId !== null) window.highlightRegion(hoverId);
+  }});
+
   var curHighlight = null, hlCol = new THREE.Color();
   window.highlightRegion = function (regionId) {{
     if (curHighlight === regionId) {{
@@ -882,15 +1062,67 @@ def _procedural_section(proc: dict, vision: dict) -> str:
     h    = proc.get("handling_class") or {}
     hv   = h.get("value") or "—"
     hr   = h.get("reason") or ""
-    coverage = ""
+    dz   = proc.get("drill_zone") or {}
+    dzv  = dz.get("value") or "—"
+    # Withheld since 2026-08-25: show the reason where the value used to be,
+    # so the report says why the field is empty instead of showing a dash.
+    dzr  = dz.get("rule") or dz.get("reason") or ""
+    core = dz.get("clear_core_mm_est")
+    if core is not None:
+        dzr += f" (steel-free core est. {core:.0f} mm at {dz.get('cover_mm_assumed')} mm cover)"
+    entry = dz.get("entry_faces")
+    if entry:
+        dzr += " Entry via " + ", ".join(f"region {i+1}" for i in entry) + "."
+    coverage = f"""
+    <div class="stat-block">
+      <div class="stat-label">Drill zone</div>
+      <div class="stat-value" style="font-size:18px">{dzv}</div>
+      <div style="font-size:11px;color:var(--muted)">{dzr}</div>
+    </div>"""
+
+    # One chip per feature. A region carries as many as apply, so a single
+    # "Label" cell would be showing whichever one happened to sort first, which
+    # is the display precedence and says nothing about the surface.
+    def _feature_chips(r: dict) -> str:
+        feats = r.get("features")
+        if not feats:                       # record written before 2026-08-20
+            lab = r.get("label")
+            feats = [{"id": lab, "box_pct": None,
+                      "votes": r.get("n_label_votes")}] if lab else []
+        if not feats:
+            return "—"
+        out = ""
+        for f in feats:
+            fid = f.get("id")
+            col = _LABEL_COLORS.get(fid, "#94a3b8")
+            grp = _GROUPS.get(fid, "")
+            v   = f.get("votes")
+            box = ""    # boxes were removed 2026-08-20: every one was fabricated
+            tip = f"{grp}{f' · {v}/3 runs' if v else ''}"
+            out += (f'<span title="{tip}" style="display:inline-block;margin:1px 3px 1px 0;'
+                    f'padding:1px 7px;border-radius:10px;font-size:10px;'
+                    f'border:1px solid {col}55;background:{col}1a;color:{col}">'
+                    f'{fid}{box}</span>')
+        return out
 
     regions_html = ""
     for r in (vision or {}).get("regions", []) or []:
         skipped = r.get("skipped")
         coh     = r.get("uv_coherence")
-        note    = (f'<span style="color:var(--warning)">not classified ({skipped}, '
-                   f'coherence {coh})</span>') if skipped else (r.get("label") or "—")
-        an = len(r.get("anomalies") or [])
+        fill    = r.get("uv_fill")
+        why_skip = f"{skipped}, coherence {coh}"
+        if skipped == "sparse_uv" and fill is not None:
+            why_skip = f"{skipped}, only {fill:.0%} of the crop is surface"
+        note    = (f'<span style="color:var(--warning)">not classified ({why_skip})</span>'
+                   ) if skipped else _feature_chips(r)
+        an = len(r.get("features") or [])
+        sm, fl = r.get("smear_frac"), r.get("flat_frac")
+        why = []
+        if fl:        why.append(f"{fl:.0%} featureless fill (mark UNSCANNED in Blender)")
+        if sm and fl: why.append(f"{sm - fl:.0%} directional smear")
+        elif sm:      why.append(f"{sm:.0%} directional smear")
+        sm_txt = (f'<span style="color:var(--warning)" title="{"; ".join(why)}">{sm:.0%}</span>'
+                  if sm else ("—" if sm is None else "0%"))
         regions_html += f"""
       <tr>
         <td>#{r.get('region_id')}</td>
@@ -898,13 +1130,18 @@ def _procedural_section(proc: dict, vision: dict) -> str:
         <td class="num">{(r.get('area_frac') or 0)*100:.1f}%</td>
         <td style="font-size:11px">{note}</td>
         <td class="num">{an if an else '—'}</td>
+        <td class="num">{sm_txt}</td>
       </tr>"""
     regions_table = f"""
-  <table class="data-table" style="margin-top:12px">
+  <details class="fold" style="margin-top:12px">
+  <summary>Per-region detail ({len(regions_html.split('<tr>')) - 1} regions) — also on hover in the 3D viewer</summary>
+  <table class="data-table" style="margin-top:6px">
     <thead><tr><th>Region</th><th>Kind</th><th class="num">Area</th>
-      <th>Label</th><th class="num">Anomalies</th></tr></thead>
+      <th title="every feature the model saw in this region. These do not compete: a broken face showing aggregate carries both. A chip marked with a square is localised and has a bounding box.">Features</th>
+      <th class="num" title="how many features were reported for this region">n</th>
+      <th class="num" title="share of the face masked out as unusable texture: directional smear or featureless fill">Masked</th></tr></thead>
     <tbody>{regions_html}</tbody>
-  </table>""" if regions_html else ""
+  </table></details>""" if regions_html else ""
 
     # ── Design implications: combinations of descriptors → candidate uses ────
     uses = (proc.get("use_suggestions") or []) if SHOW_USES_IN_REPORT else []
@@ -970,6 +1207,9 @@ def _planar_section(regions: list) -> str:
         asg   = (proc.get("design_assignment") or {}).get("value") or "—"
         conn_t = (proc.get("connection_strategy") or {}).get("rule") or ""
         asg_t  = (proc.get("design_assignment") or {}).get("rule") or ""
+        fin    = (proc.get("finishing_requirement") or {}).get("value") or "—"
+        fin_t  = ((proc.get("finishing_requirement") or {}).get("rule")
+                  or (proc.get("finishing_requirement") or {}).get("reason") or "")
         rel   = "" if r.get("scan_reliable", True) else (
                 ' <span style="color:var(--warning);font-size:10px">unscanned</span>')
         rows += f"""
@@ -981,13 +1221,18 @@ def _planar_section(regions: list) -> str:
         <td style="font-size:11px">{lbl}</td>
         <td style="font-size:11px" title="{conn_t}">{conn}</td>
         <td style="font-size:11px" title="{asg_t}">{asg}</td>
+        <td style="font-size:11px" title="{fin_t}">{fin}</td>
         <td class="num" style="color:var(--muted);font-size:11px">({nx:.3f}, {ny:.3f}, {nz:.3f})</td>
       </tr>"""
 
     return f"""
 <div class="section">
-  <div class="section-title">Planar Regions — RANSAC ({len(regions)} found)</div>
-  <table class="data-table">
+  <div class="section-title">Planar Regions — RANSAC ({len(regions)} found)
+    <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">
+      — hover a region in the 3D viewer for the same figures</span></div>
+  <details class="fold">
+  <summary>Full table</summary>
+  <table class="data-table" style="margin-top:6px">
     <thead>
       <tr>
         <th>#</th>
@@ -997,12 +1242,13 @@ def _planar_section(regions: list) -> str:
         <th>Surface</th>
         <th>Connection <span class="badge badge-pseudo">proposed</span></th>
         <th>Assignment <span class="badge badge-pseudo">proposed</span></th>
+        <th>Finishing <span class="badge badge-pseudo">proposed</span></th>
         <th class="num">Normal (x, y, z)</th>
       </tr>
     </thead>
     <tbody>{rows}
     </tbody>
-  </table>
+  </table></details>
 </div>"""
 
 
@@ -1079,68 +1325,80 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
     condition_color = {"good": "#4ade80", "moderate": "#fbbf24", "poor": "#f87171"}.get(condition, "#b0b8d0")
     conf_color      = {"high": "#4ade80", "medium": "#fbbf24", "low": "#f87171"}.get(confidence, "#b0b8d0")
 
-    # Coverage bars with subtype + notes
+    # ── Coverage, condensed ──────────────────────────────────────────────
+    # This used to be one stacked block per label, each with its own bar,
+    # subtype chip and note, which ran to most of a screen for a fragment
+    # carrying four labels. The same information fits in one proportional bar
+    # plus a chip row: the comparison a reader makes here is between labels,
+    # and separate bars are the one layout that makes that comparison hard.
     label_details = vision.get("label_details", {})
-    bars = ""
-    for label in TAXONOMY:
-        pct = coverage.get(label, 0)
-        if pct == 0:
-            continue
-        col    = _LABEL_COLORS.get(label, "#b0b8d0")
-        detail = label_details.get(label, {})
+    present = [(l, coverage.get(l, 0)) for l in TAXONOMY if coverage.get(l, 0)]
+    total   = sum(p for _, p in present) or 1
+    segs, chips, notes_out = "", "", ""
+    for label, pct in present:
+        col     = _LABEL_COLORS.get(label, "#b0b8d0")
+        detail  = label_details.get(label, {})
         subtype = detail.get("subtype", "")
         notes   = detail.get("notes", "")
-        subtype_html = ""
-        if subtype and subtype != "unknown":
-            subtype_html = (
-                f'<span style="background:{col}22;color:{col};font-size:9px;'
-                f'padding:1px 6px;border-radius:10px;margin-left:6px;'
-                f'font-weight:600;letter-spacing:0.04em">'
-                f'{subtype.replace("_", " ")}</span>'
-            )
-        notes_html = (
-            f'<div style="font-size:10px;color:var(--muted);margin-top:3px;'
-            f'font-style:italic;padding-left:2px">{notes}</div>'
-            if notes else ""
-        )
-        bars += f"""
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px">
-        <span style="color:{col}">{label.replace('_',' ')}{subtype_html}</span>
-        <span style="color:var(--muted)">{pct}%</span>
-      </div>
-      <div style="background:#1e2030;border-radius:3px;height:6px">
-        <div style="background:{col};width:{pct}%;height:6px;border-radius:3px"></div>
-      </div>
-      {notes_html}
-    </div>"""
+        segs += (f'<div title="{label.replace("_"," ")} {pct}%" '
+                 f'style="width:{pct / total * 100:.1f}%;background:{col}"></div>')
+        sub = (f' <span style="opacity:.65">{subtype.replace("_", " ")}</span>'
+               if subtype and subtype != "unknown" else "")
+        chips += (f'<span style="display:inline-block;margin:0 10px 3px 0;font-size:10px;'
+                  f'color:{col}"><span style="display:inline-block;width:7px;height:7px;'
+                  f'border-radius:2px;background:{col};margin-right:4px"></span>'
+                  f'{label.replace("_", " ")}{sub} '
+                  f'<b style="color:var(--muted);font-weight:600">{pct}%</b></span>')
+        if notes:
+            notes_out += (f'<div style="font-size:10px;color:var(--muted);margin-top:2px">'
+                          f'<span style="color:{col}">{label.replace("_", " ")}</span> '
+                          f'{notes}</div>')
+    bars = (f'<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;'
+            f'background:#1e2030;margin-bottom:7px">{segs}</div>'
+            f'<div style="line-height:1.7">{chips}</div>'
+            + (f'<details class="fold" style="margin-top:4px">'
+               f'<summary style="font-size:10px">Per-label notes</summary>{notes_out}</details>'
+               if notes_out else "")) if present else ""
+
+    # `present` and `visible` became "yes|no|unknown" on 2026-08-25. A bare
+    # truth test now passes on the strings "no" and "unknown" alike, which
+    # would report cracks precisely where the model declined to say so. Test
+    # the value, and show "unknown" as its own state so the reader sees the
+    # difference between "no cracks" and "cannot tell".
+    def _tri(v):
+        # Records written before 2026-08-25 hold real booleans. Map them, or a
+        # pre-change record renders as neither "yes" nor "unknown" and its
+        # crack line disappears without a word.
+        if isinstance(v, bool):
+            return "yes" if v else "no"
+        return str(v).lower() if v is not None else "unknown"
 
     crack_html = ""
-    if cracks.get("present"):
-        crack_html = f"""
-    <div class="stat-card" style="border-color:#f87171">
-      <div class="stat-label">Cracks</div>
-      <div class="stat-value" style="font-size:14px;color:#f87171">{cracks.get('pattern','—')}</div>
-      <div class="stat-sub">{cracks.get('coverage_pct', 0)}% surface coverage</div>
-    </div>"""
+    _cp = _tri(cracks.get("present"))
+    if _cp == "yes":
+        _pct = cracks.get("coverage_pct")
+        crack_html = (f'<span>cracks <b style="color:#f87171;font-weight:600">'
+                      f'{cracks.get("pattern","—")}</b> '
+                      + (f'<span style="opacity:.7">{_pct}%</span>' if _pct is not None else '')
+                      + '</span>')
+    elif _cp == "unknown":
+        crack_html = ('<span style="opacity:.6">cracks <b>not resolvable</b> '
+                      'at this texel density</span>')
 
     agg_html = ""
-    if aggregate.get("visible"):
-        agg_html = f"""
-    <div class="stat-card">
-      <div class="stat-label">Aggregate</div>
-      <div class="stat-value" style="font-size:14px">{aggregate.get('estimated_size','—')}</div>
-      <div class="stat-sub">size class</div>
-    </div>"""
+    _av = _tri(aggregate.get("visible"))
+    if _av == "yes":
+        agg_html = (f'<span>aggregate <b style="color:var(--text);font-weight:600">'
+                    f'{aggregate.get("estimated_size","—")}</b></span>')
 
     # Texture image preview
     texture_html = ""
     if texture_rel_path:
         texture_html = f"""
-  <div style="margin-bottom:16px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Texture Map</div>
-    <img src="{texture_rel_path}" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14" alt="Fragment texture map">
-  </div>"""
+  <details class="fold" style="margin-bottom:10px">
+    <summary>Texture atlas</summary>
+    <img src="{texture_rel_path}" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14;margin-top:6px" alt="Fragment texture map">
+  </details>"""
 
     return f"""
 <div class="section">
@@ -1152,30 +1410,18 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
 
   {texture_html}
 
-  <div class="stat-row" style="margin-bottom:16px">
-    <div class="stat-card">
-      <div class="stat-label">Dominant Surface</div>
-      <div class="stat-value" style="font-size:14px;color:{dom_color}">{dominant.replace('_',' ')}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Surface Condition</div>
-      <div class="stat-value" style="font-size:16px;color:{condition_color}">{condition}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Confidence</div>
-      <div class="stat-value" style="font-size:16px;color:{conf_color}">{confidence}</div>
-    </div>
-    {crack_html}
-    {agg_html}
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;font-size:11px;
+              margin-bottom:12px;color:var(--muted)">
+    <span>dominant <b style="color:{dom_color};font-weight:600">{dominant.replace('_',' ')}</b></span>
+    <span>condition <b style="color:{condition_color};font-weight:600">{condition}</b></span>
+    <span>confidence <b style="color:{conf_color};font-weight:600">{confidence}</b></span>
+    {crack_html}{agg_html}
   </div>
 
-  <div style="margin-bottom:16px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Surface Coverage</div>
-    {bars}
-  </div>
+  {bars}
 
-  {"<div class='stat-sub' style='margin-bottom:8px'><b style='color:var(--fg)'>Color:</b> " + color_note + "</div>" if color_note else ""}
-  {"<div class='stat-sub'><b style='color:var(--fg)'>Reuse notes:</b> " + reuse_note + "</div>" if reuse_note else ""}
+  {"<div style='font-size:10px;color:var(--muted);margin-top:8px'><b style='color:var(--text)'>Colour</b> " + color_note + "</div>" if color_note else ""}
+  {"<div style='font-size:10px;color:var(--muted);margin-top:3px'><b style='color:var(--text)'>Reuse</b> " + reuse_note + "</div>" if reuse_note else ""}
 </div>"""
 
 
@@ -1232,7 +1478,8 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     viewer_html    = _viewer_section(regions, viewer_data or {},
                                      glb_rel_path=glb_rel,
                                      feat_tex_rels=feat_tex_rels,
-                                     grid_data=grid_data)
+                                     grid_data=grid_data,
+                                     vision=vision)
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
     vision_html    = _vision_section(vision, texture_rel_path=tex_rel)
@@ -1745,7 +1992,7 @@ function renderDetail(fragment) {
         '<div class="stat-chip"><div class="chip-label">OBB Dimensions</div><div class="chip-val" style="font-size:12px">' + dims + '</div><div class="chip-sub">mm (L × W × H)</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Volume</div><div class="chip-val">' + fmt(b.volume_m3, 6) + '</div><div class="chip-sub">m³ (' + (b.volume_source || 'mesh') + ')</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Convexity</div>' + convHtml + '</div>' +
-        '<div class="stat-chip"><div class="chip-label">Mass Estimate</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2400 kg/m³</div></div>' +
+        '<div class="stat-chip"><div class="chip-label">Mass Estimate</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2500 kg/m³</div></div>' +
       '</div>' +
     '</div>' +
 

@@ -87,7 +87,9 @@ def _face_matches(record: dict, label=None, min_area=None,
     """Indices of faces satisfying the given conditions."""
     hits = []
     for i, f in enumerate(record.get("planarity", []) or []):
-        if label and f.get("surface_label") != label:
+        if label and label not in (set(f.get("features") or [])
+                                   | ({f["surface_label"]}
+                                      if f.get("surface_label") else set())):
             continue
         if min_area is not None and not (f.get("area_m2_est") or 0) >= min_area:
             continue
@@ -105,7 +107,7 @@ def _face_matches(record: dict, label=None, min_area=None,
 def select(records: list, use=None, label=None, anomaly=None,
            min_face_area=None, max_face_rms=None, reliable_only=False,
            min_mass=None, max_mass=None, min_thickness=None, max_thickness=None,
-           handling=None, connection=None, assignment=None,
+           handling=None, connection=None, assignment=None, drill_zone=None,
            rank_by=None, top_k=None) -> list:
     """Filter and rank records. Returns [{record, why}] preserving order."""
     rank_fields = {"mass": lambda r: (r.get("bounding") or {}).get("mass_kg_est") or 0,
@@ -152,6 +154,8 @@ def select(records: list, use=None, label=None, anomaly=None,
 
         proc = r.get("procedural") or {}
         if handling and (proc.get("handling_class") or {}).get("value") != handling:
+            continue
+        if drill_zone and (proc.get("drill_zone") or {}).get("value") != drill_zone:
             continue
         if connection and not any(
                 ((f.get("procedural") or {}).get("connection_strategy") or {}
@@ -206,6 +210,8 @@ def main() -> None:
     ap.add_argument("--min-thickness", type=float, metavar="MM")
     ap.add_argument("--max-thickness", type=float, metavar="MM")
     ap.add_argument("--handling", help="manual | two_person | excavator")
+    ap.add_argument("--drill-zone", dest="drill_zone",
+                    help="between_bars | edge_mid_depth | verify_gpr")
     ap.add_argument("--connection", help="direct_bolt | adaptive_bracket | no_drill | gravity_only")
     ap.add_argument("--assignment", help="show_face | seat_face | buried | unassigned")
     ap.add_argument("--rank", dest="rank_by", help="mass | area | thickness | faces")
@@ -246,6 +252,7 @@ def main() -> None:
                      min_mass=args.min_mass, max_mass=args.max_mass,
                      min_thickness=args.min_thickness, max_thickness=args.max_thickness,
                      handling=args.handling, connection=args.connection,
+                     drill_zone=args.drill_zone,
                      assignment=args.assignment,
                      rank_by=args.rank_by, top_k=args.top_k)
     _print_results(results, len(records))

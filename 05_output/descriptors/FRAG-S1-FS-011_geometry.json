@@ -1,0 +1,957 @@
+{
+  "fragment_id": "FRAG-S1-FS-011",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-08-25T08:23:28.027433+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      1662.7,
+      703.5,
+      448.5
+    ],
+    "obb_axes_xyz": [
+      [
+        -0.9985,
+        -0.0208,
+        -0.0502
+      ],
+      [
+        -0.052,
+        0.1003,
+        0.9936
+      ],
+      [
+        0.0157,
+        -0.9947,
+        0.1012
+      ]
+    ],
+    "volume_mm3": 324468465.7,
+    "volume_m3": 0.324468,
+    "volume_source": "mesh_nearly_closed",
+    "convexity": 0.8557,
+    "mass_kg_est": 778.724,
+    "mass_data_status": "pseudo",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        0.032946,
+        0.999436,
+        0.006487,
+        -291.58253
+      ],
+      "normal_xyz": [
+        0.0329,
+        0.9994,
+        0.0065
+      ],
+      "inlier_count": 1417,
+      "inlier_fraction": 0.028,
+      "area_m2_est": 0.930242,
+      "fit_rms_mm": 1.69,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 82.4,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.030078,
+        0.98694,
+        -0.158256,
+        -768.400127
+      ],
+      "normal_xyz": [
+        -0.0301,
+        0.9869,
+        -0.1583
+      ],
+      "inlier_count": 7434,
+      "inlier_fraction": 0.149,
+      "area_m2_est": 0.876424,
+      "fit_rms_mm": 1.625,
+      "data_status": "computed",
+      "surface_label": "exposed_aggregate",
+      "features": [
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "angle_to_unscanned_deg": 87.7,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "seat_face",
+          "rule": "flat fracture face, suitable for bearing"
+        },
+        "finishing_requirement": {
+          "value": "ease_sharp_arrises",
+          "rule": "rough break with sharp edges: ease arrises on any face within reach in public use"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.020316,
+        0.999569,
+        0.021173,
+        -278.624166
+      ],
+      "normal_xyz": [
+        -0.0203,
+        0.9996,
+        0.0212
+      ],
+      "inlier_count": 2901,
+      "inlier_fraction": 0.058,
+      "area_m2_est": 0.868779,
+      "fit_rms_mm": 1.611,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 82.0,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        0.030313,
+        0.999311,
+        0.021424,
+        -270.27983
+      ],
+      "normal_xyz": [
+        0.0303,
+        0.9993,
+        0.0214
+      ],
+      "inlier_count": 1891,
+      "inlier_fraction": 0.038,
+      "area_m2_est": 0.863274,
+      "fit_rms_mm": 1.641,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 81.6,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.024895,
+        0.978948,
+        -0.202588,
+        -808.126762
+      ],
+      "normal_xyz": [
+        -0.0249,
+        0.9789,
+        -0.2026
+      ],
+      "inlier_count": 2870,
+      "inlier_fraction": 0.057,
+      "area_m2_est": 0.833955,
+      "fit_rms_mm": 1.405,
+      "data_status": "computed",
+      "surface_label": "exposed_aggregate",
+      "features": [
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "angle_to_unscanned_deg": 85.2,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "seat_face",
+          "rule": "flat fracture face, suitable for bearing"
+        },
+        "finishing_requirement": {
+          "value": "ease_sharp_arrises",
+          "rule": "rough break with sharp edges: ease arrises on any face within reach in public use"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.005122,
+        0.998727,
+        0.050188,
+        -243.670246
+      ],
+      "normal_xyz": [
+        -0.0051,
+        0.9987,
+        0.0502
+      ],
+      "inlier_count": 3681,
+      "inlier_fraction": 0.074,
+      "area_m2_est": 0.796764,
+      "fit_rms_mm": 1.579,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 80.2,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.038177,
+        0.988602,
+        -0.145631,
+        -771.516064
+      ],
+      "normal_xyz": [
+        -0.0382,
+        0.9886,
+        -0.1456
+      ],
+      "inlier_count": 1641,
+      "inlier_fraction": 0.033,
+      "area_m2_est": 0.592,
+      "fit_rms_mm": 1.511,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.4,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "flat, large enough to seat a fixing plate"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "no rule applies"
+        },
+        "finishing_requirement": {
+          "value": "none",
+          "rule": "no treatment indicated"
+        },
+        "data_status": "proposed"
+      }
+    },
+    {
+      "plane_abcd": [
+        -0.061671,
+        0.171537,
+        0.983246,
+        458.740909
+      ],
+      "normal_xyz": [
+        -0.0617,
+        0.1715,
+        0.9832
+      ],
+      "inlier_count": 3385,
+      "inlier_fraction": 0.068,
+      "area_m2_est": 0.484377,
+      "fit_rms_mm": 1.667,
+      "data_status": "computed",
+      "surface_label": "exposed_aggregate",
+      "features": [
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "angle_to_unscanned_deg": 12.5,
+      "scan_reliable": false,
+      "procedural": {
+        "connection_strategy": {
+          "value": "gravity_only",
+          "rule": "face not captured by the scan; geometry unverified"
+        },
+        "design_assignment": {
+          "value": "buried",
+          "rule": "ground-contact face, not observed"
+        },
+        "finishing_requirement": {
+          "value": "ease_sharp_arrises",
+          "rule": "rough break with sharp edges: ease arrises on any face within reach in public use"
+        },
+        "data_status": "proposed"
+      }
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.37582,
+      "std_rad": 0.55926,
+      "p25_rad": 0.00809,
+      "p75_rad": 1.03106,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.72778,
+      "std_rad": 0.35587,
+      "p25_rad": 0.50976,
+      "p75_rad": 0.983,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "broken_face",
+    "labels_present": [
+      "broken_face",
+      "exposed_aggregate"
+    ],
+    "label_coverage": {
+      "broken_face": 70,
+      "exposed_aggregate": 30
+    },
+    "label_details": {
+      "broken_face": {
+        "subtype": "unknown",
+        "notes": "Rough texture with visible fractures, light grey color, moderate size."
+      },
+      "exposed_aggregate": {
+        "subtype": "unknown",
+        "notes": "Visible small stones, varied colors, scattered across the surface."
+      }
+    },
+    "cracks": {
+      "present": true,
+      "pattern": "network",
+      "coverage_pct": 18
+    },
+    "aggregate": {
+      "visible": true,
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominantly light grey with some darker patches, slight staining.",
+    "reuse_notes": "The presence of exposed aggregate and moderate surface condition suggests potential for reuse in non-structural applications. Cracks may limit structural reuse without repair.",
+    "confidence": "medium",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-011\\FRAG-S1-FS-011_texture.png",
+    "data_status": "computed",
+    "regions": [
+      {
+        "region_id": 0,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.2091,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.632,
+        "smear_frac": 0.223,
+        "skipped": null
+      },
+      {
+        "region_id": 1,
+        "kind": "plane",
+        "plane_index": 1,
+        "area_frac": 0.1786,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 0.961,
+        "uv_fill": 0.477,
+        "smear_frac": 0.025,
+        "skipped": null
+      },
+      {
+        "region_id": 2,
+        "kind": "plane",
+        "plane_index": 7,
+        "area_frac": 0.1648,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 0.999,
+        "uv_fill": 0.646,
+        "smear_frac": 0.0,
+        "skipped": null
+      },
+      {
+        "region_id": 3,
+        "kind": "residual",
+        "plane_index": null,
+        "area_frac": 0.1616,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.21,
+        "uv_fill": null,
+        "smear_frac": null,
+        "skipped": "fragmented_uv"
+      },
+      {
+        "region_id": 4,
+        "kind": "plane",
+        "plane_index": 4,
+        "area_frac": 0.0994,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 0.601,
+        "uv_fill": 0.265,
+        "smear_frac": 0.04,
+        "skipped": null
+      },
+      {
+        "region_id": 5,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0791,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 2
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 2,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.81,
+        "smear_frac": 0.201,
+        "skipped": null
+      },
+      {
+        "region_id": 6,
+        "kind": "plane",
+        "plane_index": 6,
+        "area_frac": 0.0606,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.628,
+        "uv_fill": 0.177,
+        "smear_frac": null,
+        "skipped": "sparse_uv"
+      },
+      {
+        "region_id": 7,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0468,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.178,
+        "smear_frac": null,
+        "skipped": "sparse_uv"
+      }
+    ],
+    "face_labels": {
+      "classified_faces": 1252707,
+      "inferred_faces": 149342,
+      "unlabeled_faces": 730251,
+      "method": "region classification; gaps filled from adjacent faces and flagged as inferred"
+    },
+    "grid_classification": {
+      "grid_n": 16,
+      "cells": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null
+        ]
+      ],
+      "method": "region"
+    }
+  },
+  "scan_coverage": {
+    "has_unscanned_face": true,
+    "unscanned_avg_normal": [
+      -0.1504,
+      -0.1214,
+      -0.9811
+    ],
+    "unscanned_avg_center": [
+      -0.3913,
+      0.8651,
+      0.2997
+    ],
+    "unscanned_face_count_original": 1317,
+    "angle_threshold_deg": 25.0,
+    "notes": "Ground-contact face not captured during photogrammetry scanning. Descriptor values derived from reliable faces only. Planarity regions within angle_threshold_deg of unscanned normal are flagged scan_reliable: false and excluded from connection feasibility assessment.",
+    "data_status": "annotated"
+  },
+  "procedural": {
+    "handling_class": {
+      "value": "excavator",
+      "rule": "max_dim",
+      "reason": "longest dimension 1663 mm exceeds 800 mm"
+    },
+    "drill_zone": {
+      "value": "edge_mid_depth",
+      "rule": "no bars visible, but the section is deep enough for a steel-free core between the two mats; a hole entering the broken edge at mid-thickness runs parallel to and clear of both",
+      "clear_core_mm_est": 384.5,
+      "cover_mm_assumed": 20,
+      "entry_faces": [
+        7
+      ]
+    },
+    "use_suggestions": [
+      {
+        "id": "leaning_support",
+        "label": "Leaning or backrest surface",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "note": "large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified",
+        "caveat": "orientation unverified"
+      },
+      {
+        "id": "rough_feature",
+        "label": "Textured feature surface",
+        "faces": [
+          1,
+          4
+        ],
+        "note": "deliberately rough face, exposing the break and aggregate as visible and tactile character",
+        "caveat": null
+      },
+      {
+        "id": "seat_block",
+        "label": "Seat or stool",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "note": "presents a sittable height with a flat enough top face; heavy enough to stay put",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "pedestal_support",
+        "label": "Pedestal or structural support",
+        "faces": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "note": "broad flat bearing face and mass enough to carry a timber deck, plate or slab above",
+        "caveat": null
+      }
+    ],
+    "faces_evaluated": 8,
+    "data_status": "proposed",
+    "basis": "PROVISIONAL. Drawn from Study 1 site experience and general handling/fabrication practice. Not verified with domain experts. Every derived output carries data_status 'proposed'.",
+    "note": "Derived from the encoded design factors in env/design_factors.json. Provisional: the factors are drawn from Study 1 experience and general practice and are not expert-verified."
+  }
+}

@@ -25,13 +25,8 @@
     "max_dim_note": "Above this longest dimension, a fragment is machine-handled regardless of mass (awkward to grip, unsafe to carry)."
   },
   "connection_strategy": {
-    "basis": "Study 1 timber-to-concrete connections; drilling avoidance where reinforcement is exposed.",
+    "basis": "Study 1 timber-to-concrete connections. The classes correspond to those found in the reuse literature: dry mechanical/demountable, post-tensioned, wet/cast, and bearing/interleaving without direct connection [lit. review 5.3]. This factor answers whether a fixing can be SEATED on the face (flatness, area). Whether it can be DRILLED is a separate question, see drill_zone.",
     "rules": [
-      {
-        "if_label": "rebar_visible",
-        "strategy": "no_drill",
-        "note": "drilling risks striking reinforcement"
-      },
       {
         "if_scan_reliable": false,
         "strategy": "gravity_only",
@@ -65,15 +60,16 @@
       },
       {
         "if_label": [
-          "formwork_imprint",
-          "original_finish"
+          "formwork_face",
+          "tile_remnant",
+          "brick_inclusion"
         ],
         "assignment": "show_face",
-        "note": "carries visible material history"
+        "note": "carries visible material history: a cast face, adhering tile, or brick cast into the concrete"
       },
       {
         "if_label": [
-          "fracture_surface",
+          "broken_face",
           "exposed_aggregate"
         ],
         "min_area_m2": 0.1,
@@ -98,8 +94,8 @@
           "min_area_m2": 0.25,
           "max_fit_rms_mm": 8.0,
           "labels": [
-            "formwork_imprint",
-            "original_finish"
+            "formwork_face",
+            "tile_remnant"
           ],
           "scan_reliable": true
         },
@@ -128,15 +124,14 @@
         "requires_face": {
           "min_area_m2": 0.1,
           "labels": [
-            "formwork_imprint",
-            "original_finish",
-            "weathered",
-            "staining"
+            "formwork_face",
+            "tile_remnant",
+            "brick_inclusion"
           ],
           "scan_reliable": true
         },
         "requires_fragment": {},
-        "note": "carries visible traces of the fragment's former life; candidate to face outward"
+        "note": "a face whose material history is legible: formwork marks, adhering tile, or cast-in brick. Condition (weathering, staining) is now reported as a localized anomaly rather than a surface label."
       },
       {
         "id": "rough_feature",
@@ -144,7 +139,7 @@
         "requires_face": {
           "min_area_m2": 0.1,
           "labels": [
-            "fracture_surface",
+            "broken_face",
             "exposed_aggregate"
           ],
           "scan_reliable": true
@@ -173,14 +168,16 @@
         "id": "planter_void",
         "label": "Planter or void reuse",
         "requires_face": {
-          "requires_anomaly": "opening",
+          "labels": [
+            "pipe_opening"
+          ],
           "scan_reliable": true
         },
         "requires_fragment": {
           "min_thickness_mm": 100
         },
-        "note": "a former pipe or conduit penetration, detected in the texture, can be reinterpreted as a planting pocket or light opening, as in Study 1",
-        "caveat": "opening detected from the image only; depth and whether it passes through are not measured"
+        "note": "a former pipe or conduit penetration, now carried by the pipe_opening surface label, can be reinterpreted as a planting pocket or light opening, as in Study 1",
+        "caveat": "read from the texture only; depth and whether the void passes through are not measured"
       },
       {
         "id": "seat_block",
@@ -264,5 +261,76 @@
         "note": "slab-like and elongated with a flat face; spans between two supports as a shelf or seat plate"
       }
     ]
-  }
+  },
+  "finishing_requirement": {
+    "basis": "Study 1 site practice for a public installation, and general public-realm safety practice. NOT supported by the reuse literature reviewed: that corpus covers cutting, lifting and reconnection, and records surface treatment only once (waterproofing and railings on the Re:Crete footbridge). Treat these as project-derived until evidenced.",
+    "_evidence_gap": "No reviewed source specifies treatment of exposed reinforcement, sharp arrises or residual fixings on reused fragments. Kuepfer et al. inspect sawed rebar on cut faces but do not state a treatment. This is a gap worth naming in the paper. Added 2026-08-19: spalling and biological_growth, both from the anomaly axis. Spalling is the one with a real consequence beyond appearance, since it means section loss and probable steel behind, so it bears on whether a face can carry load at all.",
+    "rules": [
+      {
+        "if_label": "rebar_visible",
+        "requirement": "cut_back_and_seal",
+        "note": "exposed reinforcement: cut back below the surface, seal against corrosion, remove any protruding end that could injure"
+      },
+      {
+        "if_label": "tile_remnant",
+        "requirement": "strip_bedding",
+        "note": "adhered tile finish. Two states, and they need different work: whole or fragmentary TILE has to be lifted off, while the bare ADHESIVE BED left where tiles have already come away has to be ground back or keyed. The combed ridges from the notched trowel are the bed, not a concrete finish. The classifier does not separate the two states, so both are named here and which applies must be read off the face. Either way the concrete below is sound and this is a surface layer, not section loss.",
+        "_provenance": "Project-derived from site practice, as with the other entries here: the reuse literature reviewed covers cutting, lifting and reconnection but not surface treatment. Recorded 2026-08-20 from Muchen's identification of the combed adhesive bed on FS-004."
+      },
+      {
+        "if_label": [
+          "broken_face",
+          "exposed_aggregate"
+        ],
+        "min_fine_curvature_rad": 0.3,
+        "requirement": "ease_sharp_arrises",
+        "note": "rough break with sharp edges: ease arrises on any face within reach in public use"
+      },
+      {
+        "requirement": "clean_before_use",
+        "note": "moss, algae or lichen: this was a weather face. Clean before handling or exposing, and expect it to return if the face is re-exposed",
+        "if_label": "biological_growth"
+      },
+      {
+        "if_assignment": "show_face",
+        "requirement": "clean_only",
+        "note": "exposed face: clean; sealing optional and changes appearance"
+      },
+      {
+        "if_scan_reliable": false,
+        "requirement": "none",
+        "note": "ground-contact face, not exposed in use"
+      },
+      {
+        "requirement": "none",
+        "note": "no treatment indicated"
+      }
+    ]
+  },
+  "drill_zone": {
+    "scope": "fragment",
+    "basis": "Reinforcement in a slab is a mat of bars at roughly constant cover and spacing, so most of the section is steel-free and the question is where to drill, not whether. Cover and spacing are not measured here; the values below are conservative assumptions for mid-twentieth-century slabs, where cover is often below current code minima. GPR is the established verification before cutting or drilling [Kuepfer et al.].",
+    "_evidence_gap": "Bar positions are not yet extracted from the scan. Where reinforcement is visible on a fracture face, that face is a section through the mat and its spacing, direction and cover are in principle measurable from the localized anomaly. Not implemented.",
+    "cover_mm_assumed": 20,
+    "bar_dia_mm_assumed": 12,
+    "min_clear_core_mm": 60,
+    "rules": [
+      {
+        "if_any_face_label": "rebar_visible",
+        "zone": "between_bars",
+        "note": "reinforcement is exposed somewhere on the fragment, so the mat's spacing, direction and cover can be read off it and projected across the piece; a hole set out in the middle of a grid opening passes the mat without striking steel"
+      },
+      {
+        "min_clear_core_mm": 60,
+        "zone": "edge_mid_depth",
+        "note": "no bars visible, but the section is deep enough for a steel-free core between the two mats; a hole entering the broken edge at mid-thickness runs parallel to and clear of both"
+      },
+      {
+        "zone": "verify_gpr",
+        "note": "bar layout unobservable and the section too thin for a reliable steel-free core; scan before drilling, or fix without drilling"
+      }
+    ],
+    "edge_normal_tol_deg": 35
+  },
+  "_taxonomy_note": "2026-08-19: original_finish, weathered and staining were retired as SURFACE labels. weathered and staining remain ANOMALY labels, which is a different axis: an anomaly is localized and carries a bounding box, so condition is now reported as a patch on a face rather than as the identity of the face. Rules using `if_anomaly` are unaffected; only `labels` and `if_label` lists were updated. See 04_schema/TAXONOMY_REVIEW.md."
 }

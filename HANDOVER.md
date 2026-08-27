@@ -1,5 +1,13 @@
 # Handover Document — Study 2 Descriptor Pipeline
-**Date:** 2026-07-21 · **Updated:** 2026-08-10  
+**Date:** 2026-07-21 · **Updated:** 2026-08-24  
+
+> **Start here if you are picking this up.** The surface classifier was validated on
+> 2026-08-24 against held-out hand-labelled data and **does not exceed a null model**
+> (80%/66% against 80%/75%). The geometric half is verified and sound. Read
+> `04_schema/CLASSIFIER_BEHAVIOUR.md` before using or citing any surface label, and
+> `paper_draft/SCOPE_REVISION_2026-08-20.md` for what the paper can now claim.
+> `CHANGELOG.md` v2.0 lists every change behind that result.
+
 **Project:** Muchen Yan — PhD, i.sd, University of Innsbruck  
 **Repo:** `Study2_Descriptor_Pipeline`
 
@@ -52,7 +60,9 @@ Study2_Descriptor_Pipeline/
 ├── env/
 │   ├── .env                            ← OPENAI_API_KEY — NEVER commit to git
 │   ├── .env.example                    ← committed placeholder
-│   ├── taxonomy.json                   ← surface label definitions + colours
+│   ├── taxonomy.json                   ← surface labels: id, colour, decision_rule,
+│   │                                     _decision_order, retired flag.
+│   │                                     Manage with 03_src/taxonomy_tool.py
 │   └── venv/                           ← Python virtualenv
 ├── COMMANDS.md                         ← quick-start command reference
 ├── CHANGELOG.md                        ← version history (has some old IDs — acceptable)

@@ -24,3 +24,7 @@ Thumbs.db
 
 # Blender temp
 *.blend1
+
+# Regenerated feature images - rebuilt by run_pipeline every run
+05_output/descriptors/*_feat_*.png
+05_output/descriptors/*_feature_map.png

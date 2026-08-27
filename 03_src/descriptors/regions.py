@@ -96,6 +96,7 @@ def segment_regions(mesh: trimesh.Trimesh,
 
     # ── 3. Area fractions ────────────────────────────────────────────────────
     total_area = float(areas[valid].sum()) or 1.0
+    adj_all = mesh.face_adjacency
     for r in regions:
         r["area_frac"] = round(float(areas[r["face_idx"]].sum()) / total_area, 4)
         # Absolute area as well as the fraction. Use rules state their area
@@ -103,6 +104,33 @@ def segment_regions(mesh: trimesh.Trimesh,
         # regions rather than only planar faces needs the same unit to compare
         # against. Mesh is in mm, so mm² → m².
         r["area_m2"] = round(float(areas[r["face_idx"]].sum()) / 1e6, 4)
+
+        # The area of the largest *connected* part of the region.
+        #
+        # A plane region is every triangle within tolerance of one plane
+        # equation, whether or not those triangles touch. On fractured material
+        # they mostly do not: measured over this corpus a plane region holds a
+        # median of 390 disconnected patches and up to 40,224, because a cast surface survives
+        # demolition only as pieces between the breaks. Both `area_m2` above and
+        # `area_m2_est` in the Phase 2 record sum or span those pieces, and
+        # `area_m2_est`, a convex hull, overstates the real surface by a median
+        # factor of 6.05 and up to 43.7.
+        #
+        # A rule that asks for a bearing face, somewhere to bolt a bracket or
+        # rest a plate, needs one continuous piece of surface. That is this
+        # number, and it is the honest input to those rules.
+        sel = np.zeros(n_faces, dtype=bool)
+        sel[r["face_idx"]] = True
+        keep_e = sel[adj_all].all(axis=1)
+        if keep_e.any():
+            comps = trimesh.graph.connected_components(
+                adj_all[keep_e], nodes=np.asarray(r["face_idx"]))
+            biggest = max((float(areas[np.asarray(c)].sum()) for c in comps),
+                          default=0.0)
+        else:
+            biggest = 0.0
+        r["contiguous_area_m2"] = round(biggest / 1e6, 4)
+        r["n_patches"] = int(len(comps)) if keep_e.any() else 0
 
     # ── 4. Merge tiny regions (< min_region_frac) into one residual ─────────
     # Keeps the vision batch small (~10 crops); tiny slivers are unreliable
@@ -250,3 +278,91 @@ def adjacent_faces(mesh, regions) -> dict:
                                    "share": round(float(share), 3),
                                    "faces_touched": len(counts)}
     return out
+
+
+# ── The patched ground-contact face ──────────────────────────────────────────
+#
+# Single home for this. It lived in `run_pipeline` and was copied into
+# `backfill_regions`, and on 2026-08-27 that copy segmented without it, giving a
+# different partition, different region ids, and every migrated value attached
+# to the wrong region across all twelve records. Two definitions of the same
+# thing is what allowed the two to disagree, so there is now one.
+
+UNSCANNED_ANGLE_DEG = 20.0   # face normal within this angle of sidecar normal
+UNSCANNED_Y_MARGIN  = 80.0   # mm above the bottom face still counted
+                             # (mesh is auto-scaled to mm in load_input)
+
+
+def unscanned_face_idx(mesh: trimesh.Trimesh,
+                       unscanned_sidecar: dict) -> "np.ndarray | None":
+    """Return indices of mesh faces belonging to the UNSCANNED (patched) bottom
+    face, or None if the sidecar normal matches nothing.
+
+    Single source of truth for the normal + position filter used by the
+    texture mask, the viewer point cloud, and the per-face feature labels.
+    Sidecar avg_normal is Blender Z-up; GLB is Y-up: gltf = [bx, bz, -by].
+    """
+    bx, by, bz = unscanned_sidecar["avg_normal"]
+    u_normal  = np.array([bx, bz, -by], dtype=float)
+    u_normal /= np.linalg.norm(u_normal)
+
+    cos_angles  = np.abs(mesh.face_normals @ u_normal)
+    normal_mask = cos_angles >= np.cos(np.radians(UNSCANNED_ANGLE_DEG))
+    if not normal_mask.any():
+        return None
+
+    # Sidecar avg_center is Blender LOCAL space; GLB is world — derive the
+    # bottom-face height from the normal-matching faces instead.
+    face_centroids = mesh.vertices[mesh.faces].mean(axis=1)
+    y_bottom = float(face_centroids[normal_mask][:, 1].min())
+    pos_mask = face_centroids[:, 1] < (y_bottom + UNSCANNED_Y_MARGIN)
+
+    idx = np.where(normal_mask & pos_mask)[0]
+    return idx if len(idx) else None
+
+
+def link_adjacent_features(mesh, regions, results, planes) -> int:
+    """Record on each face the features read on surfaces that meet it.
+
+    One home for this. It was written twice, in `run_pipeline` and in
+    `backfill_regions`, which is how the two came to disagree about whether the
+    patched ground-contact face was excluded and put wrong values into every
+    record. Same reason `unscanned_face_idx` now lives here.
+
+    `results` supplies the classifications, keyed by `region_id`; `planes` is
+    the record's `planarity` list, written in place. Previous output is cleared
+    first so re-running cannot accumulate duplicates.
+
+    Nothing here claims the face carries the feature. `features` keeps meaning
+    "observed on this face" and no design rule reads `adjacent_features`; a
+    broken surface meeting a formwork face does not make that face broken.
+
+    Returns the number of links written.
+    """
+    for f in planes:
+        f.pop("adjacent_features", None)
+        f.pop("adjacent_sources", None)
+
+    links = adjacent_faces(mesh, regions)
+    by_id = {r.get("region_id"): r for r in results}
+    n = 0
+    for rid, link in links.items():
+        src = by_id.get(rid) or {}
+        feats = [x["id"] if isinstance(x, dict) else x
+                 for x in (src.get("features") or [])]
+        if not feats or link["face"] >= len(planes):
+            continue
+        face = planes[link["face"]]
+        own = set(face.get("features") or [])
+        new = [f for f in feats if f not in own]
+        if not new:
+            continue
+        face.setdefault("adjacent_features", [])
+        face["adjacent_features"] += [f for f in new
+                                      if f not in face["adjacent_features"]]
+        face.setdefault("adjacent_sources", []).append(
+            {"region_id": rid, "kind": src.get("kind"),
+             "boundary_share": link["share"],
+             "faces_touched": link["faces_touched"], "features": new})
+        n += 1
+    return n

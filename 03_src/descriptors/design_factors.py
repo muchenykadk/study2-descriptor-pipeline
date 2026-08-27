@@ -113,6 +113,27 @@ def face_features(face: dict) -> set:
     return out
 
 
+def usable_area_m2(face: dict) -> float | None:
+    """The area a rule should test: one continuous piece of surface.
+
+    `area_m2_est` is the convex hull of a RANSAC plane's inliers. On fractured
+    material those inliers are not a surface: measured over this corpus a plane
+    region holds a median of 390 disconnected patches and up to 40,224, because an original cast face
+    survives demolition only as pieces between the breaks. The hull spans the
+    gaps between them and overstates the real surface by a median factor of 6.05
+    and up to 43.7, with 39 of the 71 faces that own any surface overstated more
+    than fivefold.
+
+    Every rule that reads an area is asking whether something can sit on the
+    face, be it a fixing plate, a timber deck or a person. That needs one
+    continuous piece, which is `contiguous_area_m2`. It is preferred wherever
+    present, with the hull kept as a fallback so records written before
+    2026-08-27 still evaluate.
+    """
+    v = face.get("contiguous_area_m2")
+    return v if v is not None else face.get("area_m2_est")
+
+
 #: Every key on a face that carries something the vision model contributed.
 #: The geometry-only baseline in `query.strip_surface` removes exactly these, so
 #: a rule that starts reading a new surface-derived key must add it here or the
@@ -153,7 +174,7 @@ def connection_strategy(face: dict, factors: dict) -> dict:
     """Feasible fixing for one planar face."""
     label   = face.get("surface_label")
     rms     = face.get("fit_rms_mm")
-    area    = face.get("area_m2_est")
+    area    = usable_area_m2(face)
     reliable = face.get("scan_reliable", True)
 
     _vals = {"rms": rms, "area": area, "label": label}
@@ -178,7 +199,7 @@ def design_assignment(face: dict, factors: dict) -> dict:
     """Whether a face is a candidate to expose, to seat on, or to bury."""
     labels   = face_features(face)
     rms      = face.get("fit_rms_mm")
-    area     = face.get("area_m2_est")
+    area     = usable_area_m2(face)
     reliable = face.get("scan_reliable", True)
 
     _vals = {"rms": rms, "area": area,
@@ -309,7 +330,7 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
     def _faces_matching(fr: dict) -> list:
         out = []
         for i, face in enumerate(faces):
-            a, r = face.get("area_m2_est"), face.get("fit_rms_mm")
+            a, r = usable_area_m2(face), face.get("fit_rms_mm")
             if "min_area_m2" in fr and not (a is not None and a >= fr["min_area_m2"]):
                 continue
             if "max_fit_rms_mm" in fr and not (r is not None and r <= fr["max_fit_rms_mm"]):
@@ -335,7 +356,7 @@ def use_suggestions(descriptors: dict, factors: dict) -> list:
         """Region ids satisfying a rule that makes no demand on flatness.
 
         A face here is a RANSAC plane's inlier set. Measured over the twelve
-        fragment corpus those sets are not surfaces: they hold 51 to 372
+        fragment corpus those sets are not surfaces: they hold a median of 390
         disconnected patches, their UV footprint scatters across the atlas, and
         77% are withheld before classification for a median fill of 0.11.
         Cluster regions are single connected patches, fill 0.41, and 75% are

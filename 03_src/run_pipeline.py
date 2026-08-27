@@ -271,37 +271,6 @@ def _normalize_points(points: np.ndarray):
 
 VIEWER_UNSCANNED_ID = 100  # sentinel region_id for UNSCANNED points in the viewer
 
-UNSCANNED_ANGLE_DEG = 20.0   # face normal within this angle of sidecar normal
-UNSCANNED_Y_MARGIN  = 80.0   # mm above the bottom face still counted
-                             # (mesh is auto-scaled to mm in load_input)
-
-
-def unscanned_face_idx(mesh: trimesh.Trimesh,
-                       unscanned_sidecar: dict) -> np.ndarray | None:
-    """Return indices of mesh faces belonging to the UNSCANNED (patched) bottom
-    face, or None if the sidecar normal matches nothing.
-
-    Single source of truth for the normal + position filter used by the
-    texture mask, the viewer point cloud, and the per-face feature labels.
-    Sidecar avg_normal is Blender Z-up; GLB is Y-up: gltf = [bx, bz, -by].
-    """
-    bx, by, bz = unscanned_sidecar["avg_normal"]
-    u_normal  = np.array([bx, bz, -by], dtype=float)
-    u_normal /= np.linalg.norm(u_normal)
-
-    cos_angles  = np.abs(mesh.face_normals @ u_normal)
-    normal_mask = cos_angles >= np.cos(np.radians(UNSCANNED_ANGLE_DEG))
-    if not normal_mask.any():
-        return None
-
-    # Sidecar avg_center is Blender LOCAL space; GLB is world — derive the
-    # bottom-face height from the normal-matching faces instead.
-    face_centroids = mesh.vertices[mesh.faces].mean(axis=1)
-    y_bottom = float(face_centroids[normal_mask][:, 1].min())
-    pos_mask = face_centroids[:, 1] < (y_bottom + UNSCANNED_Y_MARGIN)
-
-    idx = np.where(normal_mask & pos_mask)[0]
-    return idx if len(idx) else None
 
 
 def build_viewer_data(mesh: trimesh.Trimesh, planes: list, n_points: int = 2000,
@@ -797,27 +766,8 @@ def run_single(frag_id: str, args: argparse.Namespace,
                 # the adjacency instead, kept in its own field so nothing reads it
                 # as a property of the face. `features` still means "observed on
                 # this face" and the bearing rules are untouched.
-                _adj = adjacent_faces(source, _regions)
-                _n_adj = 0
-                for _res in _results:
-                    _link = _adj.get(_res.get("region_id"))
-                    if not _link or not _res.get("features"):
-                        continue
-                    _face = descriptors["planarity"][_link["face"]]
-                    _own  = set(_face.get("features") or [])
-                    _new  = [f["id"] for f in _res["features"] if f["id"] not in _own]
-                    if not _new:
-                        continue
-                    _face.setdefault("adjacent_features", [])
-                    _face["adjacent_features"] += [
-                        f for f in _new if f not in _face["adjacent_features"]]
-                    _face.setdefault("adjacent_sources", []).append(
-                        {"region_id": _res.get("region_id"),
-                         "kind": _res.get("kind"),
-                         "boundary_share": _link["share"],
-                         "faces_touched": _link["faces_touched"],
-                         "features": _new})
-                    _n_adj += 1
+                _n_adj = link_adjacent_features(
+                    source, _regions, _results, descriptors["planarity"])
                 if _n_adj:
                     print(f"    adjacency: {_n_adj} cluster classification(s) linked "
                           f"to the face they meet")

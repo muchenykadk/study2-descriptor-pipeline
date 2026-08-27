@@ -5,6 +5,55 @@ Versions: `v0.x` = pre-release development, `v1.0` = first full fragment process
 
 ---
 
+## [v2.0.6] 2026-08-27 — Face area is now a surface, not a hull
+
+**Every area rule was reading a number that overstated the surface by a median factor of
+six.** `area_m2_est` is the convex hull of a RANSAC plane's inliers. On fractured material
+those inliers are not a surface: a plane region holds a median of 390 disconnected patches and up to 40,224, because
+an original cast face survives demolition only as pieces between the breaks. The hull spans the
+gaps. Measured against the true surface of the same plane the overstatement runs to 43.7x at
+worst, and 39 of the 71 faces that own any surface are overstated more than
+fivefold, 25 of them more than tenfold.
+
+**And 16 of 87 faces own no mesh surface at all.** Segmentation assigns each triangle to its
+nearest qualifying plane, so a weak fit can end up with none of them. Those faces reported
+hull areas summing to 10.8 m² for surface that does not exist, and passed area thresholds on it.
+
+Every rule that reads an area is asking whether something can sit on the face, which needs one
+continuous piece. `regions.segment_regions` now computes `contiguous_area_m2`, the largest
+connected patch, and `n_patches`. `design_factors.usable_area_m2()` prefers it, falling back to
+the hull only for records written earlier. Faces owning no surface are written as zero rather
+than falling back. Every area predicate in `design_factors.py` and `query.py` reads through it.
+
+No threshold was changed. The rules are as they were; the value they are given is now the one
+they always meant.
+
+Effect on the frozen evaluation:
+
+| row | before | after |
+|---|---|---|
+| D1 leaning back-rest | 12 of 12, recall 1/1 | **5 of 12, recall 1/1** |
+| D3 connection face | 68 of 87, recall 7/8 | **26 of 87, recall 6/8** |
+| D4 seating platform | 4 of 12, recall 1/2 | **3 of 12, recall 1/2** |
+| D2, D6, D7 | | unchanged |
+
+`direct_bolt` fell from 70 faces to 26, `adaptive_bracket` rose from 3 to 15, `gravity_only`
+from 14 to 46, and `cut_candidate` began firing on the two fragments that genuinely have no
+usable bearing face. All six rows now narrow the field while keeping part of the documented
+answer, against two at the start of the day.
+
+**The cost is real and is recorded: D3's recall fell from 7 of 8 to 6 of 8.** Two documented
+connection faces are no longer returned. 68 candidates at 0.88 against 26 at 0.75 is the better
+shortlisting tool, and it is not a free improvement.
+
+Known inconsistency: `report.py` still displays `area_m2_est`, so the interface shows the hull
+while the rules use the contiguous area. Aligning it is outstanding.
+
+No re-classification and no API calls: `segment_regions` reads plane equations, not areas, so
+the partition and the crops are untouched.
+
+---
+
 ## [v2.0.5] 2026-08-27 — Features read on fracture surfaces are now retrievable
 
 **Three quarters of successful classifications reached nothing.** A feature is classified on a

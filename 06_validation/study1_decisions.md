@@ -163,20 +163,44 @@ what makes the figure mean anything.
 
 | ID | Set returned | Recall | Geometry-only | Reads as |
 |---|---|---|---|---|
-| D1 | 12 of 12, FS-002 at rank 4 | 1 of 1 | same | no reduction; thresholds below the corpus range |
+| D1 | **5 of 12**, 58% reduction | **1 of 1** | same | selects at full recall |
 | D2 | **7 of 12**, 42% reduction | **3 of 3** | same | full recall at a real reduction |
-| D3 | 68 of 87 faces, 22% reduction | 0.88 | same | **below the null**: loses 12% of the answers to remove 22% of the field |
-| D4 | 4 of 12, 67% reduction | 1 of 2 | same | selects; misses FS-003 on the height band |
+| D3 | **26 of 87 faces**, 70% reduction | **6 of 8** | same | a working filter; two documented faces lost |
+| D4 | **3 of 12**, 75% reduction | 1 of 2 | same | misses FS-003 on the height band |
 | D6 | **5 of 12**, 58% reduction | **2 of 3** | 0 of 12 | misses FS-008, which carries no inclusion label anywhere |
 | D7 | **2 of 12**, 83% reduction | **1 of 2** | 0 of 12 | misses FS-001, whose opening is gated out before classification |
 
-**Four of six rows now narrow the field while keeping part of the documented answer**, against
-two before the 2026-08-27 changes. **Two rows depend on the surface descriptors**, D6 and D7,
-both collapsing to nothing under `--geometry-only`, against one before.
+**All six rows now narrow the field while keeping part of the documented answer**, against two
+before the 2026-08-27 changes. **Two rows depend on the surface descriptors**, D6 and D7, both
+collapsing to nothing under `--geometry-only`, against one before.
 
-D3 is the remaining failure and its cause is known: `area_m2_est` is the convex hull of a
-plane's inliers, and those inliers form 51 to 372 disconnected patches, so the rule reads a
-bearing area that does not exist as a contiguous surface.
+### What changed on 2026-08-27, and what it cost
+
+Three repairs, none of which tuned a threshold. The rules and their thresholds are as they
+were; what changed is the value they are given and where they are allowed to look.
+
+**Rules with no flatness requirement now read regions, not only planar faces.** D6 recall 1 of
+3 → 2 of 3; D7 from inexpressible to 1 of 2.
+
+**Face area is now the largest continuous patch, not the convex hull of the plane's inliers.**
+Every area rule asks whether something can sit on the face, which needs one continuous piece.
+The hull spans the gaps between a median of 390 disconnected patches and up to 40,224 and overstates the real surface
+by a median factor of 6.05, up to 43.7. Worse, **16 of 87 faces own no mesh surface at all**,
+because segmentation assigns each triangle to its nearest qualifying plane and a weak fit can
+receive none; between them they claimed 10.8 m² of hull area corresponding to nothing. Those
+now read zero.
+
+This is what moved D1 and D3. `direct_bolt` fell from 70 faces to 26, `adaptive_bracket` rose
+from 3 to 15, `gravity_only` from 14 to 46, and `cut_candidate` began firing on the two
+fragments that genuinely have no usable bearing face.
+
+**The cost, stated plainly: D3's recall fell from 7 of 8 to 6 of 8.** Two documented connection
+faces are no longer returned. The trade is 68 candidates at recall 0.88 against 26 at recall
+0.75, which is the better shortlisting tool but is not a free improvement, and the two lost
+faces should be looked at before this is reported.
+
+**D2 was re-encoded on a corrected criterion**, thickness and integrity rather than mass, from
+the author's design knowledge. See the note above.
 
 Full diagnosis in `query_validation_2026-08-27.md` and `where_the_queries_fail_2026-08-27.md`.
 `dry_run_2026-08-27.md` is superseded.

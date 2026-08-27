@@ -3,8 +3,10 @@
 One-off migration for records written before 2026-08-27. Adds two things that
 later runs produce for themselves:
 
-  1. `area_m2` on each region.
-  2. `adjacent_features` on each planar face.
+  1. `area_m2` and `contiguous_area_m2` on each region.
+  2. `contiguous_area_m2` on each planar face, which is what the area rules
+     should have been testing all along.
+  3. `adjacent_features` on each planar face.
 
 Why. `use_suggestions` now evaluates the rules that make no demand on flatness
 over surface regions as well as planar faces, because a rule asking about
@@ -47,32 +49,10 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
 import trimesh
 import numpy as np
-from descriptors.regions import segment_regions, adjacent_faces
+from descriptors.regions import (segment_regions, unscanned_face_idx,
+                                 link_adjacent_features)
 from scan_coverage import read_sidecar
 
-# Copied from run_pipeline rather than imported, so this migration does not pull
-# in the whole pipeline entry point and its heavier dependencies. Kept in step
-# with the constants there; if those change, the partition here stops matching
-# and the guard below refuses to write.
-UNSCANNED_ANGLE_DEG = 20.0
-UNSCANNED_Y_MARGIN  = 80.0
-
-
-def unscanned_face_idx(mesh, sidecar):
-    """Faces of the patched ground-contact surface, as run_pipeline computes them.
-
-    Sidecar avg_normal is Blender Z-up; GLB is Y-up: gltf = [bx, bz, -by].
-    """
-    bx, by, bz = sidecar["avg_normal"]
-    n = np.array([bx, bz, -by], dtype=float)
-    n /= np.linalg.norm(n)
-    normal_mask = np.abs(mesh.face_normals @ n) >= np.cos(np.radians(UNSCANNED_ANGLE_DEG))
-    if not normal_mask.any():
-        return None
-    cent = mesh.vertices[mesh.faces].mean(axis=1)
-    y_bottom = float(cent[normal_mask][:, 1].min())
-    idx = np.where(normal_mask & (cent[:, 1] < y_bottom + UNSCANNED_Y_MARGIN))[0]
-    return idx if len(idx) else None
 
 DEFAULT_DIR = REPO_ROOT / "05_output" / "descriptors"
 MESH_DIR    = REPO_ROOT / "01_input" / "meshes" / "processed"
@@ -133,46 +113,45 @@ def main() -> int:
         by_id = {r["region_id"]: r.get("area_m2") for r in seg}
 
         hit = 0
+        by_contig = {r["region_id"]: r.get("contiguous_area_m2") for r in seg}
         for r in regions:
             a = by_id.get(r.get("region_id"))
             if a is not None:
                 r["area_m2"] = a
+                r["contiguous_area_m2"] = by_contig.get(r.get("region_id"))
                 hit += 1
 
-        # Clear any previous pass before rebuilding, so re-running cannot
-        # accumulate duplicates.
-        for f in planes:
-            f.pop("adjacent_features", None)
-            f.pop("adjacent_sources", None)
+        # The largest continuous piece of each plane, which is what a rule
+        # asking for a bearing surface needs. `area_m2_est` is the convex hull
+        # of the plane's inliers and spans the gaps between a median of 390
+        # disconnected patches, overstating the real surface by a median factor
+        # of 6.05.
+        n_area = 0
+        by_plane = {r["plane_index"]: r for r in seg
+                    if r.get("plane_index") is not None}
+        for pi, face in enumerate(planes):
+            r = by_plane.get(pi)
+            if r is not None:
+                face["contiguous_area_m2"] = r.get("contiguous_area_m2") or 0.0
+                face["n_patches"] = r.get("n_patches")
+            else:
+                # A plane equation that owns no mesh surface. Segmentation
+                # assigns each triangle to its nearest qualifying plane, so a
+                # weak fit can end up with none of them: 16 of 87 faces across
+                # this corpus, claiming 10.8 m2 of hull area between them that
+                # corresponds to no surface. Zero, not the hull, or a face with
+                # nothing on it keeps passing area thresholds.
+                face["contiguous_area_m2"] = 0.0
+                face["n_patches"] = 0
+            n_area += 1
 
-        links = adjacent_faces(mesh, seg)
-        by_region = {r.get("region_id"): r for r in regions}
-        n_adj = 0
-        for rid, link in links.items():
-            src = by_region.get(rid) or {}
-            feats = [x["id"] if isinstance(x, dict) else x
-                     for x in (src.get("features") or [])]
-            if not feats or link["face"] >= len(planes):
-                continue
-            face = planes[link["face"]]
-            own = set(face.get("features") or [])
-            new = [f for f in feats if f not in own]
-            if not new:
-                continue
-            face.setdefault("adjacent_features", [])
-            face["adjacent_features"] += [f for f in new
-                                          if f not in face["adjacent_features"]]
-            face.setdefault("adjacent_sources", []).append(
-                {"region_id": rid, "kind": src.get("kind"),
-                 "boundary_share": link["share"],
-                 "faces_touched": link["faces_touched"], "features": new})
-            n_adj += 1
+        n_adj = link_adjacent_features(mesh, seg, regions, planes)
 
-        print(f"  {frag_id:<18} {hit}/{len(regions)} regions given an area, "
+        print(f"  {frag_id:<18} {hit}/{len(regions)} regions, {n_area} face area(s), "
               f"{n_adj} adjacency link(s)"
               + ("" if hit == len(regions) else "   <-- partial, check partition"))
 
-        if not args.dry_run and (hit or n_adj):
+        if not args.dry_run and (hit or n_adj or n_area):
             path.write_text(json.dumps(rec, indent=2), encoding="utf-8")
             n_written += 1
 

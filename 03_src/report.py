@@ -405,7 +405,22 @@ def _region_hover_data(regions: list, vision: dict) -> list:
         nx, ny, nz = (f.get("normal_xyz") or [0, 0, 0])
         out.append({
             "n": i + 1,
-            "area": f.get("area_m2_est"),
+            # The area the design rules read: the largest continuous patch of
+            # the plane. `area_m2_est` is the convex hull of its inliers, which
+            # on fractured material spans the gaps between 51 to 372
+            # disconnected pieces and overstates the surface by a median factor
+            # of 2.96. Showing the hull here while the rules use the contiguous
+            # area would make the interface disagree with its own conclusions.
+            "area": (f.get("contiguous_area_m2")
+                     if f.get("contiguous_area_m2") is not None
+                     else f.get("area_m2_est")),
+            "hull": f.get("area_m2_est"),
+            "patches": f.get("n_patches"),
+            # Features read on a surface that meets this face, never on it.
+            # Kept under its own key so the panel can say which it is.
+            "adjacent": list(f.get("adjacent_features") or []),
+            "adj_colors": [_LABEL_COLORS.get(x, "#94a3b8")
+                           for x in (f.get("adjacent_features") or [])],
             "cov": f.get("inlier_fraction"),
             "rms": f.get("fit_rms_mm"),
             "normal": [round(nx, 2), round(ny, 2), round(nz, 2)],
@@ -939,6 +954,13 @@ def _viewer_section(regions: list, viewer_data: dict,
         + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
         + d.features[i] + '</span>';
     }}
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {{
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }}
     if (!chips) {{
       chips = '<span style="color:#6b7390;font-size:10px">'
         + (d.skipped ? 'not classified (' + d.skipped
@@ -951,7 +973,21 @@ def _viewer_section(regions: list, viewer_data: dict,
         + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
             + 'not scanned</span>') + '</div>'
       + '<div style="margin-bottom:5px">' + chips + '</div>'
-      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
       + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
       + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
       + fmtRow('normal', d.normal.join(', '))
@@ -1197,7 +1233,18 @@ def _planar_section(regions: list) -> str:
     rows = ""
     for i, r in enumerate(regions):
         color = REGION_COLORS[i % len(REGION_COLORS)]
-        area  = f"{r['area_m2_est']:.4f} m²" if r.get("area_m2_est") is not None else "—"
+        _cont = r.get("contiguous_area_m2")
+        _hull = r.get("area_m2_est")
+        if _cont is not None:
+            area = (f'{_cont:.4f} m²'
+                    + (f'<span style="color:var(--muted);font-size:10px"> of '
+                       f'{_hull:.3f} hull</span>' if _hull else ''))
+            if _cont == 0.0:
+                area = ('<span style="color:var(--warning)">0 m²</span>'
+                        '<span style="color:var(--muted);font-size:10px"> '
+                        'no mesh surface</span>')
+        else:
+            area = f"{_hull:.4f} m²" if _hull is not None else "—"
         frac  = f"{r.get('inlier_fraction', 0):.1%}"
         rms   = f"{r.get('fit_rms_mm', 0):.3f} mm"
         nx, ny, nz = (r.get("normal_xyz") or [0, 0, 0])

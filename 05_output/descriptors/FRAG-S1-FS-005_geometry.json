@@ -60,10 +60,10 @@
       "scan_reliable": true,
       "procedural": {
         "connection_strategy": {
-          "value": "direct_bolt",
-          "rule": "connection_strategy#2",
-          "note": "flat, large enough to seat a fixing plate",
-          "reason": "area 0.376 m2 >= 0.1; RMS 1.52 mm <= 5.0"
+          "value": "gravity_only",
+          "rule": "connection_strategy#4",
+          "note": "too rough or too small for a fixing",
+          "reason": "default rule, no condition tested"
         },
         "design_assignment": {
           "value": "unassigned",
@@ -77,7 +77,9 @@
           "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "contiguous_area_m2": 0.0,
+      "n_patches": 0
     },
     {
       "plane_abcd": [
@@ -122,7 +124,9 @@
           "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "contiguous_area_m2": 0.2094,
+      "n_patches": 368
     },
     {
       "plane_abcd": [
@@ -145,10 +149,10 @@
       "scan_reliable": true,
       "procedural": {
         "connection_strategy": {
-          "value": "direct_bolt",
-          "rule": "connection_strategy#2",
-          "note": "flat, large enough to seat a fixing plate",
-          "reason": "area 0.350 m2 >= 0.1; RMS 1.59 mm <= 5.0"
+          "value": "gravity_only",
+          "rule": "connection_strategy#4",
+          "note": "too rough or too small for a fixing",
+          "reason": "default rule, no condition tested"
         },
         "design_assignment": {
           "value": "unassigned",
@@ -162,7 +166,9 @@
           "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "contiguous_area_m2": 0.0,
+      "n_patches": 0
     },
     {
       "plane_abcd": [
@@ -193,13 +199,13 @@
           "value": "direct_bolt",
           "rule": "connection_strategy#2",
           "note": "flat, large enough to seat a fixing plate",
-          "reason": "area 0.331 m2 >= 0.1; RMS 1.77 mm <= 5.0"
+          "reason": "area 0.104 m2 >= 0.1; RMS 1.77 mm <= 5.0"
         },
         "design_assignment": {
           "value": "seat_face",
           "rule": "design_assignment#3",
           "note": "flat fracture face, suitable for bearing",
-          "reason": "area 0.331 m2 >= 0.1; RMS 1.77 mm <= 8.0; feature broken_face, exposed_aggregate"
+          "reason": "area 0.104 m2 >= 0.1; RMS 1.77 mm <= 8.0; feature broken_face, exposed_aggregate"
         },
         "finishing_requirement": {
           "value": null,
@@ -207,7 +213,9 @@
           "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "contiguous_area_m2": 0.1039,
+      "n_patches": 305
     },
     {
       "plane_abcd": [
@@ -238,13 +246,13 @@
           "value": "direct_bolt",
           "rule": "connection_strategy#2",
           "note": "flat, large enough to seat a fixing plate",
-          "reason": "area 0.261 m2 >= 0.1; RMS 1.69 mm <= 5.0"
+          "reason": "area 0.107 m2 >= 0.1; RMS 1.69 mm <= 5.0"
         },
         "design_assignment": {
           "value": "seat_face",
           "rule": "design_assignment#3",
           "note": "flat fracture face, suitable for bearing",
-          "reason": "area 0.261 m2 >= 0.1; RMS 1.69 mm <= 8.0; feature broken_face, exposed_aggregate"
+          "reason": "area 0.107 m2 >= 0.1; RMS 1.69 mm <= 8.0; feature broken_face, exposed_aggregate"
         },
         "finishing_requirement": {
           "value": null,
@@ -252,7 +260,9 @@
           "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
         },
         "data_status": "proposed"
-      }
+      },
+      "contiguous_area_m2": 0.1066,
+      "n_patches": 351
     }
   ],
   "curvature": {
@@ -336,7 +346,8 @@
         "smear_frac": 0.102,
         "skipped": null,
         "colour_entropy_bits": 2.382,
-        "area_m2": 0.4168
+        "area_m2": 0.4168,
+        "contiguous_area_m2": 0.4168
       },
       {
         "region_id": 1,
@@ -362,7 +373,8 @@
         "smear_frac": 0.121,
         "skipped": null,
         "colour_entropy_bits": 2.574,
-        "area_m2": 0.3517
+        "area_m2": 0.3517,
+        "contiguous_area_m2": 0.3517
       },
       {
         "region_id": 2,
@@ -379,7 +391,8 @@
         "smear_frac": null,
         "skipped": "fragmented_uv",
         "colour_entropy_bits": 2.857,
-        "area_m2": 0.3402
+        "area_m2": 0.3402,
+        "contiguous_area_m2": 0.02
       },
       {
         "region_id": 3,
@@ -405,7 +418,8 @@
         "smear_frac": 0.0,
         "skipped": null,
         "colour_entropy_bits": 2.676,
-        "area_m2": 0.3315
+        "area_m2": 0.3315,
+        "contiguous_area_m2": 0.3315
       },
       {
         "region_id": 4,
@@ -431,7 +445,8 @@
         "smear_frac": 0.045,
         "skipped": null,
         "colour_entropy_bits": 2.464,
-        "area_m2": 0.2265
+        "area_m2": 0.2265,
+        "contiguous_area_m2": 0.2094
       },
       {
         "region_id": 5,
@@ -457,7 +472,8 @@
         "smear_frac": 0.0,
         "skipped": null,
         "colour_entropy_bits": 2.474,
-        "area_m2": 0.1621
+        "area_m2": 0.1621,
+        "contiguous_area_m2": 0.1039
       },
       {
         "region_id": 6,
@@ -474,7 +490,8 @@
         "smear_frac": null,
         "skipped": "sparse_uv",
         "colour_entropy_bits": 2.884,
-        "area_m2": 0.1613
+        "area_m2": 0.1613,
+        "contiguous_area_m2": 0.1613
       },
       {
         "region_id": 7,
@@ -500,7 +517,8 @@
         "smear_frac": 0.0,
         "skipped": null,
         "colour_entropy_bits": 2.634,
-        "area_m2": 0.135
+        "area_m2": 0.135,
+        "contiguous_area_m2": 0.1066
       },
       {
         "region_id": 8,
@@ -526,7 +544,8 @@
         "smear_frac": 0.037,
         "skipped": null,
         "colour_entropy_bits": 2.907,
-        "area_m2": 0.1341
+        "area_m2": 0.1341,
+        "contiguous_area_m2": 0.1341
       },
       {
         "region_id": 9,
@@ -543,7 +562,8 @@
         "smear_frac": null,
         "skipped": "sparse_uv",
         "colour_entropy_bits": 1.83,
-        "area_m2": 0.0899
+        "area_m2": 0.0899,
+        "contiguous_area_m2": 0.0899
       }
     ],
     "face_labels": {
@@ -878,18 +898,6 @@
     },
     "use_suggestions": [
       {
-        "id": "leaning_support",
-        "label": "Leaning or backrest surface",
-        "faces": [
-          0,
-          2,
-          3,
-          4
-        ],
-        "note": "large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified",
-        "caveat": "orientation unverified"
-      },
-      {
         "id": "rough_feature",
         "label": "Textured feature surface",
         "faces": [
@@ -909,14 +917,17 @@
         ]
       },
       {
+        "id": "cut_candidate",
+        "label": "Cut to create a bearing face",
+        "faces": [],
+        "note": "substantial fragment with no usable flat face; a wall or wire saw could create one",
+        "caveat": "cutting equipment not yet encoded"
+      },
+      {
         "id": "pedestal_support",
         "label": "Pedestal or structural support",
         "faces": [
-          0,
-          1,
-          2,
-          3,
-          4
+          1
         ],
         "note": "broad flat bearing face and mass enough to carry a timber deck, plate or slab above",
         "caveat": null

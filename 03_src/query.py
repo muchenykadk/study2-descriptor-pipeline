@@ -40,6 +40,7 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 from descriptors.design_factors import (
     derive as derive_design_factors,
     load_factors,
+    usable_area_m2,
     SURFACE_FACE_KEYS,
 )
 
@@ -117,7 +118,7 @@ def _face_matches(record: dict, label=None, min_area=None,
                 on_face |= set(f.get("adjacent_features") or [])
             if label not in on_face:
                 continue
-        if min_area is not None and not (f.get("area_m2_est") or 0) >= min_area:
+        if min_area is not None and not (usable_area_m2(f) or 0) >= min_area:
             continue
         if max_rms is not None and not (f.get("fit_rms_mm") or 1e9) <= max_rms:
             continue
@@ -137,7 +138,7 @@ def select(records: list, use=None, label=None, anomaly=None,
            rank_by=None, top_k=None) -> list:
     """Filter and rank records. Returns [{record, why}] preserving order."""
     rank_fields = {"mass": lambda r: (r.get("bounding") or {}).get("mass_kg_est") or 0,
-                   "area": lambda r: max([(f.get("area_m2_est") or 0)
+                   "area": lambda r: max([(usable_area_m2(f) or 0)
                                           for f in (r.get("planarity") or [])] or [0]),
                    "thickness": lambda r: min((r.get("bounding") or {}).get("obb_dims_mm") or [0]),
                    "faces": lambda r: len(r.get("planarity") or [])}

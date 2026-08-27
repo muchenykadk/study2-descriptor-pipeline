@@ -394,7 +394,7 @@ details.fold > summary:hover { color: var(--text); }
   // tables below carry the same figures, and are collapsed by default because
   // reading them means holding a region number in your head while looking back
   // and forth. Here the number is attached to the thing it describes.
-  var REGION_INFO = [{"n": 1, "area": 0.376232, "cov": 0.081, "rms": 1.519, "normal": [0.01, 1.0, 0.0], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 2, "area": 0.355022, "cov": 0.042, "rms": 1.653, "normal": [-0.16, -0.12, 0.98], "reliable": false, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": null, "fill": 0.458}, {"n": 3, "area": 0.349576, "cov": 0.036, "rms": 1.587, "normal": [-0.01, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 4, "area": 0.330769, "cov": 0.026, "rms": 1.773, "normal": [-0.15, 0.98, 0.15], "reliable": true, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "direct_bolt", "asg": "seat_face", "fin": null, "skipped": null, "fill": 0.286}, {"n": 5, "area": 0.261431, "cov": 0.027, "rms": 1.691, "normal": [-0.12, 0.96, 0.27], "reliable": true, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "direct_bolt", "asg": "seat_face", "fin": null, "skipped": null, "fill": 0.355}];
+  var REGION_INFO = [{"n": 1, "area": 0.0, "hull": 0.376232, "patches": 0, "adjacent": [], "adj_colors": [], "cov": 0.081, "rms": 1.519, "normal": [0.01, 1.0, 0.0], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 2, "area": 0.2094, "hull": 0.355022, "patches": 368, "adjacent": [], "adj_colors": [], "cov": 0.042, "rms": 1.653, "normal": [-0.16, -0.12, 0.98], "reliable": false, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": null, "fill": 0.458}, {"n": 3, "area": 0.0, "hull": 0.349576, "patches": 0, "adjacent": [], "adj_colors": [], "cov": 0.036, "rms": 1.587, "normal": [-0.01, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 4, "area": 0.1039, "hull": 0.330769, "patches": 305, "adjacent": [], "adj_colors": [], "cov": 0.026, "rms": 1.773, "normal": [-0.15, 0.98, 0.15], "reliable": true, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "direct_bolt", "asg": "seat_face", "fin": null, "skipped": null, "fill": 0.286}, {"n": 5, "area": 0.1066, "hull": 0.261431, "patches": 351, "adjacent": [], "adj_colors": [], "cov": 0.027, "rms": 1.691, "normal": [-0.12, 0.96, 0.27], "reliable": true, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "direct_bolt", "asg": "seat_face", "fin": null, "skipped": null, "fill": 0.355}];
   var hoverBox = document.createElement('div');
   hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
     + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
@@ -424,6 +424,13 @@ details.fold > summary:hover { color: var(--text); }
         + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
         + d.features[i] + '</span>';
     }
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }
     if (!chips) {
       chips = '<span style="color:#6b7390;font-size:10px">'
         + (d.skipped ? 'not classified (' + d.skipped
@@ -436,7 +443,21 @@ details.fold > summary:hover { color: var(--text); }
         + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
             + 'not scanned</span>') + '</div>'
       + '<div style="margin-bottom:5px">' + chips + '</div>'
-      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
       + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
       + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
       + fmtRow('normal', d.normal.join(', '))
@@ -738,18 +759,18 @@ details.fold > summary:hover { color: var(--text); }
     <tbody>
       <tr class="region-row" data-region-id="0" onclick="highlightRegion(0)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#7c83fd"></span>1</td>
-        <td class="num">0.3762 m²</td>
+        <td class="num"><span style="color:var(--warning)">0 m²</span><span style="color:var(--muted);font-size:10px"> no mesh surface</span></td>
         <td class="num">8.1%</td>
         <td class="num">1.519 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.011, 1.000, 0.002)</td>
       </tr>
       <tr class="region-row" data-region-id="1" onclick="highlightRegion(1)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#4ade80"></span>2 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.3550 m²</td>
+        <td class="num">0.2094 m²<span style="color:var(--muted);font-size:10px"> of 0.355 hull</span></td>
         <td class="num">4.2%</td>
         <td class="num">1.653 mm</td>
         <td style="font-size:11px">exposed_aggregate</td>
@@ -760,18 +781,18 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="2" onclick="highlightRegion(2)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fbbf24"></span>3</td>
-        <td class="num">0.3496 m²</td>
+        <td class="num"><span style="color:var(--warning)">0 m²</span><span style="color:var(--muted);font-size:10px"> no mesh surface</span></td>
         <td class="num">3.6%</td>
         <td class="num">1.587 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(-0.007, 1.000, 0.016)</td>
       </tr>
       <tr class="region-row" data-region-id="3" onclick="highlightRegion(3)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#f87171"></span>4</td>
-        <td class="num">0.3308 m²</td>
+        <td class="num">0.1039 m²<span style="color:var(--muted);font-size:10px"> of 0.331 hull</span></td>
         <td class="num">2.6%</td>
         <td class="num">1.773 mm</td>
         <td style="font-size:11px">exposed_aggregate</td>
@@ -782,7 +803,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="4" onclick="highlightRegion(4)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#60a5fa"></span>5</td>
-        <td class="num">0.2614 m²</td>
+        <td class="num">0.1066 m²<span style="color:var(--muted);font-size:10px"> of 0.261 hull</span></td>
         <td class="num">2.7%</td>
         <td class="num">1.691 mm</td>
         <td style="font-size:11px">exposed_aggregate</td>
@@ -862,13 +883,6 @@ details.fold > summary:hover { color: var(--text); }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Leaning or backrest surface</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 3, region 4, region 5</div>
-        <div style="font-size:10px;color:var(--warning);margin-top:4px">orientation unverified</div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
-                  background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Textured feature surface</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">deliberately rough face, exposing the break and aggregate as visible and tactile character</div>
         <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 4, region 5</div>
@@ -876,9 +890,16 @@ details.fold > summary:hover { color: var(--text); }
       </div>
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
+        <div style="font-size:13px;font-weight:bold;color:var(--text)">Cut to create a bearing face</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">substantial fragment with no usable flat face; a wall or wire saw could create one</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by </div>
+        <div style="font-size:10px;color:var(--warning);margin-top:4px">cutting equipment not yet encoded</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
+                  background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Pedestal or structural support</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">broad flat bearing face and mass enough to carry a timber deck, plate or slab above</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 2</div>
         
       </div>
     </div>

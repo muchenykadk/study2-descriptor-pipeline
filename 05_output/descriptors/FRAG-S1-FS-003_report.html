@@ -394,7 +394,7 @@ details.fold > summary:hover { color: var(--text); }
   // tables below carry the same figures, and are collapsed by default because
   // reading them means holding a region number in your head while looking back
   // and forth. Here the number is attached to the thing it describes.
-  var REGION_INFO = [{"n": 1, "area": 0.864072, "cov": 0.029, "rms": 1.621, "normal": [-0.46, 0.07, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 2, "area": 0.857871, "cov": 0.171, "rms": 0.401, "normal": [0.0, 1.0, -0.0], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 3, "area": 0.852231, "cov": 0.037, "rms": 1.729, "normal": [0.05, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.128}, {"n": 4, "area": 0.851641, "cov": 0.038, "rms": 1.701, "normal": [-0.42, -0.14, 0.9], "reliable": false, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": null, "fill": 0.204}, {"n": 5, "area": 0.816509, "cov": 0.037, "rms": 1.689, "normal": [-0.46, -0.11, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.141}, {"n": 6, "area": 0.81436, "cov": 0.028, "rms": 1.714, "normal": [0.1, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.058}, {"n": 7, "area": 0.780022, "cov": 0.051, "rms": 1.69, "normal": [-0.47, 0.06, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 8, "area": 0.650671, "cov": 0.031, "rms": 1.688, "normal": [-0.46, 0.1, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}];
+  var REGION_INFO = [{"n": 1, "area": 0.0359, "hull": 0.864072, "patches": 1074, "adjacent": [], "adj_colors": [], "cov": 0.029, "rms": 1.621, "normal": [-0.46, 0.07, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 2, "area": 0.0, "hull": 0.857871, "patches": 0, "adjacent": [], "adj_colors": [], "cov": 0.171, "rms": 0.401, "normal": [0.0, 1.0, -0.0], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 3, "area": 0.1786, "hull": 0.852231, "patches": 390, "adjacent": [], "adj_colors": [], "cov": 0.037, "rms": 1.729, "normal": [0.05, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.128}, {"n": 4, "area": 0.2104, "hull": 0.851641, "patches": 379, "adjacent": [], "adj_colors": [], "cov": 0.038, "rms": 1.701, "normal": [-0.42, -0.14, 0.9], "reliable": false, "features": ["exposed_aggregate", "broken_face"], "colors": ["#fbbf24", "#f87171"], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": null, "fill": 0.204}, {"n": 5, "area": 0.253, "hull": 0.816509, "patches": 277, "adjacent": [], "adj_colors": [], "cov": 0.037, "rms": 1.689, "normal": [-0.46, -0.11, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.141}, {"n": 6, "area": 0.135, "hull": 0.81436, "patches": 426, "adjacent": ["exposed_aggregate", "broken_face"], "adj_colors": ["#fbbf24", "#f87171"], "cov": 0.028, "rms": 1.714, "normal": [0.1, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.058}, {"n": 7, "area": 0.0418, "hull": 0.780022, "patches": 1082, "adjacent": [], "adj_colors": [], "cov": 0.051, "rms": 1.69, "normal": [-0.47, 0.06, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 8, "area": 0.0519, "hull": 0.650671, "patches": 1173, "adjacent": [], "adj_colors": [], "cov": 0.031, "rms": 1.688, "normal": [-0.46, 0.1, 0.88], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "fragmented_uv", "fill": null}];
   var hoverBox = document.createElement('div');
   hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
     + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
@@ -424,6 +424,13 @@ details.fold > summary:hover { color: var(--text); }
         + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
         + d.features[i] + '</span>';
     }
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }
     if (!chips) {
       chips = '<span style="color:#6b7390;font-size:10px">'
         + (d.skipped ? 'not classified (' + d.skipped
@@ -436,7 +443,21 @@ details.fold > summary:hover { color: var(--text); }
         + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
             + 'not scanned</span>') + '</div>'
       + '<div style="margin-bottom:5px">' + chips + '</div>'
-      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
       + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
       + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
       + fmtRow('normal', d.normal.join(', '))
@@ -738,7 +759,7 @@ details.fold > summary:hover { color: var(--text); }
     <tbody>
       <tr class="region-row" data-region-id="0" onclick="highlightRegion(0)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#7c83fd"></span>1 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.8641 m²</td>
+        <td class="num">0.0359 m²<span style="color:var(--muted);font-size:10px"> of 0.864 hull</span></td>
         <td class="num">2.9%</td>
         <td class="num">1.621 mm</td>
         <td style="font-size:11px">—</td>
@@ -749,18 +770,18 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="1" onclick="highlightRegion(1)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#4ade80"></span>2</td>
-        <td class="num">0.8579 m²</td>
+        <td class="num"><span style="color:var(--warning)">0 m²</span><span style="color:var(--muted);font-size:10px"> no mesh surface</span></td>
         <td class="num">17.1%</td>
         <td class="num">0.401 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.000, 1.000, -0.000)</td>
       </tr>
       <tr class="region-row" data-region-id="2" onclick="highlightRegion(2)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fbbf24"></span>3</td>
-        <td class="num">0.8522 m²</td>
+        <td class="num">0.1786 m²<span style="color:var(--muted);font-size:10px"> of 0.852 hull</span></td>
         <td class="num">3.7%</td>
         <td class="num">1.729 mm</td>
         <td style="font-size:11px">—</td>
@@ -771,7 +792,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="3" onclick="highlightRegion(3)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#f87171"></span>4 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.8516 m²</td>
+        <td class="num">0.2104 m²<span style="color:var(--muted);font-size:10px"> of 0.852 hull</span></td>
         <td class="num">3.8%</td>
         <td class="num">1.701 mm</td>
         <td style="font-size:11px">exposed_aggregate</td>
@@ -782,7 +803,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="4" onclick="highlightRegion(4)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#60a5fa"></span>5 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.8165 m²</td>
+        <td class="num">0.2530 m²<span style="color:var(--muted);font-size:10px"> of 0.817 hull</span></td>
         <td class="num">3.7%</td>
         <td class="num">1.689 mm</td>
         <td style="font-size:11px">—</td>
@@ -793,7 +814,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="5" onclick="highlightRegion(5)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#c084fc"></span>6</td>
-        <td class="num">0.8144 m²</td>
+        <td class="num">0.1350 m²<span style="color:var(--muted);font-size:10px"> of 0.814 hull</span></td>
         <td class="num">2.8%</td>
         <td class="num">1.714 mm</td>
         <td style="font-size:11px">—</td>
@@ -804,7 +825,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="6" onclick="highlightRegion(6)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fb923c"></span>7 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.7800 m²</td>
+        <td class="num">0.0418 m²<span style="color:var(--muted);font-size:10px"> of 0.780 hull</span></td>
         <td class="num">5.1%</td>
         <td class="num">1.690 mm</td>
         <td style="font-size:11px">—</td>
@@ -815,7 +836,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="7" onclick="highlightRegion(7)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#34d399"></span>8 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.6507 m²</td>
+        <td class="num">0.0519 m²<span style="color:var(--muted);font-size:10px"> of 0.651 hull</span></td>
         <td class="num">3.1%</td>
         <td class="num">1.688 mm</td>
         <td style="font-size:11px">—</td>
@@ -895,13 +916,6 @@ details.fold > summary:hover { color: var(--text); }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Leaning or backrest surface</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 2, region 3, region 6</div>
-        <div style="font-size:10px;color:var(--warning);margin-top:4px">orientation unverified</div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
-                  background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Textured feature surface</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">deliberately rough face, exposing the break and aggregate as visible and tactile character</div>
         <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by </div>
@@ -911,7 +925,7 @@ details.fold > summary:hover { color: var(--text); }
                   background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Pedestal or structural support</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">broad flat bearing face and mass enough to carry a timber deck, plate or slab above</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5, region 6, region 7, region 8</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 3, region 4, region 5, region 6</div>
         
       </div>
     </div>

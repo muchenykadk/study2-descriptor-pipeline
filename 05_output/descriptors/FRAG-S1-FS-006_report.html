@@ -394,7 +394,7 @@ details.fold > summary:hover { color: var(--text); }
   // tables below carry the same figures, and are collapsed by default because
   // reading them means holding a region number in your head while looking back
   // and forth. Here the number is attached to the thing it describes.
-  var REGION_INFO = [{"n": 1, "area": 0.917052, "cov": 0.022, "rms": 1.686, "normal": [-0.03, 0.98, -0.18], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 2, "area": 0.730194, "cov": 0.035, "rms": 1.701, "normal": [-0.05, 0.96, -0.27], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.054}, {"n": 3, "area": 0.670785, "cov": 0.039, "rms": 1.696, "normal": [-0.05, 0.97, -0.22], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 4, "area": 0.609232, "cov": 0.049, "rms": 1.689, "normal": [-0.01, 1.0, 0.0], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 5, "area": 0.533009, "cov": 0.047, "rms": 1.546, "normal": [-0.02, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.054}, {"n": 6, "area": 0.480238, "cov": 0.037, "rms": 1.727, "normal": [0.01, 0.18, 0.98], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.086}];
+  var REGION_INFO = [{"n": 1, "area": 0.021, "hull": 0.917052, "patches": 915, "adjacent": ["exposed_aggregate", "broken_face"], "adj_colors": ["#fbbf24", "#f87171"], "cov": 0.022, "rms": 1.686, "normal": [-0.03, 0.98, -0.18], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 2, "area": 0.1363, "hull": 0.730194, "patches": 901, "adjacent": [], "adj_colors": [], "cov": 0.035, "rms": 1.701, "normal": [-0.05, 0.96, -0.27], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.054}, {"n": 3, "area": 0.0631, "hull": 0.670785, "patches": 646, "adjacent": [], "adj_colors": [], "cov": 0.039, "rms": 1.696, "normal": [-0.05, 0.97, -0.22], "reliable": true, "features": [], "colors": [], "conn": "adaptive_bracket", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 4, "area": 0.0558, "hull": 0.609232, "patches": 463, "adjacent": ["exposed_aggregate", "broken_face"], "adj_colors": ["#fbbf24", "#f87171"], "cov": 0.049, "rms": 1.689, "normal": [-0.01, 1.0, 0.0], "reliable": true, "features": [], "colors": [], "conn": "adaptive_bracket", "asg": "unassigned", "fin": null, "skipped": "fragmented_uv", "fill": null}, {"n": 5, "area": 0.1445, "hull": 0.533009, "patches": 684, "adjacent": [], "adj_colors": [], "cov": 0.047, "rms": 1.546, "normal": [-0.02, 1.0, 0.02], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.054}, {"n": 6, "area": 0.3089, "hull": 0.480238, "patches": 310, "adjacent": ["exposed_aggregate", "broken_face"], "adj_colors": ["#fbbf24", "#f87171"], "cov": 0.037, "rms": 1.727, "normal": [0.01, 0.18, 0.98], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.086}];
   var hoverBox = document.createElement('div');
   hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
     + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
@@ -424,6 +424,13 @@ details.fold > summary:hover { color: var(--text); }
         + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
         + d.features[i] + '</span>';
     }
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }
     if (!chips) {
       chips = '<span style="color:#6b7390;font-size:10px">'
         + (d.skipped ? 'not classified (' + d.skipped
@@ -436,7 +443,21 @@ details.fold > summary:hover { color: var(--text); }
         + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
             + 'not scanned</span>') + '</div>'
       + '<div style="margin-bottom:5px">' + chips + '</div>'
-      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
       + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
       + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
       + fmtRow('normal', d.normal.join(', '))
@@ -738,18 +759,18 @@ details.fold > summary:hover { color: var(--text); }
     <tbody>
       <tr class="region-row" data-region-id="0" onclick="highlightRegion(0)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#7c83fd"></span>1</td>
-        <td class="num">0.9171 m²</td>
+        <td class="num">0.0210 m²<span style="color:var(--muted);font-size:10px"> of 0.917 hull</span></td>
         <td class="num">2.2%</td>
         <td class="num">1.686 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(-0.028, 0.983, -0.183)</td>
       </tr>
       <tr class="region-row" data-region-id="1" onclick="highlightRegion(1)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#4ade80"></span>2</td>
-        <td class="num">0.7302 m²</td>
+        <td class="num">0.1363 m²<span style="color:var(--muted);font-size:10px"> of 0.730 hull</span></td>
         <td class="num">3.5%</td>
         <td class="num">1.701 mm</td>
         <td style="font-size:11px">—</td>
@@ -760,29 +781,29 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="2" onclick="highlightRegion(2)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fbbf24"></span>3</td>
-        <td class="num">0.6708 m²</td>
+        <td class="num">0.0631 m²<span style="color:var(--muted);font-size:10px"> of 0.671 hull</span></td>
         <td class="num">3.9%</td>
         <td class="num">1.696 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#3">adaptive_bracket</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(-0.053, 0.973, -0.224)</td>
       </tr>
       <tr class="region-row" data-region-id="3" onclick="highlightRegion(3)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#f87171"></span>4</td>
-        <td class="num">0.6092 m²</td>
+        <td class="num">0.0558 m²<span style="color:var(--muted);font-size:10px"> of 0.609 hull</span></td>
         <td class="num">4.9%</td>
         <td class="num">1.689 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#3">adaptive_bracket</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(-0.009, 1.000, 0.002)</td>
       </tr>
       <tr class="region-row" data-region-id="4" onclick="highlightRegion(4)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#60a5fa"></span>5</td>
-        <td class="num">0.5330 m²</td>
+        <td class="num">0.1445 m²<span style="color:var(--muted);font-size:10px"> of 0.533 hull</span></td>
         <td class="num">4.7%</td>
         <td class="num">1.546 mm</td>
         <td style="font-size:11px">—</td>
@@ -793,7 +814,7 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="5" onclick="highlightRegion(5)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#c084fc"></span>6 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.4802 m²</td>
+        <td class="num">0.3089 m²<span style="color:var(--muted);font-size:10px"> of 0.480 hull</span></td>
         <td class="num">3.7%</td>
         <td class="num">1.727 mm</td>
         <td style="font-size:11px">—</td>
@@ -873,13 +894,6 @@ details.fold > summary:hover { color: var(--text); }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Leaning or backrest surface</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5</div>
-        <div style="font-size:10px;color:var(--warning);margin-top:4px">orientation unverified</div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
-                  background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Textured feature surface</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">deliberately rough face, exposing the break and aggregate as visible and tactile character</div>
         <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by </div>
@@ -889,14 +903,14 @@ details.fold > summary:hover { color: var(--text); }
                   background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Bar-table or high-table stand</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">stands at counter height with a bearing face on top to carry a table plate</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 2, region 5</div>
         <div style="font-size:10px;color:var(--warning);margin-top:4px">stable resting orientation not computed</div>
       </div>
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Pedestal or structural support</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">broad flat bearing face and mass enough to carry a timber deck, plate or slab above</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5, region 6</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 2, region 5, region 6</div>
         
       </div>
     </div>

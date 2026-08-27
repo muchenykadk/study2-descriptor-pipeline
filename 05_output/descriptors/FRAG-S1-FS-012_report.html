@@ -394,7 +394,7 @@ details.fold > summary:hover { color: var(--text); }
   // tables below carry the same figures, and are collapsed by default because
   // reading them means holding a region number in your head while looking back
   // and forth. Here the number is attached to the thing it describes.
-  var REGION_INFO = [{"n": 1, "area": 0.323303, "cov": 0.021, "rms": 1.767, "normal": [0.53, 0.84, -0.07], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 2, "area": 0.200162, "cov": 0.028, "rms": 1.684, "normal": [0.16, 0.88, -0.46], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.084}, {"n": 3, "area": 0.183517, "cov": 0.033, "rms": 1.701, "normal": [0.06, 1.0, -0.03], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 4, "area": 0.154035, "cov": 0.021, "rms": 1.546, "normal": [0.76, 0.65, 0.09], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.08}, {"n": 5, "area": 0.146834, "cov": 0.023, "rms": 1.609, "normal": [0.18, 0.16, 0.97], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.018}, {"n": 6, "area": 0.123179, "cov": 0.039, "rms": 1.702, "normal": [0.68, 0.73, -0.03], "reliable": true, "features": [], "colors": [], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": "unreliable_texture", "fill": 0.259}, {"n": 7, "area": 0.108506, "cov": 0.042, "rms": 1.673, "normal": [0.66, 0.75, 0.01], "reliable": true, "features": ["paste_dominant"], "colors": ["#cbd5e1"], "conn": "direct_bolt", "asg": "unassigned", "fin": null, "skipped": null, "fill": 0.495}, {"n": 8, "area": 0.089006, "cov": 0.03, "rms": 1.657, "normal": [0.65, 0.76, 0.06], "reliable": true, "features": [], "colors": [], "conn": "adaptive_bracket", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.19}];
+  var REGION_INFO = [{"n": 1, "area": 0.0, "hull": 0.323303, "patches": 0, "adjacent": [], "adj_colors": [], "cov": 0.021, "rms": 1.767, "normal": [0.53, 0.84, -0.07], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 2, "area": 0.0294, "hull": 0.200162, "patches": 77, "adjacent": ["tile_remnant", "exposed_aggregate", "broken_face"], "adj_colors": ["#f472b6", "#fbbf24", "#f87171"], "cov": 0.028, "rms": 1.684, "normal": [0.16, 0.88, -0.46], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.084}, {"n": 3, "area": 0.0, "hull": 0.183517, "patches": 0, "adjacent": [], "adj_colors": [], "cov": 0.033, "rms": 1.701, "normal": [0.06, 1.0, -0.03], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": null, "fill": null}, {"n": 4, "area": 0.0173, "hull": 0.154035, "patches": 113, "adjacent": ["exposed_aggregate", "broken_face", "paste_dominant"], "adj_colors": ["#fbbf24", "#f87171", "#cbd5e1"], "cov": 0.021, "rms": 1.546, "normal": [0.76, 0.65, 0.09], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.08}, {"n": 5, "area": 0.0367, "hull": 0.146834, "patches": 68, "adjacent": ["exposed_aggregate", "broken_face"], "adj_colors": ["#fbbf24", "#f87171"], "cov": 0.023, "rms": 1.609, "normal": [0.18, 0.16, 0.97], "reliable": false, "features": [], "colors": [], "conn": "gravity_only", "asg": "buried", "fin": null, "skipped": "sparse_uv", "fill": 0.018}, {"n": 6, "area": 0.0456, "hull": 0.123179, "patches": 55, "adjacent": [], "adj_colors": [], "cov": 0.039, "rms": 1.702, "normal": [0.68, 0.73, -0.03], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": "unreliable_texture", "fill": 0.259}, {"n": 7, "area": 0.0899, "hull": 0.108506, "patches": 36, "adjacent": [], "adj_colors": [], "cov": 0.042, "rms": 1.673, "normal": [0.66, 0.75, 0.01], "reliable": true, "features": ["paste_dominant"], "colors": ["#cbd5e1"], "conn": "adaptive_bracket", "asg": "unassigned", "fin": null, "skipped": null, "fill": 0.495}, {"n": 8, "area": 0.0208, "hull": 0.089006, "patches": 188, "adjacent": [], "adj_colors": [], "cov": 0.03, "rms": 1.657, "normal": [0.65, 0.76, 0.06], "reliable": true, "features": [], "colors": [], "conn": "gravity_only", "asg": "unassigned", "fin": null, "skipped": "sparse_uv", "fill": 0.19}];
   var hoverBox = document.createElement('div');
   hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
     + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
@@ -424,6 +424,13 @@ details.fold > summary:hover { color: var(--text); }
         + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
         + d.features[i] + '</span>';
     }
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }
     if (!chips) {
       chips = '<span style="color:#6b7390;font-size:10px">'
         + (d.skipped ? 'not classified (' + d.skipped
@@ -436,7 +443,21 @@ details.fold > summary:hover { color: var(--text); }
         + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
             + 'not scanned</span>') + '</div>'
       + '<div style="margin-bottom:5px">' + chips + '</div>'
-      + fmtRow('area', d.area != null ? d.area.toFixed(4) + ' m²' : null)
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
       + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
       + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
       + fmtRow('normal', d.normal.join(', '))
@@ -738,51 +759,51 @@ details.fold > summary:hover { color: var(--text); }
     <tbody>
       <tr class="region-row" data-region-id="0" onclick="highlightRegion(0)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#7c83fd"></span>1</td>
-        <td class="num">0.3233 m²</td>
+        <td class="num"><span style="color:var(--warning)">0 m²</span><span style="color:var(--muted);font-size:10px"> no mesh surface</span></td>
         <td class="num">2.1%</td>
         <td class="num">1.767 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.533, 0.843, -0.071)</td>
       </tr>
       <tr class="region-row" data-region-id="1" onclick="highlightRegion(1)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#4ade80"></span>2</td>
-        <td class="num">0.2002 m²</td>
+        <td class="num">0.0294 m²<span style="color:var(--muted);font-size:10px"> of 0.200 hull</span></td>
         <td class="num">2.8%</td>
         <td class="num">1.684 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.160, 0.876, -0.456)</td>
       </tr>
       <tr class="region-row" data-region-id="2" onclick="highlightRegion(2)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fbbf24"></span>3</td>
-        <td class="num">0.1835 m²</td>
+        <td class="num"><span style="color:var(--warning)">0 m²</span><span style="color:var(--muted);font-size:10px"> no mesh surface</span></td>
         <td class="num">3.3%</td>
         <td class="num">1.701 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.059, 0.998, -0.026)</td>
       </tr>
       <tr class="region-row" data-region-id="3" onclick="highlightRegion(3)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#f87171"></span>4</td>
-        <td class="num">0.1540 m²</td>
+        <td class="num">0.0173 m²<span style="color:var(--muted);font-size:10px"> of 0.154 hull</span></td>
         <td class="num">2.1%</td>
         <td class="num">1.546 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.755, 0.650, 0.088)</td>
       </tr>
       <tr class="region-row" data-region-id="4" onclick="highlightRegion(4)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#60a5fa"></span>5 <span style="color:var(--warning);font-size:10px">unscanned</span></td>
-        <td class="num">0.1468 m²</td>
+        <td class="num">0.0367 m²<span style="color:var(--muted);font-size:10px"> of 0.147 hull</span></td>
         <td class="num">2.3%</td>
         <td class="num">1.609 mm</td>
         <td style="font-size:11px">—</td>
@@ -793,33 +814,33 @@ details.fold > summary:hover { color: var(--text); }
       </tr>
       <tr class="region-row" data-region-id="5" onclick="highlightRegion(5)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#c084fc"></span>6</td>
-        <td class="num">0.1232 m²</td>
+        <td class="num">0.0456 m²<span style="color:var(--muted);font-size:10px"> of 0.123 hull</span></td>
         <td class="num">3.9%</td>
         <td class="num">1.702 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.682, 0.730, -0.033)</td>
       </tr>
       <tr class="region-row" data-region-id="6" onclick="highlightRegion(6)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#fb923c"></span>7</td>
-        <td class="num">0.1085 m²</td>
+        <td class="num">0.0899 m²<span style="color:var(--muted);font-size:10px"> of 0.109 hull</span></td>
         <td class="num">4.2%</td>
         <td class="num">1.673 mm</td>
         <td style="font-size:11px">paste_dominant</td>
-        <td style="font-size:11px" title="connection_strategy#2">direct_bolt</td>
+        <td style="font-size:11px" title="connection_strategy#3">adaptive_bracket</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.659, 0.752, 0.014)</td>
       </tr>
       <tr class="region-row" data-region-id="7" onclick="highlightRegion(7)" style="cursor:pointer">
         <td><span class="region-dot" style="background:#34d399"></span>8</td>
-        <td class="num">0.0890 m²</td>
+        <td class="num">0.0208 m²<span style="color:var(--muted);font-size:10px"> of 0.089 hull</span></td>
         <td class="num">3.0%</td>
         <td class="num">1.657 mm</td>
         <td style="font-size:11px">—</td>
-        <td style="font-size:11px" title="connection_strategy#3">adaptive_bracket</td>
+        <td style="font-size:11px" title="connection_strategy#4">gravity_only</td>
         <td style="font-size:11px" title="design_assignment#4">unassigned</td>
         <td style="font-size:11px" title="Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md §7. Withheld 2026-08-25.">—</td>
         <td class="num" style="color:var(--muted);font-size:11px">(0.648, 0.759, 0.058)</td>
@@ -895,13 +916,6 @@ details.fold > summary:hover { color: var(--text); }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Leaning or backrest surface</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">large face, mass resists displacement. Resting-pose orientation is not computed, so the angle the face presents once placed is unverified</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2</div>
-        <div style="font-size:10px;color:var(--warning);margin-top:4px">orientation unverified</div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
-                  background:#15171f">
         <div style="font-size:13px;font-weight:bold;color:var(--text)">Exposed face, material history visible</div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px">a face whose material history is legible: formwork marks, adhering tile, or cast-in brick. Condition (weathering, staining) is now reported as a localized anomaly rather than a surface label.</div>
         <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by </div>
@@ -916,17 +930,10 @@ details.fold > summary:hover { color: var(--text); }
       </div>
       <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
                   background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Seat or stool</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">presents a sittable height with a flat enough top face; heavy enough to stay put</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 6, region 7</div>
-        <div style="font-size:10px;color:var(--warning);margin-top:4px">stable resting orientation not computed</div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
-                  background:#15171f">
-        <div style="font-size:13px;font-weight:bold;color:var(--text)">Pedestal or structural support</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">broad flat bearing face and mass enough to carry a timber deck, plate or slab above</div>
-        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by region 1, region 2, region 3, region 4, region 5, region 6</div>
-        
+        <div style="font-size:13px;font-weight:bold;color:var(--text)">Cut to create a bearing face</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">substantial fragment with no usable flat face; a wall or wire saw could create one</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by </div>
+        <div style="font-size:10px;color:var(--warning);margin-top:4px">cutting equipment not yet encoded</div>
       </div>
     </div>
   </div>

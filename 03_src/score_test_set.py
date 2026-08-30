@@ -37,9 +37,32 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
 from PIL import Image                                              # noqa: E402
 import ai.region_classification as rc                              # noqa: E402
+from ai.taxonomy import ACTIVE, TAXONOMY                           # noqa: E402
 
 TILE_DIR = REPO_ROOT / "01_input" / "test_tiles"
 CSV_PATH = REPO_ROOT / "05_output" / "test_set_labels.csv"
+
+
+def use_set(name: str) -> None:
+    """Point the loader at a named set, matching build_test_set.py --set.
+
+    Without this both this script and binary_probe.py read set A whatever was
+    labelled, so a run against set B would have silently rescored set A.
+    """
+    global TILE_DIR, CSV_PATH
+    if not name:
+        return
+    s = name.strip().replace(" ", "_")
+    TILE_DIR = REPO_ROOT / "01_input" / f"test_tiles_{s}"
+    CSV_PATH = REPO_ROOT / "05_output" / f"test_set_labels_{s}.csv"
+    if not CSV_PATH.exists():
+        raise SystemExit(f"\n  No set '{s}': {CSV_PATH} does not exist.\n")
+
+
+def add_set_arg(ap) -> None:
+    ap.add_argument("--set", dest="set_name", default="",
+                    help="which test set to score, e.g. --set b. Default is the "
+                         "first set in 01_input/test_tiles/.")
 
 
 def parse_labels(s: str) -> list:
@@ -51,9 +74,17 @@ def parse_labels(s: str) -> list:
 def load_set() -> list:
     if not CSV_PATH.exists():
         return []
+    # A hand-typed label that is not a taxonomy id used to pass through as truth.
+    # The model is never asked about it, so it could only ever be a false negative,
+    # and it dragged recall down for a reason invisible in the output. Retired ids
+    # do the same thing: they are in TAXONOMY but not in the prompt.
+    bad: dict = {}
     out = []
     for r in csv.DictReader(open(CSV_PATH, encoding="utf-8-sig")):
         labs = parse_labels(r.get("true_features"))
+        for l in labs:
+            if l not in ACTIVE and l not in ("none", "unusable"):
+                bad.setdefault(l, []).append(str(r.get("#", "?")))
         if not labs or "unusable" in labs:
             continue
         p = TILE_DIR / r["tile"]
@@ -65,6 +96,13 @@ def load_set() -> list:
         truth = set() if labs == ["none"] else {l for l in labs if l != "none"}
         out.append({"n": r["#"], "tile": r["tile"], "frag": r["fragment"],
                     "truth": truth, "img": img})
+    for lab, rows in sorted(bad.items()):
+        why = ("RETIRED, not in the prompt" if lab in TAXONOMY
+               else "not a taxonomy id, check the spelling")
+        print(f"  ! '{lab}' on row(s) {', '.join(rows)}: {why}. "
+              f"It cannot be predicted, so it scores as a false negative.")
+    if bad:
+        print(f"  valid labels: {', '.join(ACTIVE)}, none, unusable\n")
     return out
 
 
@@ -73,7 +111,9 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--votes", type=int, default=1)
     ap.add_argument("--no-references", action="store_true")
+    add_set_arg(ap)
     args = ap.parse_args()
+    use_set(args.set_name)
 
     if args.no_references:
         rc.USE_REFERENCES = False
@@ -111,6 +151,29 @@ def main() -> None:
             print(".", end="", flush=True)
         runs.append(result)
         print(" OK")
+
+    # Score each vote on its own before merging. --votes changes two things at
+    # once: it averages out run-to-run variation, and _merge_votes swaps a single
+    # answer for a majority rule that drops anything seen in only one run. A rare
+    # feature caught once in three disappears. Printing the individual runs keeps
+    # those two effects separable, and costs nothing extra.
+    def score(pred_sets):
+        TP = FP = FN = 0
+        for it, pred in zip(items, pred_sets):
+            TP += len(pred & it["truth"]); FP += len(pred - it["truth"])
+            FN += len(it["truth"] - pred)
+        return TP, FP, FN
+
+    if len(runs) > 1:
+        print(f"\n  each vote scored on its own:")
+        for v, result in enumerate(runs, 1):
+            preds = [{f["id"] for f in
+                      rc._merge_votes([result], len(items))[i]["features"]}
+                     for i in range(len(items))]
+            TP, FP, FN = score(preds)
+            print(f"    vote {v}   recall {TP/(TP+FN) if TP+FN else 0:>4.0%}  "
+                  f"precision {TP/(TP+FP) if TP+FP else 0:>4.0%}   "
+                  f"(TP {TP}, FP {FP}, FN {FN})")
 
     merged = rc._merge_votes(runs, len(items))
 

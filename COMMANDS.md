@@ -345,7 +345,7 @@ API cache key. Cached answers are then correctly ignored and every region is re-
 ## Blender export
 
 Use the **v2 scripts** (they also write the UNSCANNED `_scan_coverage.json` sidecar): open `02_blender/bake_texture_v2.py` (remesh + bake + export) or `02_blender/export_fragment_v2.py` (export only) in the Blender Scripting tab.  
-Set `FRAG_ID = "FRAG-S1-{ARCHETYPE}-{###}"` at the top, select the mesh, click ▶ Run Script. Assign the `UNSCANNED` vertex group to the manually closed ground-contact faces *before* running (see `HANDOVER.md` §5–6).
+Set `FRAG_ID = "FRAG-S1-{ARCHETYPE}-{###}"` at the top, select the mesh, click ▶ Run Script. Assign the `UNSCANNED` vertex group to the manually closed ground-contact faces *before* running (see `WORKFLOW.md`).
 
 Outputs:
 - `01_input/meshes/processed/FRAG-S1-{ARCHETYPE}-{###}/FRAG-S1-{ARCHETYPE}-{###}.glb`
@@ -399,4 +399,3 @@ git log --oneline -10
 | FRAG-S1-FS-006 | Floor Slab | 2,132,300 | sound; UNSCANNED verified |
 
 Five distinct fragments, not six: FS-005 and FS-006 are the same piece exported twice.
-See `PLAN_texture_quality.md` §3 for the evidence and the remediation order.

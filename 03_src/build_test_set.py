@@ -45,6 +45,7 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 INPUT_DIR = REPO_ROOT / "01_input" / "meshes" / "processed"
 OUT_DIR   = REPO_ROOT / "01_input" / "test_tiles"
 CSV_PATH  = REPO_ROOT / "05_output" / "test_set_labels.csv"
+LABEL_GLOB = "test_set_labels*.csv"
 
 TILE_MM      = 250     # real surface per tile; matches the exemplar scale
 MIN_SURFACE  = 0.90    # tile must be at least this much real texture
@@ -63,8 +64,10 @@ def texel_density(frag: str, size: int) -> float | None:
     # Cached per fragment. Measuring means loading a 100 MB+ GLB, and doing
     # that for every fragment in one process exhausts memory on a modest
     # machine. The mesh is freed as soon as the number is out.
+    # Cache lives with the first set, not the current one, so every set measures
+    # the same density and tiles cover the same real surface across sets.
     import json as _json
-    cache_p = OUT_DIR / "_texel_density.json"
+    cache_p = REPO_ROOT / "01_input" / "test_tiles" / "_texel_density.json"
     try:
         cache = _json.loads(cache_p.read_text(encoding="utf-8"))
     except Exception:
@@ -93,14 +96,32 @@ def texel_density(frag: str, size: int) -> float | None:
         ppm = None
     cache[frag] = ppm
     try:
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        cache_p.parent.mkdir(parents=True, exist_ok=True)
         cache_p.write_text(_json.dumps(cache, indent=2), encoding="utf-8")
     except OSError:
         pass
     return ppm
 
 
-def sample(frag_dir: Path, n: int, rng) -> list:
+def used_positions() -> dict:
+    """Tile positions already drawn into any existing set, per fragment.
+
+    A second set is only held out if it shares no surface with the first. The
+    within-run overlap test in sample() cannot see earlier runs, so a new seed
+    could redraw the same patch and the two sets would not be independent.
+    """
+    used: dict = {}
+    for p in sorted((REPO_ROOT / "05_output").glob(LABEL_GLOB)):
+        try:
+            for r in csv.DictReader(open(p, encoding="utf-8-sig")):
+                used.setdefault(r["fragment"], []).append(
+                    (int(r["atlas_x"]), int(r["atlas_y"])))
+        except (OSError, KeyError, ValueError):
+            continue
+    return used
+
+
+def sample(frag_dir: Path, n: int, rng, used: list | None = None) -> list:
     frag = frag_dir.name
     tex_p = frag_dir / f"{frag}_texture.png"
     if not tex_p.exists():
@@ -115,7 +136,18 @@ def sample(frag_dir: Path, n: int, rng) -> list:
     ppm = texel_density(frag, size) or 1.5
     side = int(np.clip(TILE_MM * ppm, 120, 640))
 
-    out = []
+    # Two different constraints, and they are not the same strength.
+    #
+    # Within one run, half a tile's spacing spreads the sample over the atlas.
+    # Some overlap between neighbours is acceptable there: both tiles get
+    # labelled by the same person in the same pass.
+    #
+    # Against an earlier set, any shared pixel breaks the hold-out. A tile that
+    # overlaps a set A tile has been seen, and a model calibrated or analysed on
+    # set A is no longer naive to it. So earlier positions require full
+    # separation: the two squares must not intersect at all.
+    earlier = list(used or [])
+    out: list = []
     tries = 0
     while len(out) < n and tries < MAX_TRIES:
         tries += 1
@@ -123,9 +155,11 @@ def sample(frag_dir: Path, n: int, rng) -> list:
         y = int(rng.integers(0, size - side))
         if lit[y:y + side, x:x + side].mean() < MIN_SURFACE:
             continue
+        if any(abs(x - px) < side and abs(y - py) < side for px, py in earlier):
+            continue                       # no shared pixel with an earlier set
         if any(abs(x - px) < side // 2 and abs(y - py) < side // 2
                for px, py, _ in out):
-            continue                       # keep tiles from overlapping
+            continue                       # spread this run's tiles apart
         out.append((x, y, Image.fromarray(a[y:y + side, x:x + side])))
     return [(frag, x, y, im) for x, y, im in out]
 
@@ -139,12 +173,31 @@ def main() -> None:
                     help="keep tiles already labelled and top the set up to --n. "
                          "Labelling is expensive; regenerating from scratch throws "
                          "it away.")
+    ap.add_argument("--set", dest="set_name", default="",
+                    help="name a second, independent set, e.g. --set b. Tiles go "
+                         "to 01_input/test_tiles_b/ and labels to "
+                         "05_output/test_set_labels_b.csv, and positions already "
+                         "drawn into any existing set are avoided. Without this "
+                         "the first set is overwritten.")
     ap.add_argument("--exclude", default="",
                     help="comma-separated fragments to skip, e.g. FRAG-S1-FS-001. "
                          "Use for atlases too coarse to tile: at 0.20 px/mm a tile "
                          "covers 600 mm and shows nothing.")
     args = ap.parse_args()
     excluded = {x.strip() for x in args.exclude.split(",") if x.strip()}
+
+    # Positions are read before the paths move, so a named set sees every
+    # earlier set and the first set is never among the files it may delete.
+    avoid = used_positions() if args.set_name else {}
+
+    global OUT_DIR, CSV_PATH
+    if args.set_name:
+        s = args.set_name.strip().replace(" ", "_")
+        OUT_DIR = REPO_ROOT / "01_input" / f"test_tiles_{s}"
+        CSV_PATH = REPO_ROOT / "05_output" / f"test_set_labels_{s}.csv"
+        n_avoid = sum(len(v) for v in avoid.values())
+        print(f"\n  set '{s}' -> {OUT_DIR.name}/, avoiding {n_avoid} "
+              f"position(s) from earlier set(s)")
 
     frags = sorted(d for d in INPUT_DIR.iterdir()
                    if d.is_dir() and (d / f"{d.name}_texture.png").exists()
@@ -167,12 +220,16 @@ def main() -> None:
         print("\n  No fragment textures found.\n")
         return
 
-    rng = np.random.default_rng(args.seed if not args.add else args.seed + 1)
+    # A named set derives its own seed from the name, so it is a different draw
+    # from the first set by default and still reproducible from the printed value.
+    seed = args.seed + (1 if args.add else 0) + sum(map(ord, args.set_name))
+    print(f"  seed {seed}")
+    rng = np.random.default_rng(seed)
     need = max(0, args.n - len(kept))
     per = max(1, need // max(len(frags), 1))
     tiles = []
     for d in frags:
-        got = sample(d, per, rng)
+        got = sample(d, per, rng, avoid.get(d.name))
         tiles.extend(got)
         print(f"  {d.name}: {len(got)} tile(s)")
     rng.shuffle(tiles)

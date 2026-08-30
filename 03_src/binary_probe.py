@@ -37,7 +37,7 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 from PIL import Image                                              # noqa: E402
 import ai.region_classification as rc                              # noqa: E402
 from ai.taxonomy import ACTIVE, LABEL_RULES                        # noqa: E402
-from score_test_set import load_set                                # noqa: E402
+from score_test_set import load_set, use_set, add_set_arg          # noqa: E402
 
 TILES_PER_CALL = 8
 
@@ -91,7 +91,9 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--features", default="", help="comma separated; default all active")
     ap.add_argument("--no-references", action="store_true")
+    add_set_arg(ap)
     args = ap.parse_args()
+    use_set(args.set_name)
     if args.no_references:
         rc.USE_REFERENCES = False
 
@@ -111,12 +113,14 @@ def main() -> None:
           f"{-(-len(items)//TILES_PER_CALL)} call(s) each"
           f"{', references OFF' if args.no_references else ''}\n")
 
-    rows = []
+    rows: list = []
+    misses: list = []   # every disagreement, so a false positive can be looked at
     for f in feats:
+        # Every active feature is probed, including those absent from the tiles.
+        # An absent feature can still be answered yes, and that false positive
+        # belongs in the micro-average. score_test_set.py counts FP the same way,
+        # so skipping absent features here would score the two on different sets.
         truth = [f in it["truth"] for it in items]
-        if not any(truth):
-            print(f"  {f:<20} not present in any tile — skipped")
-            continue
         pred = []
         print(f"  {f:<20}", end=" ", flush=True)
         for i in range(0, len(items), TILES_PER_CALL):
@@ -129,14 +133,25 @@ def main() -> None:
         tp = sum(1 for t, p in zip(truth, pred) if t and p)
         fp = sum(1 for t, p in zip(truth, pred) if not t and p)
         fn = sum(1 for t, p in zip(truth, pred) if t and not p)
-        rec = tp / (tp + fn) if tp + fn else float("nan")
-        pre = tp / (tp + fp) if tp + fp else float("nan")
+        rec = f"{tp/(tp+fn):>4.0%}" if tp + fn else "   -"
+        pre = f"{tp/(tp+fp):>4.0%}" if tp + fp else "   -"
         print(f"  truth {tp+fn:>2}  TP {tp:>2}  FP {fp:>2}  FN {fn:>2}   "
-              f"recall {rec:>4.0%}  precision {pre:>4.0%}"
-              if tp + fp else
-              f"  truth {tp+fn:>2}  TP {tp:>2}  FP {fp:>2}  FN {fn:>2}   "
-              f"recall {rec:>4.0%}  precision    -")
+              f"recall {rec}  precision {pre}")
         rows.append((f, tp + fn, tp, fp, fn))
+        for it, t, p in zip(items, truth, pred):
+            if t != p:
+                misses.append({"tile": it.get("tile") or it.get("n"),
+                               "feature": f,
+                               "kind": "FP" if p else "FN",
+                               "truth": ", ".join(sorted(it["truth"]))})
+
+    if misses:
+        out = REPO_ROOT / "05_output" / "binary_probe_misses.csv"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", newline="", encoding="utf-8-sig") as fh:
+            w = csv.DictWriter(fh, fieldnames=["tile", "feature", "kind", "truth"])
+            w.writeheader(); w.writerows(misses)
+        print(f"\n  {len(misses)} disagreement(s) -> {out.relative_to(REPO_ROOT)}")
 
     if rows:
         TP = sum(r[2] for r in rows); FP = sum(r[3] for r in rows)
@@ -144,9 +159,20 @@ def main() -> None:
         print(f"\n  micro-average: recall {TP/(TP+FN) if TP+FN else 0:.0%}, "
               f"precision {TP/(TP+FP) if TP+FP else 0:.0%}  "
               f"(TP {TP}, FP {FP}, FN {FN})")
-        print(f"\n  Compare with the multi-label prompt on the same tiles:")
-        print(f"    multi-label   recall 80%  precision 66%")
-        print(f"    null model    recall 80%  precision 75%")
+        # Computed from the set actually loaded. These lines used to be set A's
+        # numbers hardcoded, so a run against any other set printed a comparison
+        # that did not belong to it.
+        common = [f for f, _ in collections.Counter(
+            l for it in items for l in it["truth"]).most_common(2)]
+        g = set(common)
+        nTP = sum(len(g & it["truth"]) for it in items)
+        nFP = sum(len(g - it["truth"]) for it in items)
+        nFN = sum(len(it["truth"] - g) for it in items)
+        print(f"\n  Null model on these same {len(items)} tiles, answering "
+              f"{' and '.join(common)} unconditionally:")
+        print(f"    null model    recall {nTP/(nTP+nFN) if nTP+nFN else 0:.0%}  "
+              f"precision {nTP/(nTP+nFP) if nTP+nFP else 0:.0%}"
+              f"  (TP {nTP}, FP {nFP}, FN {nFN})")
         print(f"\n  The question that matters is not the micro-average. It is "
               f"whether any\n  distinctive feature moved off zero — those failed "
               f"0 of 9 under multi-label.\n")

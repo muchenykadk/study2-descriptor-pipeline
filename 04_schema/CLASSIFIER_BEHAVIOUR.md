@@ -1,7 +1,6 @@
 # Classifier behaviour and validation
 
-Status 2026-08-24. Written for §5.1 and §6.2. Scope consequences in
-`paper_draft/SCOPE_REVISION_2026-08-20.md`.
+Status 2026-08-24. The evidence behind the validation summary in `README.md`.
 
 Regenerate:
 

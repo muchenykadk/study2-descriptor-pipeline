@@ -557,13 +557,23 @@ def load_reference_set() -> list:
     # are parked. Warning about them is noise.
     known = set(TAXONOMY)
     for d in sorted(REFERENCE_DIR.iterdir()):
-        if d.is_dir() and not d.name.startswith("_") and d.name not in known:
+        if not d.is_dir() or d.name.startswith("_"):
+            continue
+        if d.name not in known:
             print(f"      ! reference folder '{d.name}' is not a taxonomy feature and is "
                   f"being ignored. Add it to env/taxonomy.json first: an entry in "
                   f"'features' with id, color, description, decision_rule and group.")
+        elif d.name not in ACTIVE and any(
+                p.suffix.lower() in {".png", ".jpg", ".jpeg"} for p in d.iterdir()):
+            print(f"      ! reference folder '{d.name}' belongs to a RETIRED feature "
+                  f"and is being ignored. Move it to _retired/ to silence this.")
 
+    # ACTIVE, not TAXONOMY. TAXONOMY keeps every id ever used, retired included,
+    # because the index is the stored feature_id. Iterating it here sent the
+    # exemplars of a retired feature on every call, so retiring a feature took it
+    # out of the prompt's label list while leaving its pictures in the prompt.
     out = []
-    for label in TAXONOMY:
+    for label in ACTIVE:
         folder = REFERENCE_DIR / label
         if not folder.is_dir():
             continue
@@ -589,7 +599,7 @@ def reference_signature() -> str:
     if not USE_REFERENCES or not REFERENCE_DIR.is_dir():
         return "none"
     h = hashlib.sha256()
-    for label in TAXONOMY:
+    for label in ACTIVE:            # must match what load_reference_set actually sends
         folder = REFERENCE_DIR / label
         if not folder.is_dir():
             continue

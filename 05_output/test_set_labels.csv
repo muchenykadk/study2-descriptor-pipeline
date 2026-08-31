@@ -1,0 +1,40 @@
+﻿#,tile,fragment,atlas_x,atlas_y,true_features,notes,_original_labels
+2,02_FRAG-S1-FS-011_1894_1994.png,FRAG-S1-FS-011,1894,1994,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+5,05_FRAG-S1-FS-003_1396_1043.png,FRAG-S1-FS-003,1396,1043,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+7,07_FRAG-S1-FS-006_1910_737.png,FRAG-S1-FS-006,1910,737,broken_face,,"weathered,spalling"
+8,08_FRAG-S1-FS-002_2051_2317.png,FRAG-S1-FS-002,2051,2317,"exposed_aggregate, broken_face",,"exposed_aggregate,fracture_surface,staining,weathered,spalling"
+9,09_FRAG-S1-FS-002_1813_486.png,FRAG-S1-FS-002,1813,486,"brick_inclusion, formwork_face",,"cast_in_brick,formwork_imprint"
+11,11_FRAG-S1-FS-009_1114_2233.png,FRAG-S1-FS-009,1114,2233,exposed_aggregate,,
+12,12_FRAG-S1-FS-003_503_2229.png,FRAG-S1-FS-003,503,2229,broken_face,,"weathered,spalling"
+18,18_FRAG-S1-FS-008_2763_2826.png,FRAG-S1-FS-008,2763,2826,"rebar_visible, broken_face",,"rebar_visible, weathered,spalling,fracture_surface"
+24,24_FRAG-S1-FS-010_3352_1877.png,FRAG-S1-FS-010,3352,1877,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+25,25_FRAG-S1-FS-010_3403_1041.png,FRAG-S1-FS-010,3403,1041,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+26,26_FRAG-S1-FS-011_3085_3385.png,FRAG-S1-FS-011,3085,3385,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+27,27_FRAG-S1-FS-006_2477_2055.png,FRAG-S1-FS-006,2477,2055,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+28,28_FRAG-S1-FS-008_1414_3115.png,FRAG-S1-FS-008,1414,3115,unusable,,
+29,29_FRAG-S1-FS-004_3670_2641.png,FRAG-S1-FS-004,3670,2641,unusable,,
+30,30_FRAG-S1-FS-002_1088_2928.png,FRAG-S1-FS-002,1088,2928,unusable,,
+31,31_FRAG-S1-FS-011_241_2702.png,FRAG-S1-FS-011,241,2702,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+32,32_FRAG-S1-FS-005_3054_3575.png,FRAG-S1-FS-005,3054,3575,"brick_inclusion, exposed_aggregate, broken_face",,"cast_in_brick, exposed_aggregate,weathered,spalling"
+33,33_FRAG-S1-FS-008_2463_2133.png,FRAG-S1-FS-008,2463,2133,broken_face,,"fracture_surface,weathered,spalling"
+34,34_FRAG-S1-FS-003_2223_939.png,FRAG-S1-FS-003,2223,939,unusable,,
+35,35_FRAG-S1-FS-004_655_2224.png,FRAG-S1-FS-004,655,2224,unusable,,
+36,36_FRAG-S1-FS-002_3482_2283.png,FRAG-S1-FS-002,3482,2283,"formwork_face, pipe_opening",,"formwork_imprint,pipe_opening"
+37,37_FRAG-S1-FS-003_2559_2076.png,FRAG-S1-FS-003,2559,2076,unusable,,
+38,38_FRAG-S1-FS-005_2008_3005.png,FRAG-S1-FS-005,2008,3005,unusable,,
+39,39_FRAG-S1-FS-010_2708_3172.png,FRAG-S1-FS-010,2708,3172,"brick_inclusion, exposed_aggregate, broken_face",,"cast_in_brick, exposed_aggregate,weathered,spalling"
+40,40_FRAG-S1-FS-009_685_1761.png,FRAG-S1-FS-009,685,1761,exposed_aggregate,,
+41,41_FRAG-S1-FS-004_2307_2264.png,FRAG-S1-FS-004,2307,2264,"brick_inclusion, exposed_aggregate",,"cast_in_brick, exposed_aggregate"
+42,42_FRAG-S1-FS-008_2210_927.png,FRAG-S1-FS-008,2210,927,broken_face,,"weathered,spalling"
+43,43_FRAG-S1-FS-009_2148_2053.png,FRAG-S1-FS-009,2148,2053,unusable,,
+44,44_FRAG-S1-FS-012_598_3064.png,FRAG-S1-FS-012,598,3064,unusable,,
+45,45_FRAG-S1-FS-010_3225_2573.png,FRAG-S1-FS-010,3225,2573,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+46,46_FRAG-S1-FS-002_1728_1085.png,FRAG-S1-FS-002,1728,1085,"brick_inclusion, exposed_aggregate, broken_face",,"cast_in_brick, exposed_aggregate,weathered,spalling"
+47,47_FRAG-S1-FS-005_865_2120.png,FRAG-S1-FS-005,865,2120,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+48,48_FRAG-S1-FS-012_1105_2796.png,FRAG-S1-FS-012,1105,2796,unusable,,
+49,49_FRAG-S1-FS-011_1272_2954.png,FRAG-S1-FS-011,1272,2954,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+50,50_FRAG-S1-FS-006_3188_1727.png,FRAG-S1-FS-006,3188,1727,broken_face,,"fracture_surface,weathered,spalling"
+51,51_FRAG-S1-FS-009_2363_2653.png,FRAG-S1-FS-009,2363,2653,unusable,,
+52,52_FRAG-S1-FS-012_613_2234.png,FRAG-S1-FS-012,613,2234,unusable,,
+53,53_FRAG-S1-FS-003_1562_3680.png,FRAG-S1-FS-003,1562,3680,"exposed_aggregate, broken_face",,"exposed_aggregate,weathered,spalling"
+54,54_FRAG-S1-FS-006_3256_445.png,FRAG-S1-FS-006,3256,445,unusable,,

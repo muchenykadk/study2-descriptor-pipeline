@@ -1,0 +1,16 @@
+{
+  "has_unscanned_face": true,
+  "avg_normal": [
+    0.1629,
+    0.035,
+    -0.986
+  ],
+  "avg_center": [
+    -0.1105,
+    6.5874,
+    0.0876
+  ],
+  "face_count": 1625,
+  "detection_method": "manual_vertex_group",
+  "notes": "Ground-contact face \u2014 manually closed and marked with UNSCANNED vertex group."
+}

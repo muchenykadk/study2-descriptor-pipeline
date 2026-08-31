@@ -1,0 +1,1001 @@
+{
+  "fragment_id": "FRAG-S1-FS-008",
+  "archetype": "FS",
+  "archetype_label": "Floor Slab",
+  "input_type": "mesh",
+  "pipeline_version": "v0.2",
+  "computed_at": "2026-08-27T08:36:11.248330+00:00",
+  "ransac_threshold_mm": 3.0,
+  "bounding": {
+    "obb_dims_mm": [
+      1331.7,
+      1128.7,
+      656.0
+    ],
+    "obb_axes_xyz": [
+      [
+        0.2939,
+        0.0031,
+        -0.9558
+      ],
+      [
+        -0.9556,
+        0.0228,
+        -0.2938
+      ],
+      [
+        -0.0209,
+        -0.9997,
+        -0.0096
+      ]
+    ],
+    "volume_mm3": 506025622.7,
+    "volume_m3": 0.506026,
+    "volume_source": "mesh_nearly_closed",
+    "convexity": 0.8147,
+    "mass_kg_est": 1265.064,
+    "mass_data_status": "assumed_density",
+    "watertight": false,
+    "data_status": "computed"
+  },
+  "planarity": [
+    {
+      "plane_abcd": [
+        -0.175584,
+        0.959553,
+        -0.220065,
+        -1630.956901
+      ],
+      "normal_xyz": [
+        -0.1756,
+        0.9596,
+        -0.2201
+      ],
+      "inlier_count": 1150,
+      "inlier_fraction": 0.023,
+      "area_m2_est": 1.086944,
+      "fit_rms_mm": 1.572,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 77.2,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "adaptive_bracket",
+          "rule": "connection_strategy#3",
+          "note": "moderately flat; bracket absorbs tolerance",
+          "reason": "area 0.076 m2 >= 0.05; RMS 1.57 mm <= 12.0"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.0765,
+      "n_patches": 214
+    },
+    {
+      "plane_abcd": [
+        0.188057,
+        0.981643,
+        0.031818,
+        174.887073
+      ],
+      "normal_xyz": [
+        0.1881,
+        0.9816,
+        0.0318
+      ],
+      "inlier_count": 1640,
+      "inlier_fraction": 0.033,
+      "area_m2_est": 0.990021,
+      "fit_rms_mm": 1.75,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 88.1,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "adaptive_bracket",
+          "rule": "connection_strategy#3",
+          "note": "moderately flat; bracket absorbs tolerance",
+          "reason": "area 0.058 m2 >= 0.05; RMS 1.75 mm <= 12.0"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.0583,
+      "n_patches": 98
+    },
+    {
+      "plane_abcd": [
+        0.213388,
+        0.976967,
+        -0.001217,
+        -24.575028
+      ],
+      "normal_xyz": [
+        0.2134,
+        0.977,
+        -0.0012
+      ],
+      "inlier_count": 1293,
+      "inlier_fraction": 0.026,
+      "area_m2_est": 0.848312,
+      "fit_rms_mm": 1.678,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 86.0,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "gravity_only",
+          "rule": "connection_strategy#4",
+          "note": "too rough or too small for a fixing",
+          "reason": "default rule, no condition tested"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.0435,
+      "n_patches": 149
+    },
+    {
+      "plane_abcd": [
+        0.224109,
+        0.970434,
+        0.089628,
+        570.86456
+      ],
+      "normal_xyz": [
+        0.2241,
+        0.9704,
+        0.0896
+      ],
+      "inlier_count": 1255,
+      "inlier_fraction": 0.025,
+      "area_m2_est": 0.742449,
+      "fit_rms_mm": 1.537,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 89.0,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "adaptive_bracket",
+          "rule": "connection_strategy#3",
+          "note": "moderately flat; bracket absorbs tolerance",
+          "reason": "area 0.070 m2 >= 0.05; RMS 1.54 mm <= 12.0"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.0704,
+      "n_patches": 117
+    },
+    {
+      "plane_abcd": [
+        0.168211,
+        0.972999,
+        0.158043,
+        527.964595
+      ],
+      "normal_xyz": [
+        0.1682,
+        0.973,
+        0.158
+      ],
+      "inlier_count": 3590,
+      "inlier_fraction": 0.072,
+      "area_m2_est": 0.502575,
+      "fit_rms_mm": 1.337,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 84.6,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.160 m2 >= 0.1; RMS 1.34 mm <= 5.0"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.1596,
+      "n_patches": 372,
+      "adjacent_features": [
+        "exposed_aggregate",
+        "broken_face"
+      ],
+      "adjacent_sources": [
+        {
+          "region_id": 0,
+          "kind": "cluster",
+          "boundary_share": 0.547,
+          "faces_touched": 3,
+          "features": [
+            "exposed_aggregate",
+            "broken_face"
+          ]
+        },
+        {
+          "region_id": 3,
+          "kind": "cluster",
+          "boundary_share": 0.625,
+          "faces_touched": 2,
+          "features": [
+            "exposed_aggregate",
+            "broken_face"
+          ]
+        }
+      ]
+    },
+    {
+      "plane_abcd": [
+        0.143646,
+        0.980227,
+        0.136092,
+        372.281178
+      ],
+      "normal_xyz": [
+        0.1436,
+        0.9802,
+        0.1361
+      ],
+      "inlier_count": 1218,
+      "inlier_fraction": 0.024,
+      "area_m2_est": 0.426042,
+      "fit_rms_mm": 1.344,
+      "data_status": "computed",
+      "angle_to_unscanned_deg": 85.6,
+      "scan_reliable": true,
+      "procedural": {
+        "connection_strategy": {
+          "value": "direct_bolt",
+          "rule": "connection_strategy#2",
+          "note": "flat, large enough to seat a fixing plate",
+          "reason": "area 0.144 m2 >= 0.1; RMS 1.34 mm <= 5.0"
+        },
+        "design_assignment": {
+          "value": "unassigned",
+          "rule": "design_assignment#4",
+          "note": "no rule applies",
+          "reason": "default rule, no condition tested"
+        },
+        "finishing_requirement": {
+          "value": null,
+          "data_status": "withheld",
+          "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+        },
+        "data_status": "proposed"
+      },
+      "contiguous_area_m2": 0.1437,
+      "n_patches": 328
+    }
+  ],
+  "curvature": {
+    "fine_mm": {
+      "mean_rad": 0.32602,
+      "std_rad": 0.53621,
+      "p25_rad": 0.00964,
+      "p75_rad": 0.13127,
+      "radius_mm": 20.0
+    },
+    "coarse_mm": {
+      "mean_rad": 0.65769,
+      "std_rad": 0.41295,
+      "p25_rad": 0.16083,
+      "p75_rad": 0.98187,
+      "radius_mm": 60.0
+    },
+    "data_status": "computed"
+  },
+  "vision": {
+    "dominant_label": "broken_face",
+    "labels_present": [
+      "broken_face",
+      "exposed_aggregate"
+    ],
+    "label_coverage": {
+      "broken_face": 70,
+      "exposed_aggregate": 30
+    },
+    "label_details": {
+      "broken_face": {
+        "subtype": "unknown",
+        "notes": "Rough texture with irregular edges, light grey color, moderate size."
+      },
+      "exposed_aggregate": {
+        "subtype": "unknown",
+        "notes": "Visible small stones, varied colors, embedded in the surface."
+      }
+    },
+    "cracks": {
+      "present": "yes",
+      "pattern": "network",
+      "coverage_pct": 20
+    },
+    "aggregate": {
+      "visible": "yes",
+      "estimated_size": "medium"
+    },
+    "surface_condition": "moderate",
+    "color_notes": "Dominantly light grey with some darker patches and minor staining.",
+    "reuse_notes": "The presence of exposed aggregate and moderate surface condition suggests potential for reuse in non-structural applications. Cracks may limit structural reuse without repair.",
+    "confidence": "medium",
+    "n_runs": 3,
+    "n_total": 3,
+    "provider": "openai",
+    "model": "gpt-4o",
+    "image_path": "C:\\Users\\muche\\Documents\\Austria\\Research\\Research Concrete upcycling\\Study2_Descriptor_Pipeline\\01_input\\meshes\\processed\\FRAG-S1-FS-008\\FRAG-S1-FS-008_texture.png",
+    "data_status": "ai-annotated",
+    "regions": [
+      {
+        "region_id": 0,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.2394,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.48,
+        "smear_frac": 0.036,
+        "skipped": null,
+        "colour_entropy_bits": 2.702,
+        "area_m2": 0.9267,
+        "contiguous_area_m2": 0.9267
+      },
+      {
+        "region_id": 1,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.1438,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.269,
+        "smear_frac": 0.633,
+        "skipped": "unreliable_texture",
+        "colour_entropy_bits": 1.297,
+        "area_m2": 0.5567,
+        "contiguous_area_m2": 0.5567
+      },
+      {
+        "region_id": 2,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.1366,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.666,
+        "smear_frac": 0.155,
+        "skipped": null,
+        "colour_entropy_bits": 2.549,
+        "area_m2": 0.529,
+        "contiguous_area_m2": 0.529
+      },
+      {
+        "region_id": 3,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.1267,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.721,
+        "smear_frac": 0.0,
+        "skipped": null,
+        "colour_entropy_bits": 2.865,
+        "area_m2": 0.4905,
+        "contiguous_area_m2": 0.4905
+      },
+      {
+        "region_id": 4,
+        "kind": "residual",
+        "plane_index": null,
+        "area_frac": 0.074,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.608,
+        "uv_fill": 0.064,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 2.847,
+        "area_m2": 0.2865,
+        "contiguous_area_m2": 0.0247
+      },
+      {
+        "region_id": 5,
+        "kind": "plane",
+        "plane_index": 4,
+        "area_frac": 0.0702,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.566,
+        "uv_fill": 0.085,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 1.779,
+        "area_m2": 0.2719,
+        "contiguous_area_m2": 0.1596
+      },
+      {
+        "region_id": 6,
+        "kind": "plane",
+        "plane_index": 5,
+        "area_frac": 0.0458,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.814,
+        "uv_fill": 0.062,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 2.106,
+        "area_m2": 0.1775,
+        "contiguous_area_m2": 0.1437
+      },
+      {
+        "region_id": 7,
+        "kind": "cluster",
+        "plane_index": null,
+        "area_frac": 0.0452,
+        "label": "exposed_aggregate",
+        "anomalies": [],
+        "features": [
+          {
+            "id": "exposed_aggregate",
+            "votes": 3
+          },
+          {
+            "id": "broken_face",
+            "votes": 3
+          }
+        ],
+        "n_features": 2,
+        "n_label_votes": 3,
+        "uv_coherence": 1.0,
+        "uv_fill": 0.374,
+        "smear_frac": 0.298,
+        "skipped": null,
+        "colour_entropy_bits": 1.794,
+        "area_m2": 0.1751,
+        "contiguous_area_m2": 0.1751
+      },
+      {
+        "region_id": 8,
+        "kind": "plane",
+        "plane_index": 3,
+        "area_frac": 0.0371,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.977,
+        "uv_fill": 0.106,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 0.215,
+        "area_m2": 0.1437,
+        "contiguous_area_m2": 0.0704
+      },
+      {
+        "region_id": 9,
+        "kind": "plane",
+        "plane_index": 1,
+        "area_frac": 0.0294,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.883,
+        "uv_fill": 0.113,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 0.365,
+        "area_m2": 0.1138,
+        "contiguous_area_m2": 0.0583
+      },
+      {
+        "region_id": 10,
+        "kind": "plane",
+        "plane_index": 2,
+        "area_frac": 0.0289,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.377,
+        "uv_fill": null,
+        "smear_frac": null,
+        "skipped": "fragmented_uv",
+        "colour_entropy_bits": 0.387,
+        "area_m2": 0.112,
+        "contiguous_area_m2": 0.0435
+      },
+      {
+        "region_id": 11,
+        "kind": "plane",
+        "plane_index": 0,
+        "area_frac": 0.0228,
+        "label": null,
+        "anomalies": [],
+        "features": [],
+        "n_features": 0,
+        "n_label_votes": 0,
+        "uv_coherence": 0.848,
+        "uv_fill": 0.028,
+        "smear_frac": null,
+        "skipped": "sparse_uv",
+        "colour_entropy_bits": 0.607,
+        "area_m2": 0.0881,
+        "contiguous_area_m2": 0.0765
+      }
+    ],
+    "face_labels": {
+      "classified_faces": 1547945,
+      "inferred_faces": 48805,
+      "unlabeled_faces": 1337518,
+      "method": "region classification; gaps filled from adjacent faces and flagged as inferred"
+    },
+    "grid_classification": {
+      "grid_n": 16,
+      "cells": [
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate"
+        ],
+        [
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "exposed_aggregate",
+          "exposed_aggregate",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "method": "region"
+    }
+  },
+  "scan_coverage": {
+    "has_unscanned_face": true,
+    "unscanned_avg_normal": [
+      0.1629,
+      0.035,
+      -0.986
+    ],
+    "unscanned_avg_center": [
+      -0.1105,
+      6.5874,
+      0.0876
+    ],
+    "unscanned_face_count_original": 1625,
+    "angle_threshold_deg": 25.0,
+    "notes": "Ground-contact face not captured during photogrammetry scanning. Descriptor values derived from reliable faces only. Planarity regions within angle_threshold_deg of unscanned normal are flagged scan_reliable: false and excluded from connection feasibility assessment.",
+    "data_status": "annotated"
+  },
+  "procedural": {
+    "handling_class": {
+      "value": "excavator",
+      "rule": "handling_class#0",
+      "note": "Above this longest dimension, a fragment is machine-handled regardless of mass (awkward to grip, unsafe to carry).",
+      "reason": "longest dimension 1332 mm exceeds 800 mm"
+    },
+    "drill_zone": {
+      "value": null,
+      "data_status": "withheld",
+      "reason": "Depends on rebar_visible. On the 2026-08-27 corpus the region pass reports it on 2 of 134 regions and on no planar face, so no face-level rule can read it, and the classifier producing it does not exceed a null baseline. Drilling and finishing guidance resting on that would be unsafe. See 04_schema/CLASSIFIER_BEHAVIOUR.md \u00a77. Withheld 2026-08-25."
+    },
+    "use_suggestions": [
+      {
+        "id": "rough_feature",
+        "label": "Textured feature surface",
+        "faces": [],
+        "note": "deliberately rough face, exposing the break and aggregate as visible and tactile character",
+        "caveat": null,
+        "regions": [
+          0,
+          2,
+          3,
+          7
+        ]
+      },
+      {
+        "id": "bar_table_stand",
+        "label": "Bar-table or high-table stand",
+        "faces": [
+          4,
+          5
+        ],
+        "note": "stands at counter height with a bearing face on top to carry a table plate",
+        "caveat": "stable resting orientation not computed"
+      },
+      {
+        "id": "pedestal_support",
+        "label": "Pedestal or structural support",
+        "faces": [
+          4,
+          5
+        ],
+        "note": "broad flat bearing face and mass enough to carry a timber deck, plate or slab above",
+        "caveat": null
+      }
+    ],
+    "faces_evaluated": 6,
+    "data_status": "proposed",
+    "basis": "PROVISIONAL. Drawn from Study 1 site experience and general handling/fabrication practice. Not verified with domain experts. Every derived output carries data_status 'proposed'.",
+    "note": "Derived from the encoded design factors in env/design_factors.json. Provisional: the factors are drawn from Study 1 experience and general practice and are not expert-verified."
+  }
+}

@@ -1,48 +1,178 @@
 {
-  "_comment": "Surface feature taxonomy for AI vision classification. Edit labels here — no code changes needed.",
-  "_note": "Do NOT change label IDs between pipeline runs — it breaks comparability across fragments. Add new labels at the end. Rename only if reprocessing all fragments.",
-  "labels": [
+  "_comment": "ONE axis of observable surface features, MULTI-LABEL, nothing competes. Revised 2026-08-20 so that every label names something the capture can actually resolve. A 250 mm tile at ~1.5 px/mm cannot show a 1 mm crack, cannot show the lip that defines a spall, and cannot show the age cues that separate demolition breakage from in-service deterioration. Labels requiring that evidence were retired rather than left in place producing confident errors. Array ORDER is the stored feature_id: append only, never reorder.",
+  "_display_order": "Rendering precedence only. The 3D viewer and the combined feature map can show one colour per face, so when a region carries several features this decides which is drawn on top. It makes no claim about what the surface IS.",
+  "_basis": "Built from what is observable at the corpus texel density rather than from inspection practice. ACI 201.1R, EN 1504, CODEBRIM and dacl10k all assume in-service structures photographed at close range; neither holds for demolition debris captured by handheld photogrammetry, so their condition categories cannot transfer intact. `fracture_surface` and `spalling` were merged into `broken_face` because separating them requires the boundary against sound surface and the age of the exposed faces, and an expert annotator could not apply the distinction to these tiles either. Three questions: formation (how the surface came to be), composition (what it is made of), inclusion (what is embedded in it), colour (what is on it). Groups are for reporting, not exclusivity.",
+  "_reference_set": "01_input/reference_surfaces/<label>/*.png holds labelled exemplar crops from this same building. When present they are sent ahead of the regions on every call and define what each label means for this material, so the model matches against samples instead of interpreting a verbal definition alone. Build candidates with 03_src/build_reference_set.py. The set is hashed into the API cache key: swapping an exemplar changes the standard and correctly invalidates cached answers. Exemplars chosen by eye make the classifier agree with whoever chose them, which is an operational definition of the categories and not validation; report it as such.",
+  "_acquisition_note": "Known limitation of the acquisition method, not of the classifier. Photogrammetry cannot reconstruct an element thinner than roughly its point spacing, so a protruding reinforcing bar is missing from the mesh while remaining fully visible in the source photographs. The bake then projects it onto whatever geometry lies behind it, and it arrives in the atlas as a dark line on a flat face. This makes one feature produce two errors at once: crack is over-reported and rebar_visible under-reported. Neither is separable by geometry, since both a crack and an absent bar leave a flat surface. The hints for both labels now describe the colour cue that distinguishes them. See PLAN_texture_quality.md.",
+  "features": [
     {
-      "id": "formwork_imprint",
+      "id": "formwork_face",
       "color": "#60a5fa",
       "description": "Original cast face; smooth, shows mould texture or release agent",
-      "subtypes": ["timber_formwork", "steel_formwork", "plastic_formwork", "prefab_mould", "unknown"]
+      "decision_rule": "Formed against formwork or a mould, with the evidence VISIBLE in this image: board marks, panel joints, tie holes, a release-agent sheen, or an unbroken skin of paste with no aggregate cut through. If no mould evidence is visible, do not use this label even if the surface is flat.",
+      "group": "formation",
+      "_was": "formwork_imprint"
     },
     {
-      "id": "fracture_surface",
+      "id": "broken_face",
       "color": "#f87171",
       "description": "Internal concrete exposed by demolition break; rough",
-      "subtypes": ["matrix_fracture", "aggregate_pullout", "aggregate_split", "bond_failure", "unknown"]
+      "decision_rule": "The surface is a break through the body of the concrete: irregular across the whole region, with aggregate and paste both cut and pulled. Covers any loss of material from the piece regardless of cause. Do NOT try to distinguish demolition breakage from deterioration: that needs the boundary against sound surface and the age of the exposed faces, and neither is legible here.",
+      "group": "formation",
+      "_was": "fracture_surface"
     },
     {
       "id": "exposed_aggregate",
       "color": "#fbbf24",
       "description": "Coarse aggregate (gravel/stone) visible at surface",
-      "subtypes": ["gravel_rounded", "crushed_stone", "limestone", "granite", "recycled_aggregate", "unknown"]
+      "decision_rule": "Coarse aggregate particles are a dominant part of what you see, whether cut through by a break, pulled from the paste, or washed clear. Report it whenever true, including on a broken face, where it usually is.",
+      "group": "composition"
     },
     {
       "id": "rebar_visible",
       "color": "#f97316",
       "description": "Steel reinforcement bar exposed",
-      "subtypes": ["round_bar", "deformed_bar", "mesh", "stirrup", "anchor_bolt", "unknown"]
+      "decision_rule": "Steel reinforcement is visible: a bar, a mat, a stirrup or a cut end. Judge by ferrous colour, rust orange-brown or steel grey, and by constant width. A bar protruding from the fragment is often too thin for photogrammetry to reconstruct and appears painted onto the surface behind it, so do not require raised relief.",
+      "group": "inclusion",
+      "source": "CODEBRIM 'exposed bars'; dacl10k 'ExposedRebars'"
     },
     {
       "id": "weathered",
       "color": "#a3e635",
-      "description": "Carbonated, eroded, or surface-degraded concrete",
-      "subtypes": ["carbonation", "spalling", "erosion", "efflorescence", "freeze_thaw_damage", "unknown"]
+      "description": "RETIRED — not observable at this capture resolution",
+      "decision_rule": "Requires comparison against fresh concrete of the same mix, which is never in frame at 250 mm. Retired 2026-08-20.",
+      "group": "defect",
+      "source": "dacl10k 'Weathering'. Not in CODEBRIM",
+      "retired": true
     },
     {
-      "id": "staining",
+      "id": "discolouration",
       "color": "#c084fc",
-      "description": "Rust, moss, oil, paint, or other contamination",
-      "subtypes": ["rust", "moss_algae", "oil_grease", "paint", "efflorescence", "soot", "unknown"]
+      "description": "RETIRED — over-reported, no discriminating value",
+      "decision_rule": "RETIRED 2026-08-20. On the 26-tile held-out set the model predicted it on 8 tiles where the truth was 1: recall 100%, precision 12%. It had become the label reached for whenever anything looked unusual, including the orange of a cast-in brick, and its false positives were the entire precision gap against a null model. Colour alone does not separate contamination from the concrete's own variation at this capture quality.",
+      "group": "colour",
+      "source": "CODEBRIM 'corrosion (stains)'; dacl10k 'Rust'",
+      "_was": "staining",
+      "retired": true
     },
     {
       "id": "original_finish",
       "color": "#34d399",
       "description": "Intentional architectural finish (tile, plaster, render)",
-      "subtypes": ["ceramic_tile", "stone_tile", "mosaic", "paint", "plaster", "render", "screed", "unknown"]
+      "decision_rule": "An applied layer covers the concrete: tile, mosaic, plaster, render or screed. Judge the layer, not the concrete beneath it.",
+      "retired": true,
+      "group": "manufacture"
+    },
+    {
+      "id": "embedded_metal",
+      "color": "#94a3b8",
+      "description": "Steel that is not reinforcement: a fixing, angle, plate or c",
+      "decision_rule": "Steel that is not reinforcement: a fixing, angle, plate or conduit cast into the element. A discrete component rather than a bar in a mat.",
+      "group": "inclusion"
+    },
+    {
+      "id": "tile_remnant",
+      "color": "#f472b6",
+      "description": "Adhered tile finish: tile itself, or the combed adhesive bed it left",
+      "decision_rule": "An adhered tile finish in either state: tile still stuck to the concrete, or the bare cement bedding left where tiles came away, recognisable by the parallel ridges of a notched trowel, often alternating direction tile to tile. Machine-regular, which no concrete surface is.",
+      "group": "inclusion",
+      "treatment": "tile is lifted off; a bare adhesive bed is ground back or keyed. See finishing_requirement 'strip_bedding' in env/design_factors.json.",
+      "_note": "A tiled face was a floor finish, so it identifies the TOP of the slab. In this corpus the slab tops are tiled rather than left as bare floated concrete, which is why trowelled_finish may return nothing."
+    },
+    {
+      "id": "pipe_opening",
+      "color": "#2dd4bf",
+      "description": "The region IS the inner surface of a former pipe or conduit ",
+      "decision_rule": "A hole passing into or through the fragment: a service penetration, duct or cast-in sleeve. Dark interior going darker toward the centre, usually with a rim where the surface turns into the bore.",
+      "group": "inclusion",
+      "source": "project-defined; not in CODEBRIM or dacl10k, both of which cover defects rather than cast features"
+    },
+    {
+      "id": "brick_inclusion",
+      "color": "#facc15",
+      "description": "Brick or masonry units cast into the concrete and visible at",
+      "decision_rule": "Brick or masonry unit cast into the concrete and visible at the surface, whole or cut through by a break. Judge by the fired colour and by a module larger than any aggregate particle.",
+      "group": "inclusion",
+      "_was": "cast_in_brick"
+    },
+    {
+      "id": "paste_dominant",
+      "color": "#cbd5e1",
+      "description": "cement paste, fines or a coating cover the surface and individual aggregate particles are largely hidden",
+      "decision_rule": "Cement paste, fines or a surface skin cover the face and individual aggregate particles are largely hidden.",
+      "group": "composition",
+      "retired": true,
+      "retired_reason": "2026-08-29. Absent from this batch, confirmed by inspection, and true on 0 of 26 labelled tiles. The binary probe answered yes on 16 of those 26, the largest single source of false positives in the run. The rule turns on 'largely hidden' with no anchor, and the label is the opposite pole of exposed_aggregate written as an independent yes/no, so every surface satisfies it in part."
+    },
+    {
+      "id": "spalling",
+      "color": "#fdba74",
+      "description": "RETIRED — not observable at this capture resolution",
+      "decision_rule": "Defined by the lip where sound surface meets loss. A spall crater is usually larger than the sampling window, so the lip is not in frame and the interior is indistinguishable from a break. Merged into broken_face. Retired 2026-08-20.",
+      "group": "defect",
+      "source": "CODEBRIM 'spallation'; dacl10k 'Spalling'",
+      "retired": true
+    },
+    {
+      "id": "crack",
+      "color": "#fb7185",
+      "description": "RETIRED — not observable at this capture resolution",
+      "decision_rule": "0.5 to 3 mm wide, which is 0.5 to 3 px at the corpus texel density of ~1.5 px/mm. Below resolution. Every crack reported in the 2026-08-20 corpus was a false positive. Retired 2026-08-20.",
+      "group": "defect",
+      "source": "CODEBRIM 'crack' [Mundt et al. 2019]; dacl10k 'Crack' [Flotzinger et al. 2024]",
+      "retired": true
+    },
+    {
+      "id": "biological_growth",
+      "color": "#4ade80",
+      "description": "moss, algae or lichen: green, grey-green or black organic film, usually where water sits or runs. Marks the face that was exposed to weather",
+      "decision_rule": "Moss, algae or lichen: green, grey-green or black organic film, usually where water sits or runs. Marks a face that was exposed to weather.",
+      "group": "colour",
+      "source": "project-defined; in neither benchmark",
+      "retired": true,
+      "retired_reason": "2026-08-29. Does not occur in this batch, confirmed by inspection of the whole stock, and true on 0 of 26 labelled tiles while the binary probe answered yes on 3. The definition is sound and the category would apply to weathered stock, so this is retirement for absence, not for being ill-formed."
+    },
+    {
+      "id": "efflorescence",
+      "color": "#e2e8f0",
+      "description": "white salt bloom deposited on the surface where water moved through the concrete and evaporated",
+      "decision_rule": "A white crust or bloom lying ON the concrete, left where water travelled through it and evaporated at the face. It is a deposit, so it has an edge: it sits on the surface with a boundary you can trace, rather than blending into the material. Look for it around a crack, a joint, an edge or a former opening, which is where water reaches the face. The confusions to avoid are all pale concrete rather than pale deposits: light-coloured paste, pale aggregate cut through by a break, and a blown-out highlight where the surface faced the light are none of them this. Pale alone is not enough, since the concrete's own lightness varies widely across one piece. Ask whether something has been added to the surface.",
+      "group": "colour",
+      "source": "CODEBRIM 'efflorescence'; dacl10k 'Efflorescence'",
+      "_note": "Retired 2026-08-20 as absent from 26 blind-sampled tiles, explicitly pending evidence it occurs in this stock. Reinstated 2026-08-29 on Muchen's inspection of the pieces, before test set B was labelled. A colour search over all twelve atlases did NOT find it: filtering for pale low-chroma patches returned light paste, pale aggregate and reconstruction blur on every fragment. That is a limit of the search, not evidence of absence. Within one fragment the atlas spans about 50 L* points from p10 to p90 because illumination is baked into the texture, so a white deposit on grey concrete has almost no headroom to separate on lightness alone. If the classifier can find it, it will be on the deposit's edge and its position near cracks and joints, not on its paleness."
+    },
+    {
+      "id": "trowelled_finish",
+      "color": "#38bdf8",
+      "description": "The finished top face of a slab, floated or power-floated rather than cast against formwork",
+      "decision_rule": "The concrete's own finished top surface, floated or power-floated. Smooth and dense with fine paste at the surface, and NO ridges. Distinct from tile_remnant, which is an applied bedding layer with regular comb ridges.",
+      "group": "formation",
+      "source": "project-defined; fabrication and demolition process",
+      "retired": true,
+      "retired_reason": "2026-08-29. Absent from this batch. The slab tops here were tiled rather than left as bare floated concrete, which tile_remnant's own note already predicted, so the surface this label names was covered before demolition and does not survive in the stock. True on 0 of 26 labelled tiles, never given an exemplar, and the binary probe answered yes once. Retired for absence, not for being ill-formed: it would apply directly to an untiled slab."
+    },
+    {
+      "id": "rust_staining",
+      "color": "#b45309",
+      "description": "orange-brown ferrous stain running or bleeding from a point or a line; marks steel behind a face that is otherwise unbroken",
+      "decision_rule": "A dark rust-brown bleed on pale concrete: a small localized mark that spreads outward from a point or a line, typically a bar end, a crack or a joint, fading as it goes. Judge it by three things together: it is DARKER than the concrete around it, it is SMALL, a mark on the face and not a field covering it, and it has a source it spreads from. Report it whether or not steel itself is visible, because the stain marks reinforcement behind a face that has not broken open. The confusion to avoid is brick: a cast-in brick is LIGHTER than the surrounding concrete, covers a large part of the face, and is a stronger, more saturated orange. Warm colour alone does not separate the two, so do not decide on hue. A large warm area is brick. A broad even darkening with no source is a weathered face, not this.",
+      "group": "colour",
+      "source": "project-defined; succeeds the retired `staining` and `discolouration` labels, narrowed to a ferrous stain that has a direction and a source",
+      "treatment": "Signals reinforcement below the surface where no bar is exposed. Bears on drilling and on cutting, and on whether the face can be left as a show face.",
+      "_note": "Added 2026-08-29, before test set B was sampled or labelled, so its evaluation on set B is a test of a stated prediction. The old `staining` label was retired for promiscuity: the model volunteered it on 6 of 16 control rows, including surfaces filed as rebar, formwork and tile. The three-part test in the decision rule, hue and direction and source, exists to stop that recurring. Colour categories are also what a low texel density favours, since a hue difference over a large area survives a resolution that destroys fine geometry such as a crack."
     }
+  ],
+  "_display_precedence_note": "Rendering only; it never affects which features are recorded. A face can hold several features but can only be painted one colour, so this decides which one wins. Ordered rarest-first as of 2026-08-25. The previous order was rarest-last, and because broken_face and exposed_aggregate together cover almost every classified region, broken_face won 61 of 72 regions across the corpus and the viewer was uniformly its red. FS-010 region 4 carried brick_inclusion and still rendered as broken_face. A colour showing what is true nearly everywhere carries no information; the distinctive features are the ones worth seeing, so they now sit on top.",
+  "_display_precedence": [
+    "rebar_visible",
+    "rust_staining",
+    "efflorescence",
+    "embedded_metal",
+    "pipe_opening",
+    "brick_inclusion",
+    "tile_remnant",
+    "formwork_face",
+    "exposed_aggregate",
+    "broken_face"
   ]
 }

@@ -1,0 +1,205 @@
+{
+ "_note": "Phase 3A answers recorded while cracks.present and surface_condition offered no way to decline. Archived 2026-08-25 before the prompt was changed to allow 'unknown'. Kept as the before half of the forced-answer measurement; see CLASSIFIER_BEHAVIOUR.md.",
+ "_archived": "2026-08-25",
+ "fragments": {
+  "FRAG-S1-FS-002": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 30
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominant light grey with orange and rust stains, some carbonation visible.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "rebar_visible",
+    "tile_remnant"
+   ]
+  },
+  "FRAG-S1-FS-003": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly grey with some brown and rust stains.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "rebar_visible",
+    "trowelled_finish"
+   ]
+  },
+  "FRAG-S1-FS-004": {
+   "cracks": {
+    "present": true,
+    "pattern": "branching",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly grey with some reddish stains and dark spots.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "rebar_visible"
+   ]
+  },
+  "FRAG-S1-FS-005": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly light grey with some darker patches and minor staining.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "formwork_face"
+   ]
+  },
+  "FRAG-S1-FS-006": {
+   "cracks": {
+    "present": true,
+    "pattern": "branching",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly light grey with some dark staining.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "rebar_visible"
+   ]
+  },
+  "FRAG-S1-FS-007": {
+   "cracks": {
+    "present": true,
+    "pattern": "branching",
+    "coverage_pct": 18
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "fine"
+   },
+   "color_notes": "Dominant light grey with some darker patches, slight staining.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate"
+   ]
+  },
+  "FRAG-S1-FS-008": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly light grey with some darker patches and minor staining.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "formwork_face"
+   ]
+  },
+  "FRAG-S1-FS-009": {
+   "cracks": {
+    "present": true,
+    "pattern": "branching",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly light grey with some rust and dark patches.",
+   "labels_present": [
+    "broken_face",
+    "embedded_metal",
+    "exposed_aggregate",
+    "tile_remnant"
+   ]
+  },
+  "FRAG-S1-FS-010": {
+   "cracks": {
+    "present": true,
+    "pattern": "branching",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "coarse"
+   },
+   "color_notes": "Dominantly grey with red and brown inclusions, some staining visible.",
+   "labels_present": [
+    "brick_inclusion",
+    "broken_face",
+    "exposed_aggregate"
+   ]
+  },
+  "FRAG-S1-FS-011": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 18
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "medium"
+   },
+   "color_notes": "Dominantly light grey with some darker patches, slight staining.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate"
+   ]
+  },
+  "FRAG-S1-FS-012": {
+   "cracks": {
+    "present": true,
+    "pattern": "network",
+    "coverage_pct": 20
+   },
+   "surface_condition": "moderate",
+   "aggregate": {
+    "visible": true,
+    "estimated_size": "coarse"
+   },
+   "color_notes": "Dominant grey and brown tones with some multicolored patterns.",
+   "labels_present": [
+    "broken_face",
+    "exposed_aggregate",
+    "tile_remnant"
+   ]
+  }
+ }
+}

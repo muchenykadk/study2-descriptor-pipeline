@@ -27,20 +27,22 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 try:
-    from ai.taxonomy import TAXONOMY, LABEL_COLORS as _LABEL_COLORS, LABEL_DESCRIPTIONS
+    from ai.taxonomy import (TAXONOMY, ACTIVE as _ACTIVE,
+                             LABEL_COLORS as _LABEL_COLORS, LABEL_DESCRIPTIONS,
+                             GROUPS as _GROUPS)
 except ImportError:
     # Absolute fallback — should never happen in normal usage
     _LABEL_COLORS = {
-        "formwork_imprint":  "#60a5fa",
-        "fracture_surface":  "#f87171",
+        "formwork_face":     "#60a5fa",
+        "broken_face":       "#f87171",
         "exposed_aggregate": "#fbbf24",
         "rebar_visible":     "#f97316",
-        "weathered":         "#a3e635",
-        "staining":          "#c084fc",
-        "original_finish":   "#34d399",
+        "discolouration":    "#c084fc",
     }
     TAXONOMY = list(_LABEL_COLORS.keys())
+    _ACTIVE = list(TAXONOMY)
     LABEL_DESCRIPTIONS = {k: "" for k in TAXONOMY}
+    _GROUPS = {k: "formation" for k in TAXONOMY}
 
 
 # ── Roughness grading standard ────────────────────────────────────────────────
@@ -139,6 +141,15 @@ body {
 
 /* ── Section ── */
 .section { margin-bottom: 28px; }
+details.fold > summary {
+  cursor: pointer; list-style: none; user-select: none;
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 4px 0; outline: none;
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "\25B8  "; color: #4b5268; }
+details.fold[open] > summary::before { content: "\25BE  "; }
+details.fold > summary:hover { color: var(--text); }
 .section-title {
   font-size: 11px;
   text-transform: uppercase;
@@ -293,6 +304,14 @@ body {
 
 # ── Helper renderers ──────────────────────────────────────────────────────────
 
+# Candidate uses are shown on the individual fragment page, where they read as
+# implications of that fragment's descriptors, but not on the inventory, where a
+# category selector would present a closed list of uses as the way to browse the
+# stock and understate the open-ended vocabulary the descriptors support.
+SHOW_USES_IN_REPORT    = True
+SHOW_USES_IN_INVENTORY = False
+
+
 def _badge(status: str) -> str:
     cls = "badge-computed" if status == "computed" else "badge-pseudo"
     return f'<span class="badge {cls}">{status}</span>'
@@ -328,7 +347,6 @@ def _bounding_section(b: dict) -> str:
     convexity  = b.get("convexity")
     mass       = b.get("mass_kg_est")
     status     = b.get("data_status", "computed")
-    mass_status = b.get("mass_data_status", "pseudo")
 
     convexity_html = (
         f'<div class="stat-value">{convexity:.4f}</div>'
@@ -355,17 +373,74 @@ def _bounding_section(b: dict) -> str:
       {convexity_html}
     </div>
     <div class="stat-card">
-      <div class="stat-label">Mass Estimate {_badge(mass_status)}</div>
+      <div class="stat-label">Mass Estimate</div>
       <div class="stat-value">{_fmt(mass, 3)}<span class="stat-unit"> kg</span></div>
-      <div class="stat-sub">@ 2400 kg/m³ concrete</div>
+      <div class="stat-sub">@ 2500 kg/m³ (EN 1991-1-1)</div>
     </div>
   </div>
 </div>"""
 
 
+def _region_hover_data(regions: list, vision: dict) -> list:
+    """Everything the hover panel shows for one region, in viewer index order.
+
+    The planar and design-factor tables carry the same numbers, but a table
+    forces the reader to hold a region number in their head while they look
+    from the 3D view to a row and back. Attaching the figures to the geometry
+    removes that step, so the tables below can be collapsed by default.
+    """
+    by_plane = {}
+    for r in (vision or {}).get("regions", []) or []:
+        if r.get("plane_index") is not None:
+            by_plane[r["plane_index"]] = r
+
+    out = []
+    for i, f in enumerate(regions):
+        proc = f.get("procedural") or {}
+        v = by_plane.get(i, {})
+        feats = [x["id"] if isinstance(x, dict) else x
+                 for x in (v.get("features") or [])]
+        if not feats and f.get("surface_label"):
+            feats = [f["surface_label"]]
+        nx, ny, nz = (f.get("normal_xyz") or [0, 0, 0])
+        out.append({
+            "n": i + 1,
+            # The area the design rules read: the largest continuous patch of
+            # the plane. `area_m2_est` is the convex hull of its inliers, which
+            # on fractured material spans the gaps between 51 to 372
+            # disconnected pieces and overstates the surface by a median factor
+            # of 2.96. Showing the hull here while the rules use the contiguous
+            # area would make the interface disagree with its own conclusions.
+            "area": (f.get("contiguous_area_m2")
+                     if f.get("contiguous_area_m2") is not None
+                     else f.get("area_m2_est")),
+            "hull": f.get("area_m2_est"),
+            "patches": f.get("n_patches"),
+            # Features read on a surface that meets this face, never on it.
+            # Kept under its own key so the panel can say which it is.
+            "adjacent": list(f.get("adjacent_features") or []),
+            "adj_colors": [_LABEL_COLORS.get(x, "#94a3b8")
+                           for x in (f.get("adjacent_features") or [])],
+            "cov": f.get("inlier_fraction"),
+            "rms": f.get("fit_rms_mm"),
+            "normal": [round(nx, 2), round(ny, 2), round(nz, 2)],
+            "reliable": f.get("scan_reliable", True),
+            "features": feats,
+            "colors": [_LABEL_COLORS.get(x, "#94a3b8") for x in feats],
+            "conn": (proc.get("connection_strategy") or {}).get("value"),
+            "asg":  (proc.get("design_assignment") or {}).get("value"),
+            "fin":  (proc.get("finishing_requirement") or {}).get("value"),
+            "skipped": v.get("skipped"),
+            "fill": v.get("uv_fill"),
+        })
+    return out
+
+
 def _viewer_section(regions: list, viewer_data: dict,
                     glb_rel_path: str = "",
-                    feat_tex_rels: dict = None) -> str:
+                    feat_tex_rels: dict = None,
+                    grid_data: dict = None,
+                    vision: dict = None) -> str:
     """
     Build the 3D viewer section HTML + embedded Three.js script.
 
@@ -379,6 +454,7 @@ def _viewer_section(regions: list, viewer_data: dict,
     point_json  = json.dumps(viewer_data["points"])
     color_mode  = viewer_data.get("color_mode", "region")
     scale_mm    = viewer_data.get("scale_mm", "?")
+    region_info_json = json.dumps(_region_hover_data(regions, vision or {}))
 
     # ── RANSAC region legend (point cloud mode) ──────────────────────────────
     legend_items = ""
@@ -395,6 +471,12 @@ def _viewer_section(regions: list, viewer_data: dict,
         '<div class="legend-item">'
         '<div class="legend-dot" style="background:#3d4455"></div>Unclassified</div>'
     )
+    if viewer_data.get("has_unscanned"):
+        legend_items += (
+            '<div class="legend-row">'
+            '<div class="legend-dot" style="background:#94a3b8"></div>'
+            'Unscanned (ground contact)</div>'
+        )
 
     has_scan_js = "true" if color_mode == "scan" else "false"
 
@@ -411,7 +493,32 @@ def _viewer_section(regions: list, viewer_data: dict,
                 'style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;'
                 'font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button>'
             )
-        for lbl in TAXONOMY:
+        # Grouped, because the groups are what the paper cites. The grouping
+        # carries no exclusivity: a region may hold features from all of them
+        # at once.
+        #
+        # Read the group names from the taxonomy rather than naming them here.
+        # The hard-coded list ("manufacture", "inclusion", "defect") survived
+        # the 2026-08-20 rebuild, which renamed the groups to formation /
+        # composition / inclusion / colour. Only `inclusion` still matched, so
+        # every other chip was dropped silently: on FS-010 the panel offered
+        # `brick_inclusion` alone and `broken_face` and `exposed_aggregate`,
+        # the two features actually covering the piece, had no chip and no
+        # colour key at all.
+        _order = []
+        for l in _ACTIVE:
+            g = _GROUPS.get(l)
+            if g and g not in _order:
+                _order.append(g)
+        _seen_group = None
+        for grp in _order:
+          for lbl in [l for l in _ACTIVE if _GROUPS.get(l) == grp]:
+            if grp != _seen_group:
+                _seen_group = grp
+                chips_html += (
+                    f'<div style="flex-basis:100%;height:0"></div>'
+                    f'<span style="font-size:9px;color:var(--muted);text-transform:uppercase;'
+                    f'letter-spacing:0.08em;align-self:center;margin-right:4px">{grp}</span>')
             col  = _LABEL_COLORS.get(lbl, "#b0b8d0")
             desc = LABEL_DESCRIPTIONS.get(lbl, "")
             if lbl in feat_tex_rels:
@@ -458,16 +565,46 @@ def _viewer_section(regions: list, viewer_data: dict,
             'examples/js/loaders/GLTFLoader.js"></script>'
         )
 
-        # ── Serialise texture map for JS ─────────────────────────────────────
-        feat_tex_js = json.dumps(feat_tex_rels)   # {"all": "path", "staining": "path", ...}
+        # ── Grid classification data for vertex-colour feature overlay ────────
+        # When present, mesh vertices are coloured by UV→cell→label directly
+        # (16×16 quadrant-classified grid; labels follow the texture on the
+        # 3D surface).
+        if grid_data:
+            grid_cells_js   = json.dumps(grid_data["cells"])
+            grid_n_js       = str(grid_data["grid_n"])
+        else:
+            grid_cells_js   = "null"
+            grid_n_js       = "8"
+        taxonomy_idx_js = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
+        # UNSCANNED 3D test parameters (mesh-local space) — authoritative
+        # opt-out of the reconstructed bottom face in the feature overlay.
+        unsc_3d_js = json.dumps(viewer_data.get("unscanned_3d"))
+
+        # ── Feature Labels button (point cloud mode, shown only when features exist) ──
+        has_features    = viewer_data.get("has_features", False)
+        has_features_js = json.dumps(has_features)
+        feat_colors_js  = json.dumps([_LABEL_COLORS.get(lbl, "#b0b8d0") for lbl in TAXONOMY])
+        feat_labels_btn = (
+            '<button id="feat-labels-btn" onclick="window.toggleFeatureLabels()" '
+            'style="display:none;position:absolute;top:8px;right:8px;background:#1e2030;'
+            'border:1px solid #7c83fd;color:#7c83fd;font-size:10px;'
+            'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Feature Labels</button>'
+        ) if has_features else ""
 
         glb_js = f"""
 
   // ── GLB textured mesh ─────────────────────────────────────────────────────
-  var meshGroup   = null;
+  var meshGroup    = null;
   var showMeshMode = true;
-  var featTextures = {{}};       // label → THREE.Texture  (loaded async)
-  var activeFeat   = null;      // currently active feature label or null
+  var activeFeat   = null;
+
+  // Grid classification — used to colour mesh vertices by UV→cell→label
+  // (GRID_N × GRID_N global grid, quadrant-classified with majority voting).
+  var GRID_CELLS     = {grid_cells_js};
+  var GRID_N         = {grid_n_js};
+  var TAXONOMY_INDEX = {taxonomy_idx_js};
+  // UNSCANNED patch test in mesh-local space: {{normal, cos_angle, y_max}}
+  var UNSC_3D        = {unsc_3d_js};
 
   (function loadGLB() {{
     var loader = new THREE.GLTFLoader();
@@ -490,41 +627,101 @@ def _viewer_section(regions: list, viewer_data: dict,
     }});
   }})();
 
-  // ── Pre-load all feature textures ─────────────────────────────────────────
-  (function loadFeatTextures() {{
-    var paths = {feat_tex_js};
-    var tl = new THREE.TextureLoader();
-    Object.keys(paths).forEach(function (label) {{
-      tl.load(paths[label], function (tex) {{
-        tex.flipY = false;
-        tex.encoding = THREE.sRGBEncoding;
-        featTextures[label] = tex;
-      }}, undefined, function () {{
-        console.warn('Feature texture not found:', label, paths[label]);
-      }});
-    }});
-  }})();
+  // ── Feature overlay (per-vertex UV → grid cell → label) ──────────────────
+  //
+  // Each vertex looks up its own UV coordinate in the GRID_N × GRID_N
+  // classification grid and takes that cell's label. Labels therefore sit
+  // exactly where the classified texture sits on the 3D surface — no
+  // spatial-grid smearing, no bbox-aligned blocks. The finer grid (16×16,
+  // quadrant-classified with majority voting) keeps cell labels reliable
+  // enough that UV-island boundaries no longer fragment the result.
+  //
+  // UNSCANNED handling: majority-patch UV cells are cleared to null in Phase
+  // 3B, and additionally every vertex on the patched bottom face is forced
+  // unlabeled by the UNSC_3D normal + height test (mesh-local space) — the
+  // patch scatters into many UV cells at trace coverage, so cell-clearing
+  // alone cannot opt it out.
 
-  // Apply a texture to all mesh materials; pass null to restore originals
-  function _applyMeshTex(tex) {{
+  function _applyFeatureVertexColors(targetLabel) {{
+    if (!meshGroup || !GRID_CELLS) return;
+    var c = new THREE.Color();
+    var cosLim = UNSC_3D ? UNSC_3D.cos_angle : 0;
+    var unx = UNSC_3D ? UNSC_3D.normal[0] : 0,
+        uny = UNSC_3D ? UNSC_3D.normal[1] : 0,
+        unz = UNSC_3D ? UNSC_3D.normal[2] : 0;
+    // World-space height cut: GLB node transforms + viewer scaling make local
+    // Y meaningless, so the cut is a fraction of the world bbox vertical span.
+    var yLim = -Infinity;
+    if (UNSC_3D) {{
+      meshGroup.updateMatrixWorld(true);
+      var wb = new THREE.Box3().setFromObject(meshGroup);
+      yLim = wb.min.y + UNSC_3D.y_frac * (wb.max.y - wb.min.y);
+    }}
+    var wPos = new THREE.Vector3();
+    var wNrm = new THREE.Vector3();
+    var nMat = new THREE.Matrix3();
+
+    meshGroup.traverse(function (child) {{
+      if (!child.isMesh) return;
+      var geo     = child.geometry;
+      var posAttr = geo.attributes.position;
+      var uvAttr  = geo.attributes.uv;
+      var nrmAttr = geo.attributes.normal;
+      if (!posAttr || !uvAttr) return;
+      var mat = child.material;
+      if (mat._origMap === undefined) mat._origMap = mat.map;
+      if (mat._origVC  === undefined) mat._origVC  = mat.vertexColors;
+      var wMat = child.matrixWorld;
+      nMat.getNormalMatrix(wMat);
+      var n      = posAttr.count;
+      var colArr = new Float32Array(n * 3);
+      for (var i = 0; i < n; i++) {{
+        var u   = Math.max(0, Math.min(1, uvAttr.getX(i)));
+        var v   = Math.max(0, Math.min(1, uvAttr.getY(i)));
+        var ugc = Math.min(Math.floor(u * GRID_N), GRID_N - 1);
+        var ugr = Math.min(Math.floor(v * GRID_N), GRID_N - 1);
+        var lbl = GRID_CELLS[ugr][ugc];
+        // UNSCANNED patch opt-out (world-space normal + height test)
+        if (lbl && UNSC_3D && nrmAttr) {{
+          wPos.fromBufferAttribute(posAttr, i).applyMatrix4(wMat);
+          if (wPos.y <= yLim) {{
+            wNrm.fromBufferAttribute(nrmAttr, i).applyMatrix3(nMat).normalize();
+            var dot = Math.abs(wNrm.x * unx + wNrm.y * uny + wNrm.z * unz);
+            if (dot >= cosLim) lbl = null;
+          }}
+        }}
+        var fid = (lbl && TAXONOMY_INDEX[lbl] !== undefined) ? TAXONOMY_INDEX[lbl] : -1;
+        if (targetLabel === 'all') {{
+          c.set(fid >= 0 ? FEAT_COLORS[fid] : '#111318');
+        }} else {{
+          if (lbl === targetLabel && fid >= 0) c.set(FEAT_COLORS[fid]);
+          else if (fid >= 0)                   c.set('#1e1e26');
+          else                                 c.set('#111318');
+        }}
+        colArr[i*3] = c.r; colArr[i*3+1] = c.g; colArr[i*3+2] = c.b;
+      }}
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colArr, 3));
+      mat.vertexColors = true;
+      mat.map          = null;
+      mat.needsUpdate  = true;
+    }});
+  }}
+
+  function _restoreOrigMesh() {{
     if (!meshGroup) return;
     meshGroup.traverse(function (child) {{
-      if (child.isMesh && child.material) {{
-        var mat = child.material;
-        if (mat._origMap === undefined) mat._origMap = mat.map;
-        mat.map = tex !== null ? tex : mat._origMap;
-        mat.needsUpdate = true;
-      }}
+      if (!child.isMesh || !child.material) return;
+      var mat = child.material;
+      mat.map          = mat._origMap !== undefined ? mat._origMap : mat.map;
+      mat.vertexColors = mat._origVC  !== undefined ? mat._origVC  : false;
+      mat.needsUpdate  = true;
     }});
   }}
 
   // ── Feature chip activation ───────────────────────────────────────────────
   window.activateFeature = function (label) {{
-    var tex = featTextures[label] || null;
-    if (!tex) {{ console.warn('Texture not ready:', label); return; }}
     activeFeat = label;
-    _applyMeshTex(tex);
-    // Update chip styles
+    _applyFeatureVertexColors(label);
     document.querySelectorAll('#feat-chips button').forEach(function (b) {{
       var isActive = b.dataset.feat === label;
       b.style.background = isActive ? '#2d3250' : '#1e2030';
@@ -541,12 +738,10 @@ def _viewer_section(regions: list, viewer_data: dict,
     if (chips) chips.style.display = featurePanelOpen ? 'flex' : 'none';
     if (btn)   btn.textContent     = featurePanelOpen ? 'Hide Features' : 'Feature Map';
     if (featurePanelOpen) {{
-      // Default to combined "all" on first open
       if (!activeFeat) window.activateFeature('all');
     }} else {{
-      // Restore original texture when closing
       activeFeat = null;
-      _applyMeshTex(null);
+      _restoreOrigMesh();
       document.querySelectorAll('#feat-chips button').forEach(function (b) {{
         b.style.background = '#1e2030';
         b.style.fontWeight  = 'normal';
@@ -561,26 +756,49 @@ def _viewer_section(regions: list, viewer_data: dict,
     meshGroup.visible = showMeshMode;
     cloud.visible     = !showMeshMode;
     document.getElementById('mesh-toggle').textContent = showMeshMode ? 'Point Cloud' : 'Textured Mesh';
-    // Close feature panel when switching to point cloud
     if (!showMeshMode && featurePanelOpen) window.toggleFeaturePanel();
+    if (showMeshMode && showFeatureLabels) window.toggleFeatureLabels();
     var leg   = document.getElementById('viewer-legend');
-    if (leg)  leg.style.display = (!showMeshMode && curMode === 'region') ? '' : 'none';
+    if (leg)  leg.style.display = (!showMeshMode && curMode === 'region' && !showFeatureLabels) ? '' : 'none';
     var ctBtn = document.getElementById('color-toggle');
     if (ctBtn) ctBtn.style.display = (!showMeshMode && {has_scan_js}) ? '' : 'none';
     var fBtn  = document.getElementById('feature-btn');
     if (fBtn)  fBtn.style.display = showMeshMode && {json.dumps(bool(feat_tex_rels))}.toString() === 'true' ? '' : 'none';
+    var flBtn = document.getElementById('feat-labels-btn');
+    if (flBtn) flBtn.style.display = (!showMeshMode && HAS_FEATURES) ? '' : 'none';
   }};
 """
     else:
         mesh_toggle_btn  = ""
         feature_main_btn = ""
+        feat_labels_btn  = ""
         gltf_script_tag  = ""
         glb_js           = ""
+        has_features     = False
+        has_features_js  = "false"
+        feat_colors_js   = json.dumps([_LABEL_COLORS.get(lbl, "#b0b8d0") for lbl in TAXONOMY])
+        grid_cells_js    = "null"
+        grid_n_js        = "8"
+        taxonomy_idx_js  = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
         scan_toggle_btn  = (
             '<button id="color-toggle" style="position:absolute;top:8px;right:8px;'
             'background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;'
             'padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>'
         ) if color_mode == "scan" else ""
+
+    # ── Feature legend (shown in Feature Labels point-cloud mode) ────────────
+    if has_features:
+        _fl_items = "".join(
+            f'<div class="legend-item">'
+            f'<div class="legend-dot" style="background:{_LABEL_COLORS.get(lbl, "#b0b8d0")}"></div>'
+            f'{lbl.replace("_", " ")}</div>'
+            for lbl in _ACTIVE
+        ) + '<div class="legend-item"><div class="legend-dot" style="background:#111318"></div>Unlabeled</div>'
+        feat_legend_html = (
+            f'<div class="viewer-legend" id="feat-legend" style="display:none">{_fl_items}</div>'
+        )
+    else:
+        feat_legend_html = ""
 
     return f"""
 <div class="section">
@@ -590,9 +808,11 @@ def _viewer_section(regions: list, viewer_data: dict,
     <div class="viewer-hint">drag to rotate &nbsp;·&nbsp; scroll to zoom</div>
     {mesh_toggle_btn}
     {feature_main_btn}
+    {feat_labels_btn}
     {scan_toggle_btn}
   </div>
   <div class="viewer-legend" id="viewer-legend" style="display:none">{legend_items}</div>
+  {feat_legend_html}
   {chips_html}
 </div>
 
@@ -602,7 +822,9 @@ def _viewer_section(regions: list, viewer_data: dict,
 (function () {{
   var POINT_DATA   = {point_json};
   var HAS_SCAN     = {has_scan_js};
+  var HAS_FEATURES = {has_features_js};
   var COLORS       = {json.dumps(REGION_COLORS)};
+  var FEAT_COLORS  = {feat_colors_js};
   var UNCLASSIFIED = '#3d4455';
   var curMode      = '{color_mode}';
 
@@ -625,16 +847,27 @@ def _viewer_section(regions: list, viewer_data: dict,
   renderer.setSize(W, H);
   renderer.outputEncoding = THREE.sRGBEncoding;
 
-  var positions = [], scanColors = [], regionColors = [];
+  var UNSCANNED_ID    = 100;
+  var UNSCANNED_COLOR = '#94a3b8';   // grey-blue — ground-contact face (not scanned)
+
+  var positions = [], scanColors = [], regionColors = [], featureColors = [];
+  var showFeatureLabels = false;
   var col = new THREE.Color();
   for (var i = 0; i < POINT_DATA.length; i++) {{
     var p = POINT_DATA[i];
     positions.push(p[0], p[1], p[2]);
-    if (HAS_SCAN && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
-    else col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
+    if (HAS_SCAN && p.length >= 8)      col.setRGB(p[5], p[6], p[7]);
+    else if (HAS_SCAN && p.length === 7) col.setRGB(p[4], p[5], p[6]);
+    else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     scanColors.push(col.r, col.g, col.b);
-    col.set(p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]);
+    col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? UNCLASSIFIED : COLORS[p[3] % COLORS.length]));
     regionColors.push(col.r, col.g, col.b);
+    // Feature label colour: UNSCANNED stays grey, labeled points → FEAT_COLORS[fid], unlabeled → near-black
+    var fid = (p.length === 5 || p.length >= 8) ? p[4] : -1;
+    if (p[3] === UNSCANNED_ID) col.set(UNSCANNED_COLOR);
+    else if (fid >= 0 && fid < FEAT_COLORS.length) col.set(FEAT_COLORS[fid]);
+    else col.set('#111318');
+    featureColors.push(col.r, col.g, col.b);
   }}
   var geo  = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -685,6 +918,129 @@ def _viewer_section(regions: list, viewer_data: dict,
     camera.aspect = w / H; camera.updateProjectionMatrix(); renderer.setSize(w, H);
   }});
 
+  // ── Hover panel ───────────────────────────────────────────────────────────
+  // Raycast the point cloud, read the region id off the hit point, and show
+  // that region's planar geometry and design factors beside the cursor. The
+  // tables below carry the same figures, and are collapsed by default because
+  // reading them means holding a region number in your head while looking back
+  // and forth. Here the number is attached to the thing it describes.
+  var REGION_INFO = {region_info_json};
+  var hoverBox = document.createElement('div');
+  hoverBox.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:20;'
+    + 'background:rgba(17,19,26,0.96);border:1px solid #3d4455;border-radius:6px;'
+    + 'padding:8px 10px;font-size:11px;color:#b0b8d0;min-width:190px;max-width:280px;'
+    + 'box-shadow:0 4px 18px rgba(0,0,0,0.55);line-height:1.5';
+  container.style.position = 'relative';
+  container.appendChild(hoverBox);
+
+  var ray = new THREE.Raycaster();
+  // The cloud carries ~2000 points over a model normalised to about 2 units,
+  // so mean spacing is near 0.05. A threshold below that misses on most
+  // pixels and the panel never appears.
+  ray.params.Points.threshold = 0.06;
+  var ndc = new THREE.Vector2(), hoverId = null;
+
+  function fmtRow(k, v) {{
+    return v === null || v === undefined || v === ''
+      ? '' : '<div><span style="color:#6b7390">' + k + '</span> ' + v + '</div>';
+  }}
+  function showHover(id, cx, cy) {{
+    var d = REGION_INFO[id];
+    if (!d) {{ hoverBox.style.display = 'none'; return; }}
+    var chips = '';
+    for (var i = 0; i < d.features.length; i++) {{
+      chips += '<span style="display:inline-block;margin:1px 3px 1px 0;padding:0 6px;'
+        + 'border-radius:9px;font-size:10px;border:1px solid ' + d.colors[i] + '55;'
+        + 'background:' + d.colors[i] + '1a;color:' + d.colors[i] + '">'
+        + d.features[i] + '</span>';
+    }}
+    var adjChips = '';
+    for (var j = 0; j < (d.adjacent || []).length; j++) {{
+      adjChips += '<span style="display:inline-block;margin:1px 3px 1px 0;'
+        + 'padding:0 6px;border-radius:9px;font-size:10px;border:1px dashed '
+        + d.adj_colors[j] + '77;color:' + d.adj_colors[j] + '">'
+        + d.adjacent[j] + '</span>';
+    }}
+    if (!chips) {{
+      chips = '<span style="color:#6b7390;font-size:10px">'
+        + (d.skipped ? 'not classified (' + d.skipped
+              + (d.fill != null ? ', ' + Math.round(d.fill*100) + '% fill' : '') + ')'
+              : 'no features reported') + '</span>';
+    }}
+    hoverBox.innerHTML =
+      '<div style="color:' + COLORS[id % COLORS.length] + ';font-weight:bold;'
+        + 'margin-bottom:4px">Region ' + d.n
+        + (d.reliable ? '' : ' <span style="color:#f0b429;font-weight:normal;font-size:10px">'
+            + 'not scanned</span>') + '</div>'
+      + '<div style="margin-bottom:5px">' + chips + '</div>'
+      + (d.adjacent && d.adjacent.length
+          ? '<div style="margin-bottom:5px">'
+            + '<span style="color:#6b7390;font-size:10px">on a surface meeting '
+            + 'this face: </span>' + adjChips + '</div>'
+          : '')
+      + fmtRow('bearing area', d.area != null
+          ? (d.area === 0
+              ? '<span style="color:#f0b429">0 m², no mesh surface</span>'
+              : d.area.toFixed(4) + ' m²'
+                + (d.patches > 1
+                    ? '<span style="color:#6b7390"> largest of '
+                      + d.patches + ' patches</span>' : ''))
+          : null)
+      + fmtRow('hull', d.hull != null && d.hull !== d.area
+          ? d.hull.toFixed(4) + ' m²' : null)
+      + fmtRow('coverage', d.cov != null ? Math.round(d.cov*100) + '%' : null)
+      + fmtRow('fit RMS', d.rms != null ? d.rms + ' mm' : null)
+      + fmtRow('normal', d.normal.join(', '))
+      + (d.conn || d.asg || d.fin
+          ? '<div style="border-top:1px solid #2a2f3f;margin:6px 0 4px"></div>'
+            + '<div style="font-size:9px;color:#6b7390;text-transform:uppercase;'
+            + 'letter-spacing:0.06em;margin-bottom:3px">proposed</div>'
+            + fmtRow('connection', d.conn) + fmtRow('assignment', d.asg)
+            + fmtRow('finishing', d.fin)
+          : '');
+    var r = container.getBoundingClientRect();
+    var x = cx - r.left + 14, y = cy - r.top + 14;
+    if (x + 290 > r.width)  x = cx - r.left - 300;
+    if (y + 190 > r.height) y = Math.max(4, cy - r.top - 190);
+    hoverBox.style.left = x + 'px';
+    hoverBox.style.top  = y + 'px';
+    hoverBox.style.display = 'block';
+  }}
+
+  cvs.addEventListener('mousemove', function (e) {{
+    // Raycast the point cloud even in mesh mode. The default view is the GLB
+    // and the cloud is set invisible behind it, but the two occupy the same
+    // normalised space, and Raycaster.intersectObject does not skip an object
+    // for being invisible. Bailing on showMeshMode meant hover never fired in
+    // the view the report actually opens in.
+    if (isDragging) {{ hoverBox.style.display = 'none'; return; }}
+    var r = cvs.getBoundingClientRect();
+    ndc.x =  ((e.clientX - r.left) / r.width)  * 2 - 1;
+    ndc.y = -((e.clientY - r.top)  / r.height) * 2 + 1;
+    ray.setFromCamera(ndc, camera);
+    var hits = ray.intersectObject(cloud);
+    if (!hits.length) {{ hoverBox.style.display = 'none'; hoverId = null; return; }}
+    var rid = POINT_DATA[hits[0].index][3];
+    if (rid < 0 || rid >= REGION_INFO.length) {{
+      hoverBox.style.display = 'none'; hoverId = null; return;
+    }}
+    hoverId = rid;
+    showHover(rid, e.clientX, e.clientY);
+  }});
+  cvs.addEventListener('mouseleave', function () {{
+    hoverBox.style.display = 'none'; hoverId = null;
+  }});
+  // Clicking a hovered region pins it, the same as clicking its table row.
+  // Guarded by drag distance: rotating the view ends in a click event too, and
+  // without this every orbit would toggle whatever region ended up under the
+  // cursor.
+  var downX = 0, downY = 0;
+  cvs.addEventListener('mousedown', function (e) {{ downX = e.clientX; downY = e.clientY; }});
+  cvs.addEventListener('click', function (e) {{
+    var moved = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
+    if (moved < 5 && hoverId !== null) window.highlightRegion(hoverId);
+  }});
+
   var curHighlight = null, hlCol = new THREE.Color();
   window.highlightRegion = function (regionId) {{
     if (curHighlight === regionId) {{
@@ -706,9 +1062,164 @@ def _viewer_section(regions: list, viewer_data: dict,
       r.classList.toggle('row-active', parseInt(r.dataset.regionId) === regionId);
     }});
   }};
+
+  // ── Feature Labels colour mode (point cloud) ──────────────────────────────
+  // Colours each sampled point by the surface label of the face it was
+  // sampled from, rather than by RANSAC region.
+  window.toggleFeatureLabels = function () {{
+    showFeatureLabels = !showFeatureLabels;
+    var arr = showFeatureLabels ? featureColors : regionColors;
+    cloud.geometry.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
+    var btn = document.getElementById('feat-labels-btn');
+    if (btn) {{
+      btn.textContent       = showFeatureLabels ? 'Region Colors' : 'Feature Labels';
+      btn.style.color       = showFeatureLabels ? '#fbbf24' : '#7c83fd';
+      btn.style.borderColor = showFeatureLabels ? '#fbbf24' : '#7c83fd';
+    }}
+    var leg  = document.getElementById('viewer-legend');
+    var fleg = document.getElementById('feat-legend');
+    if (showFeatureLabels) {{
+      if (leg)  leg.style.display  = 'none';
+      if (fleg) fleg.style.display = '';
+    }} else {{
+      if (leg)  leg.style.display  = (curMode === 'region') ? '' : 'none';
+      if (fleg) fleg.style.display = 'none';
+    }}
+  }};
 {glb_js}
 }})();
 </script>"""
+
+
+def _procedural_section(proc: dict, vision: dict) -> str:
+    """Fragment-level design factors + how many faces were classified vs inferred."""
+    if not proc:
+        return ""
+    h    = proc.get("handling_class") or {}
+    hv   = h.get("value") or "—"
+    hr   = h.get("reason") or ""
+    dz   = proc.get("drill_zone") or {}
+    dzv  = dz.get("value") or "—"
+    # Withheld since 2026-08-25: show the reason where the value used to be,
+    # so the report says why the field is empty instead of showing a dash.
+    dzr  = dz.get("rule") or dz.get("reason") or ""
+    core = dz.get("clear_core_mm_est")
+    if core is not None:
+        dzr += f" (steel-free core est. {core:.0f} mm at {dz.get('cover_mm_assumed')} mm cover)"
+    entry = dz.get("entry_faces")
+    if entry:
+        dzr += " Entry via " + ", ".join(f"region {i+1}" for i in entry) + "."
+    coverage = f"""
+    <div class="stat-block">
+      <div class="stat-label">Drill zone</div>
+      <div class="stat-value" style="font-size:18px">{dzv}</div>
+      <div style="font-size:11px;color:var(--muted)">{dzr}</div>
+    </div>"""
+
+    # One chip per feature. A region carries as many as apply, so a single
+    # "Label" cell would be showing whichever one happened to sort first, which
+    # is the display precedence and says nothing about the surface.
+    def _feature_chips(r: dict) -> str:
+        feats = r.get("features")
+        if not feats:                       # record written before 2026-08-20
+            lab = r.get("label")
+            feats = [{"id": lab, "box_pct": None,
+                      "votes": r.get("n_label_votes")}] if lab else []
+        if not feats:
+            return "—"
+        out = ""
+        for f in feats:
+            fid = f.get("id")
+            col = _LABEL_COLORS.get(fid, "#94a3b8")
+            grp = _GROUPS.get(fid, "")
+            v   = f.get("votes")
+            box = ""    # boxes were removed 2026-08-20: every one was fabricated
+            tip = f"{grp}{f' · {v}/3 runs' if v else ''}"
+            out += (f'<span title="{tip}" style="display:inline-block;margin:1px 3px 1px 0;'
+                    f'padding:1px 7px;border-radius:10px;font-size:10px;'
+                    f'border:1px solid {col}55;background:{col}1a;color:{col}">'
+                    f'{fid}{box}</span>')
+        return out
+
+    regions_html = ""
+    for r in (vision or {}).get("regions", []) or []:
+        skipped = r.get("skipped")
+        coh     = r.get("uv_coherence")
+        fill    = r.get("uv_fill")
+        why_skip = f"{skipped}, coherence {coh}"
+        if skipped == "sparse_uv" and fill is not None:
+            why_skip = f"{skipped}, only {fill:.0%} of the crop is surface"
+        note    = (f'<span style="color:var(--warning)">not classified ({why_skip})</span>'
+                   ) if skipped else _feature_chips(r)
+        an = len(r.get("features") or [])
+        sm, fl = r.get("smear_frac"), r.get("flat_frac")
+        why = []
+        if fl:        why.append(f"{fl:.0%} featureless fill (mark UNSCANNED in Blender)")
+        if sm and fl: why.append(f"{sm - fl:.0%} directional smear")
+        elif sm:      why.append(f"{sm:.0%} directional smear")
+        sm_txt = (f'<span style="color:var(--warning)" title="{"; ".join(why)}">{sm:.0%}</span>'
+                  if sm else ("—" if sm is None else "0%"))
+        regions_html += f"""
+      <tr>
+        <td>#{r.get('region_id')}</td>
+        <td style="font-size:11px">{r.get('kind','')}</td>
+        <td class="num">{(r.get('area_frac') or 0)*100:.1f}%</td>
+        <td style="font-size:11px">{note}</td>
+        <td class="num">{an if an else '—'}</td>
+        <td class="num">{sm_txt}</td>
+      </tr>"""
+    regions_table = f"""
+  <details class="fold" style="margin-top:12px">
+  <summary>Per-region detail ({len(regions_html.split('<tr>')) - 1} regions) — also on hover in the 3D viewer</summary>
+  <table class="data-table" style="margin-top:6px">
+    <thead><tr><th>Region</th><th>Kind</th><th class="num">Area</th>
+      <th title="every feature the model saw in this region. These do not compete: a broken face showing aggregate carries both. A chip marked with a square is localised and has a bounding box.">Features</th>
+      <th class="num" title="how many features were reported for this region">n</th>
+      <th class="num" title="share of the face masked out as unusable texture: directional smear or featureless fill">Masked</th></tr></thead>
+    <tbody>{regions_html}</tbody>
+  </table></details>""" if regions_html else ""
+
+    # ── Design implications: combinations of descriptors → candidate uses ────
+    uses = (proc.get("use_suggestions") or []) if SHOW_USES_IN_REPORT else []
+    if uses:
+        cards = ""
+        for u in uses:
+            faces_txt = ", ".join(f"region {i+1}" for i in u.get("faces", []))
+            caveat = (f'<div style="font-size:10px;color:var(--warning);margin-top:4px">'
+                      f'{u["caveat"]}</div>') if u.get("caveat") else ""
+            cards += f"""
+      <div style="border:1px solid var(--line);border-radius:6px;padding:10px 12px;
+                  background:#15171f">
+        <div style="font-size:13px;font-weight:bold;color:var(--text)">{u['label']}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">{u['note']}</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:5px">satisfied by {faces_txt}</div>
+        {caveat}
+      </div>"""
+        uses_html = f"""
+  <div style="margin-top:14px">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+                letter-spacing:0.06em;margin-bottom:8px">Candidate uses {_badge('proposed')}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">{cards}
+    </div>
+  </div>"""
+    else:
+        uses_html = ('<div style="margin-top:14px;font-size:11px;color:var(--muted)">'
+                     'No candidate use met its conditions for this fragment.</div>'
+                     if SHOW_USES_IN_REPORT else "")
+
+    return f"""
+<div class="section">
+  <div class="section-title">Design Factors {_badge('proposed')}
+    <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">
+      — derived from encoded links, provisional and not expert-verified</span></div>
+  <div class="stat-grid">
+    <div class="stat-block">
+      <div class="stat-label">Handling class</div>
+      <div class="stat-value" style="font-size:18px">{hv}</div>
+      <div style="font-size:11px;color:var(--muted)">{hr}</div>
+    </div>{coverage}
+  </div>{uses_html}{regions_table}
+</div>"""
 
 
 def _planar_section(regions: list) -> str:
@@ -722,35 +1233,69 @@ def _planar_section(regions: list) -> str:
     rows = ""
     for i, r in enumerate(regions):
         color = REGION_COLORS[i % len(REGION_COLORS)]
-        area  = f"{r['area_m2_est']:.4f} m²" if r.get("area_m2_est") is not None else "—"
+        _cont = r.get("contiguous_area_m2")
+        _hull = r.get("area_m2_est")
+        if _cont is not None:
+            area = (f'{_cont:.4f} m²'
+                    + (f'<span style="color:var(--muted);font-size:10px"> of '
+                       f'{_hull:.3f} hull</span>' if _hull else ''))
+            if _cont == 0.0:
+                area = ('<span style="color:var(--warning)">0 m²</span>'
+                        '<span style="color:var(--muted);font-size:10px"> '
+                        'no mesh surface</span>')
+        else:
+            area = f"{_hull:.4f} m²" if _hull is not None else "—"
         frac  = f"{r.get('inlier_fraction', 0):.1%}"
         rms   = f"{r.get('fit_rms_mm', 0):.3f} mm"
         nx, ny, nz = (r.get("normal_xyz") or [0, 0, 0])
+        lbl   = r.get("surface_label") or "—"
+        proc  = r.get("procedural") or {}
+        conn  = (proc.get("connection_strategy") or {}).get("value") or "—"
+        asg   = (proc.get("design_assignment") or {}).get("value") or "—"
+        conn_t = (proc.get("connection_strategy") or {}).get("rule") or ""
+        asg_t  = (proc.get("design_assignment") or {}).get("rule") or ""
+        fin    = (proc.get("finishing_requirement") or {}).get("value") or "—"
+        fin_t  = ((proc.get("finishing_requirement") or {}).get("rule")
+                  or (proc.get("finishing_requirement") or {}).get("reason") or "")
+        rel   = "" if r.get("scan_reliable", True) else (
+                ' <span style="color:var(--warning);font-size:10px">unscanned</span>')
         rows += f"""
       <tr class="region-row" data-region-id="{i}" onclick="highlightRegion({i})" style="cursor:pointer">
-        <td><span class="region-dot" style="background:{color}"></span>{i+1}</td>
+        <td><span class="region-dot" style="background:{color}"></span>{i+1}{rel}</td>
         <td class="num">{area}</td>
         <td class="num">{frac}</td>
         <td class="num">{rms}</td>
+        <td style="font-size:11px">{lbl}</td>
+        <td style="font-size:11px" title="{conn_t}">{conn}</td>
+        <td style="font-size:11px" title="{asg_t}">{asg}</td>
+        <td style="font-size:11px" title="{fin_t}">{fin}</td>
         <td class="num" style="color:var(--muted);font-size:11px">({nx:.3f}, {ny:.3f}, {nz:.3f})</td>
       </tr>"""
 
     return f"""
 <div class="section">
-  <div class="section-title">Planar Regions — RANSAC ({len(regions)} found)</div>
-  <table class="data-table">
+  <div class="section-title">Planar Regions — RANSAC ({len(regions)} found)
+    <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">
+      — hover a region in the 3D viewer for the same figures</span></div>
+  <details class="fold">
+  <summary>Full table</summary>
+  <table class="data-table" style="margin-top:6px">
     <thead>
       <tr>
         <th>#</th>
         <th class="num">Area</th>
         <th class="num">Coverage</th>
         <th class="num">Fit RMS</th>
+        <th>Surface</th>
+        <th>Connection <span class="badge badge-pseudo">proposed</span></th>
+        <th>Assignment <span class="badge badge-pseudo">proposed</span></th>
+        <th>Finishing <span class="badge badge-pseudo">proposed</span></th>
         <th class="num">Normal (x, y, z)</th>
       </tr>
     </thead>
     <tbody>{rows}
     </tbody>
-  </table>
+  </table></details>
 </div>"""
 
 
@@ -827,68 +1372,80 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
     condition_color = {"good": "#4ade80", "moderate": "#fbbf24", "poor": "#f87171"}.get(condition, "#b0b8d0")
     conf_color      = {"high": "#4ade80", "medium": "#fbbf24", "low": "#f87171"}.get(confidence, "#b0b8d0")
 
-    # Coverage bars with subtype + notes
+    # ── Coverage, condensed ──────────────────────────────────────────────
+    # This used to be one stacked block per label, each with its own bar,
+    # subtype chip and note, which ran to most of a screen for a fragment
+    # carrying four labels. The same information fits in one proportional bar
+    # plus a chip row: the comparison a reader makes here is between labels,
+    # and separate bars are the one layout that makes that comparison hard.
     label_details = vision.get("label_details", {})
-    bars = ""
-    for label in TAXONOMY:
-        pct = coverage.get(label, 0)
-        if pct == 0:
-            continue
-        col    = _LABEL_COLORS.get(label, "#b0b8d0")
-        detail = label_details.get(label, {})
+    present = [(l, coverage.get(l, 0)) for l in TAXONOMY if coverage.get(l, 0)]
+    total   = sum(p for _, p in present) or 1
+    segs, chips, notes_out = "", "", ""
+    for label, pct in present:
+        col     = _LABEL_COLORS.get(label, "#b0b8d0")
+        detail  = label_details.get(label, {})
         subtype = detail.get("subtype", "")
         notes   = detail.get("notes", "")
-        subtype_html = ""
-        if subtype and subtype != "unknown":
-            subtype_html = (
-                f'<span style="background:{col}22;color:{col};font-size:9px;'
-                f'padding:1px 6px;border-radius:10px;margin-left:6px;'
-                f'font-weight:600;letter-spacing:0.04em">'
-                f'{subtype.replace("_", " ")}</span>'
-            )
-        notes_html = (
-            f'<div style="font-size:10px;color:var(--muted);margin-top:3px;'
-            f'font-style:italic;padding-left:2px">{notes}</div>'
-            if notes else ""
-        )
-        bars += f"""
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px">
-        <span style="color:{col}">{label.replace('_',' ')}{subtype_html}</span>
-        <span style="color:var(--muted)">{pct}%</span>
-      </div>
-      <div style="background:#1e2030;border-radius:3px;height:6px">
-        <div style="background:{col};width:{pct}%;height:6px;border-radius:3px"></div>
-      </div>
-      {notes_html}
-    </div>"""
+        segs += (f'<div title="{label.replace("_"," ")} {pct}%" '
+                 f'style="width:{pct / total * 100:.1f}%;background:{col}"></div>')
+        sub = (f' <span style="opacity:.65">{subtype.replace("_", " ")}</span>'
+               if subtype and subtype != "unknown" else "")
+        chips += (f'<span style="display:inline-block;margin:0 10px 3px 0;font-size:10px;'
+                  f'color:{col}"><span style="display:inline-block;width:7px;height:7px;'
+                  f'border-radius:2px;background:{col};margin-right:4px"></span>'
+                  f'{label.replace("_", " ")}{sub} '
+                  f'<b style="color:var(--muted);font-weight:600">{pct}%</b></span>')
+        if notes:
+            notes_out += (f'<div style="font-size:10px;color:var(--muted);margin-top:2px">'
+                          f'<span style="color:{col}">{label.replace("_", " ")}</span> '
+                          f'{notes}</div>')
+    bars = (f'<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;'
+            f'background:#1e2030;margin-bottom:7px">{segs}</div>'
+            f'<div style="line-height:1.7">{chips}</div>'
+            + (f'<details class="fold" style="margin-top:4px">'
+               f'<summary style="font-size:10px">Per-label notes</summary>{notes_out}</details>'
+               if notes_out else "")) if present else ""
+
+    # `present` and `visible` became "yes|no|unknown" on 2026-08-25. A bare
+    # truth test now passes on the strings "no" and "unknown" alike, which
+    # would report cracks precisely where the model declined to say so. Test
+    # the value, and show "unknown" as its own state so the reader sees the
+    # difference between "no cracks" and "cannot tell".
+    def _tri(v):
+        # Records written before 2026-08-25 hold real booleans. Map them, or a
+        # pre-change record renders as neither "yes" nor "unknown" and its
+        # crack line disappears without a word.
+        if isinstance(v, bool):
+            return "yes" if v else "no"
+        return str(v).lower() if v is not None else "unknown"
 
     crack_html = ""
-    if cracks.get("present"):
-        crack_html = f"""
-    <div class="stat-card" style="border-color:#f87171">
-      <div class="stat-label">Cracks</div>
-      <div class="stat-value" style="font-size:14px;color:#f87171">{cracks.get('pattern','—')}</div>
-      <div class="stat-sub">{cracks.get('coverage_pct', 0)}% surface coverage</div>
-    </div>"""
+    _cp = _tri(cracks.get("present"))
+    if _cp == "yes":
+        _pct = cracks.get("coverage_pct")
+        crack_html = (f'<span>cracks <b style="color:#f87171;font-weight:600">'
+                      f'{cracks.get("pattern","—")}</b> '
+                      + (f'<span style="opacity:.7">{_pct}%</span>' if _pct is not None else '')
+                      + '</span>')
+    elif _cp == "unknown":
+        crack_html = ('<span style="opacity:.6">cracks <b>not resolvable</b> '
+                      'at this texel density</span>')
 
     agg_html = ""
-    if aggregate.get("visible"):
-        agg_html = f"""
-    <div class="stat-card">
-      <div class="stat-label">Aggregate</div>
-      <div class="stat-value" style="font-size:14px">{aggregate.get('estimated_size','—')}</div>
-      <div class="stat-sub">size class</div>
-    </div>"""
+    _av = _tri(aggregate.get("visible"))
+    if _av == "yes":
+        agg_html = (f'<span>aggregate <b style="color:var(--text);font-weight:600">'
+                    f'{aggregate.get("estimated_size","—")}</b></span>')
 
     # Texture image preview
     texture_html = ""
     if texture_rel_path:
         texture_html = f"""
-  <div style="margin-bottom:16px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Texture Map</div>
-    <img src="{texture_rel_path}" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14" alt="Fragment texture map">
-  </div>"""
+  <details class="fold" style="margin-bottom:10px">
+    <summary>Texture atlas</summary>
+    <img src="{texture_rel_path}" style="width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#0a0c14;margin-top:6px" alt="Fragment texture map">
+  </details>"""
 
     return f"""
 <div class="section">
@@ -900,30 +1457,18 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
 
   {texture_html}
 
-  <div class="stat-row" style="margin-bottom:16px">
-    <div class="stat-card">
-      <div class="stat-label">Dominant Surface</div>
-      <div class="stat-value" style="font-size:14px;color:{dom_color}">{dominant.replace('_',' ')}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Surface Condition</div>
-      <div class="stat-value" style="font-size:16px;color:{condition_color}">{condition}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Confidence</div>
-      <div class="stat-value" style="font-size:16px;color:{conf_color}">{confidence}</div>
-    </div>
-    {crack_html}
-    {agg_html}
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;font-size:11px;
+              margin-bottom:12px;color:var(--muted)">
+    <span>dominant <b style="color:{dom_color};font-weight:600">{dominant.replace('_',' ')}</b></span>
+    <span>condition <b style="color:{condition_color};font-weight:600">{condition}</b></span>
+    <span>confidence <b style="color:{conf_color};font-weight:600">{confidence}</b></span>
+    {crack_html}{agg_html}
   </div>
 
-  <div style="margin-bottom:16px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Surface Coverage</div>
-    {bars}
-  </div>
+  {bars}
 
-  {"<div class='stat-sub' style='margin-bottom:8px'><b style='color:var(--fg)'>Color:</b> " + color_note + "</div>" if color_note else ""}
-  {"<div class='stat-sub'><b style='color:var(--fg)'>Reuse notes:</b> " + reuse_note + "</div>" if reuse_note else ""}
+  {"<div style='font-size:10px;color:var(--muted);margin-top:8px'><b style='color:var(--text)'>Colour</b> " + color_note + "</div>" if color_note else ""}
+  {"<div style='font-size:10px;color:var(--muted);margin-top:3px'><b style='color:var(--text)'>Reuse</b> " + reuse_note + "</div>" if reuse_note else ""}
 </div>"""
 
 
@@ -961,6 +1506,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     regions        = data.get("planarity", [])
     curvature      = data.get("curvature", {})
     vision         = data.get("vision", {})
+    procedural     = data.get("procedural", {})
 
     def _rel(p):
         return _os.path.relpath(p, output_dir).replace("\\", "/") if p and Path(p).exists() else ""
@@ -971,14 +1517,20 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
     # Build relative paths for all feature textures
     feat_tex_rels = {k: _rel(v) for k, v in feature_texture_paths.items() if _rel(v)}
 
+    # Grid classification data for vertex-colour feature overlay in the viewer
+    grid_data = vision.get("grid_classification") if vision else None
+
     banner_html    = _mesh_banner(bounding)
     bounding_html  = _bounding_section(bounding)
     viewer_html    = _viewer_section(regions, viewer_data or {},
                                      glb_rel_path=glb_rel,
-                                     feat_tex_rels=feat_tex_rels)
+                                     feat_tex_rels=feat_tex_rels,
+                                     grid_data=grid_data,
+                                     vision=vision)
     planarity_html = _planar_section(regions)
     curvature_html = _curvature_section(curvature)
     vision_html    = _vision_section(vision, texture_rel_path=tex_rel)
+    procedural_html= _procedural_section(procedural, vision)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1013,6 +1565,7 @@ def generate_report(data: dict, output_dir: Path, viewer_data: dict = None,
   {planarity_html}
   {curvature_html}
   {vision_html}
+  {procedural_html}
 
   <div style="margin-top:40px;color:var(--border);font-size:10px;text-align:right">
     Generated by Study2_Descriptor_Pipeline {version}
@@ -1303,6 +1856,8 @@ const REGION_COLORS = [
   '#7c83fd','#4ade80','#fbbf24','#f87171',
   '#60a5fa','#c084fc','#fb923c','#34d399'
 ];
+const UNSCANNED_ID    = 100;
+const UNSCANNED_COLOR = '#94a3b8';   // grey-blue — ground-contact face (not scanned)
 
 const ROUGHNESS_GRADES = {
   S:  { label: 'Smooth',     color: '#4ade80' },
@@ -1331,8 +1886,59 @@ function fmt(v, d, unit) {
   return v.toFixed(d) + (unit ? ' ' + unit : '');
 }
 
+// ── Intended design use: chips on each card, and a filter over the list ──────
+// The uses come from the encoded design factors and are proposals, not verified
+// assignments; the filter selects fragments whose record offers a given use.
+var useFilter = '';
+var SHOW_USES = {show_uses_js};   // candidate uses hidden in the interface by default
+
+function fragUses(f) {
+  return ((f.procedural || {}).use_suggestions) || [];
+}
+
+function useChips(f) {
+  var us = fragUses(f);
+  if (!us.length) return '';
+  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">' +
+    us.map(function(u) {
+      var on = useFilter && u.id === useFilter;
+      return '<span style="font-size:9px;padding:1px 5px;border-radius:8px;' +
+        'background:' + (on ? '#2d3250' : '#1b1e29') + ';color:' + (on ? '#9aa4ff' : '#6b7280') +
+        ';border:1px solid ' + (on ? '#7c83fd' : '#262a36') + '">' + u.label + '</span>';
+    }).join('') + '</div>';
+}
+
+function buildUseFilter(fragments) {
+  var sel = document.getElementById('use-filter');
+  if (!sel) return;
+  var box = document.getElementById('use-filter-box');
+  if (!SHOW_USES) { if (box) box.style.display = 'none'; return; }
+  var seen = {};
+  fragments.forEach(function(f) {
+    fragUses(f).forEach(function(u) { seen[u.id] = u.label; });
+  });
+  var opts = ['<option value="">All fragments</option>'];
+  Object.keys(seen).sort().forEach(function(id) {
+    var n = fragments.filter(function(f) {
+      return fragUses(f).some(function(u) { return u.id === id; });
+    }).length;
+    opts.push('<option value="' + id + '">' + seen[id] + ' (' + n + ')</option>');
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = useFilter;
+  sel.onchange = function() {
+    useFilter = this.value;
+    renderList(allFragments, selectedId);
+  };
+}
+
 function renderList(fragments, selectedId) {
   const list = document.getElementById('frag-list');
+  if (useFilter) {
+    fragments = fragments.filter(function(f) {
+      return fragUses(f).some(function(u) { return u.id === useFilter; });
+    });
+  }
   list.innerHTML = '';
   fragments.forEach(function(f) {
     const b = f.bounding || {};
@@ -1353,7 +1959,8 @@ function renderList(fragments, selectedId) {
       '</div>' +
       (archCode ? '<div style="font-size:10px;color:var(--accent);margin-bottom:2px;letter-spacing:0.04em">' + archCode + ' · ' + (f.archetype_label || '') + '</div>' : '') +
       '<div class="frag-dims">' + dims + ' mm</div>' +
-      '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>';
+      '<div class="frag-meta">' + fmt(b.mass_kg_est, 2) + ' kg · ' + (f.planarity || []).length + ' regions</div>' +
+      (SHOW_USES ? useChips(f) : '');
     item.addEventListener('click', function() { selectFragment(f.fragment_id); });
     list.appendChild(item);
   });
@@ -1432,7 +2039,7 @@ function renderDetail(fragment) {
         '<div class="stat-chip"><div class="chip-label">OBB Dimensions</div><div class="chip-val" style="font-size:12px">' + dims + '</div><div class="chip-sub">mm (L × W × H)</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Volume</div><div class="chip-val">' + fmt(b.volume_m3, 6) + '</div><div class="chip-sub">m³ (' + (b.volume_source || 'mesh') + ')</div></div>' +
         '<div class="stat-chip"><div class="chip-label">Convexity</div>' + convHtml + '</div>' +
-        '<div class="stat-chip"><div class="chip-label">Mass (pseudo)</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2400 kg/m³</div></div>' +
+        '<div class="stat-chip"><div class="chip-label">Mass Estimate</div><div class="chip-val">' + fmt(b.mass_kg_est, 3) + '</div><div class="chip-sub">kg @ 2500 kg/m³</div></div>' +
       '</div>' +
     '</div>' +
 
@@ -1568,10 +2175,11 @@ function loadPointCloud(points, regions, colorMode) {
   for (var i = 0; i < points.length; i++) {
     var p = points[i];
     positions.push(p[0], p[1], p[2]);
-    if (hasScan && p.length >= 7) col.setRGB(p[4], p[5], p[6]);
-    else col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    if (hasScan && p.length >= 8)       col.setRGB(p[5], p[6], p[7]);
+    else if (hasScan && p.length === 7) col.setRGB(p[4], p[5], p[6]);
+    else col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));
     scanColArr.push(col.r, col.g, col.b);
-    col.set(p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]);
+    col.set(p[3] === UNSCANNED_ID ? UNSCANNED_COLOR : (p[3] < 0 ? '#3d4455' : REGION_COLORS[p[3] % REGION_COLORS.length]));
     regionColArr.push(col.r, col.g, col.b);
   }
   var geo = new THREE.BufferGeometry();
@@ -1604,6 +2212,11 @@ function loadPointCloud(points, regions, colorMode) {
             'R'+(j+1)+' · '+area+'</span>';
   }
   html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:#3d4455;display:inline-block"></span>unclassified</span>';
+  // Check if any point has UNSCANNED_ID
+  var hasUnscanned = points.some(function(p) { return p[3] === UNSCANNED_ID; });
+  if (hasUnscanned) {
+    html += '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:' + UNSCANNED_COLOR + ';display:inline-block"></span>unscanned (ground contact)</span>';
+  }
   leg.innerHTML = html;
 }
 
@@ -1646,6 +2259,7 @@ function init(fragments, vmap) {
   document.getElementById('count').textContent = allFragments.length + ' fragment' + (allFragments.length !== 1 ? 's' : '');
   var hash  = location.hash.replace('#', '') || {hash_init};
   var first = hash || (allFragments[0] ? allFragments[0].fragment_id : null);
+  buildUseFilter(allFragments);
   renderList(allFragments, first);
   renderDetail(allFragments.find(function(f){ return f.fragment_id === first; }) || null);
   if (first) { selectedId = first; selectFragment(first); }
@@ -1689,6 +2303,12 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
     hash_init     = f'"{highlight_id}"' if highlight_id else "null"
     count         = len(fragments)
 
+    # _INDEX_JS is a plain string (not an f-string), so {hash_init} inside it
+    # must be substituted manually before embedding into the HTML template.
+    index_js = (_INDEX_JS.replace('{hash_init}', hash_init)
+               .replace('{show_uses_js}',
+                        'true' if SHOW_USES_IN_INVENTORY else 'false'))
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1705,6 +2325,10 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 </div>
 
 <div class="panels">
+  <div id="use-filter-box" style="padding:8px 10px;border-bottom:1px solid #262a36">
+    <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Intended use</div>
+    <select id="use-filter" style="width:100%;background:#15171f;color:#b0b8d0;border:1px solid #262a36;border-radius:4px;font-size:11px;padding:4px 6px"></select>
+  </div>
   <div class="frag-list" id="frag-list"></div>
   <div class="detail-panel" id="detail-panel">
     <div id="viewer-wrap">
@@ -1721,7 +2345,7 @@ def update_inventory(output_dir: Path, highlight_id: str = None) -> Path:
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-{_INDEX_JS}
+{index_js}
 init({fragment_json}, {viewer_json});
 </script>
 </body>

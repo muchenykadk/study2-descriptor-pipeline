@@ -3,6 +3,57 @@ Study 2 Descriptor Pipeline
 
 Complete step-by-step workflow from Scaniverse export to pipeline-ready GLB + texture.
 
+> **Use the script, not the manual stages.** `02_blender/bake_texture_v2.py` does Stages 3
+> and 4 in one run and writes the `UNSCANNED` sidecar. Stages 3–4 below are the manual
+> fallback and the explanation of what the script does. The parts you still do by hand are
+> **Stage 2 (clean)** and **Stage 2.5 (mark UNSCANNED)**.
+
+---
+
+## Stage 0 — Check the export before you use it
+
+```powershell
+python 03_src/preflight.py FRAG-S1-{ARCHETYPE}-{###}
+```
+
+This runs automatically at the start of every pipeline run, but run it yourself straight
+after the Blender export: it takes seconds and tells you whether to go back into Blender
+before anything else happens.
+
+**`FRAG_ID` is the one to watch.** It is hand-edited before every bake and nothing
+downstream can verify it. Leaving it unchanged from the previous fragment silently
+overwrites that fragment's export, which is how FS-003's mesh was lost and how a 1630 mm
+slab ended up in FS-002's folder. Both of those exports were internally perfect and every
+check passed, because the checks ask whether the mesh is good, not whether it is the right
+mesh. `preflight` now also compares the export's oriented bounding box against the record
+and warns above 15% drift, but that only works while the record still describes the right
+piece: once a wrong export has been processed, the record agrees with it.
+
+The things it checks that you can also see by eye:
+
+**1. Units before remesh.** Blender's Voxel Size is in scene units. `VOXEL_SIZE = 0.002`
+means 2 mm only if the object measures ~1.6 *units*, not ~1600. Press **N** and read
+Dimensions. If it shows hundreds or thousands, the object is in millimetres and the voxel
+size is wrong by 1000×.
+
+**2. Face count after remesh.** Expect roughly `3 × (longest_dimension / voxel_size)²`.
+A 1.6 m fragment at 2 mm voxels gives about 2 million faces. FRAG-S1-FS-003 came out at
+**3,016** and was exported anyway; it produced planes matching under 4% of its geometry and
+no surface classification at all. `bake_texture_v2.py` now raises below 20% of expected,
+but check the number yourself in the Statistics overlay.
+
+**3. Texel density in the finished atlas.** Not the atlas resolution: pixels of atlas per
+millimetre of real surface, which is what decides whether the model can see anything. Two
+settings starve it independently. `BAKE_RES` must be **4096**, and the Smart UV Project
+island margin must be **0.002**, because that value is a *fraction of the sheet*, not a
+pixel count: at 0.02 only 20% of the atlas carried any UV at all and the rest was packing
+waste. Below about 0.5 px/mm an island of a few faces averages to one colour and the bake
+margin bleeds it into a flat diamond, which is the mottled texture seen on FS-001 and
+FS-002. Both values are set in the script; `preflight` reports the resulting density and
+fails below 0.50.
+
+**4. Mark UNSCANNED before you fill the hole and move on.** See Stage 2.5.
+
 ---
 
 ## Stage 1 — Scan (Scaniverse on iPhone/iPad)
@@ -43,6 +94,48 @@ Complete step-by-step workflow from Scaniverse export to pipeline-ready GLB + te
 9. Press **N** → side panel → **Item** tab → check **Dimensions**
    - Should be in hundreds of mm (e.g. 350 × 220 × 150 mm)
    - If it shows 0.35 × 0.22 × 0.15 (metres): **S → 1000 → Enter** to scale up
+
+---
+
+## Stage 2.5 — Close the ground-contact hole and mark it UNSCANNED
+
+The fragment was scanned lying on the ground, so its underside was never photographed. The
+hole has to be closed, and the closed patch has to be labelled, because everything
+downstream will otherwise treat invented geometry as measured surface.
+
+10. **Tab** → Edit Mode → **Edge select mode (2)**
+11. Hover over the boundary of the hole → **Alt+Click** to select the whole edge loop
+12. **F** to fill it
+13. **The filled faces are still selected. Do not click away.**
+14. Properties → **Object Data (green triangle) → Vertex Groups → `+`**
+15. Rename the group exactly `UNSCANNED` (capitals, no spaces) → click **Assign**
+16. Verify: **Alt+A** to deselect all → select the `UNSCANNED` group → click **Select**.
+    The patch should highlight and nothing else should.
+17. **Tab** → Object Mode
+
+`bake_texture_v2.py` reads this group *before* the voxel remesh, because the remesh destroys
+all original topology, and writes `{FRAG_ID}_scan_coverage.json` recording the patch's
+average normal, centroid and face count. `run_pipeline.py` picks the sidecar up
+automatically.
+
+### Is this still needed now that smeared texture is detected automatically?
+
+Yes, and for a different reason than originally.
+
+The smear gate is a *texture* safety net. It catches a bake that failed, which is what
+happens on an unmarked patch, and on FRAG-S1-FS-005 it caught exactly that: 90% of one face
+was marbled nonsense.
+
+`UNSCANNED` does something the smear gate cannot. **A manually filled hole is perfectly
+flat.** RANSAC finds an excellent plane there, with a better fit RMS than any real face on
+the fragment, and it is often the largest. Without the flag it ranks as the best bolting
+surface the piece has, and the design factors will happily propose it as a bench top. That
+is a geometric error and no amount of texture analysis will catch it, because the mistake is
+in the shape, not the image.
+
+So the two are complementary: `UNSCANNED` declares the geometry invented, the smear gate
+catches a bake that went wrong. Mark the group on every fragment. Only FS-003 and FS-006
+currently have it.
 
 ---
 
@@ -138,11 +231,19 @@ The Scaniverse UV is often messy — overlapping islands, wrong seams. We create
     - Contributions: **Color** only (Direct and Indirect unchecked)
     - **Selected to Active: ON**
     - Extrusion: **0.05 m** (increase to 0.1 m if you get black patches)
+    - **Margin: 32 px**, Margin Type: **Extend**
 45. Click **Bake**
     - Blender projects the texture from the bake source onto the remesh's UV
 
 46. In Shader Editor → click the baked Image Texture node → **Image → Save As**
     - Save to: `01_input/meshes/processed/FRAG-S1-{ARCHETYPE}-{###}/FRAG-S1-{ARCHETYPE}-{###}_texture.png`
+
+> **Why margin matters.** Blender's default margin type bleeds colour only across shared UV
+> edges, so the space between islands stays pure black. Roughly 30% of the atlas is that
+> black. The descriptor pipeline masks it out before the vision model sees it, so the effect
+> is limited to the rim where the region mask overshoots its island by a few pixels, but
+> Extend removes even that. `bake_texture_v2.py` sets this automatically (`BAKE_MARGIN`);
+> the step above is for baking by hand.
 
 ### H — Wire up the remesh material
 

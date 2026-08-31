@@ -24,7 +24,7 @@ import os
 from collections import Counter
 from pathlib import Path
 
-from .taxonomy import TAXONOMY, LABEL_SUBTYPES  # noqa: F401 — re-exported for importers
+from .taxonomy import TAXONOMY, ACTIVE, LABEL_SUBTYPES  # noqa: F401 — re-exported for importers
 
 CACHE_DIR = Path(__file__).resolve().parents[2] / "05_output" / "ai_cache"
 
@@ -37,9 +37,18 @@ fragment surfaces and return structured descriptors in JSON format only.\
 """
 
 def _build_taxonomy_block() -> str:
-    """Build the taxonomy section of the prompt, including subtype options per label."""
+    """Build the taxonomy section of the prompt, including subtype options per label.
+
+    ACTIVE, not TAXONOMY. TAXONOMY keeps every id ever defined, retired ones
+    included, because a feature's position in it is its stored `feature_id` and
+    renumbering would silently recolour existing records. Offering that list to
+    the model put `weathered`, `crack`, `spalling`, `efflorescence` and
+    `original_finish` back on the menu after the 2026-08-20 rebuild retired
+    them, and the corpus run of 2026-08-24 duly returned `weathered` on nine of
+    twelve fragments and `discolouration` on FS-007.
+    """
     lines = []
-    for label in TAXONOMY:
+    for label in ACTIVE:
         subtypes = LABEL_SUBTYPES.get(label, ["unknown"])
         lines.append(f"  - {label}  [{' | '.join(subtypes)}]")
     return "\n".join(lines)
@@ -65,15 +74,15 @@ this structure — no extra keys, no markdown, no explanation:
     }}
   }},
   "cracks": {{
-    "present": <true|false>,
-    "pattern": "<none | linear | branching | network>",
-    "coverage_pct": <0-100>
+    "present": "<yes | no | unknown>",
+    "pattern": "<none | linear | branching | network | unknown>",
+    "coverage_pct": <0-100, or null if present is not "yes">
   }},
   "aggregate": {{
-    "visible": <true|false>,
+    "visible": "<yes | no | unknown>",
     "estimated_size": "<fine | medium | coarse | unknown>"
   }},
-  "surface_condition": "<good | moderate | poor>",
+  "surface_condition": "<good | moderate | poor | unknown>",
   "color_notes": "<brief description of dominant colours, staining, carbonation>",
   "reuse_notes": "<1-2 sentences on implications for cascading reuse>",
   "confidence": "<high | medium | low>"
@@ -83,6 +92,11 @@ Rules:
 - label_details must contain an entry for every label in labels_present.
 - subtype must be chosen from the options listed for that label below.
 - If the subtype cannot be determined from the image, use "unknown".
+- "unknown" is a valid and preferred answer wherever the image does not support a
+  judgement. This is a baked texture atlas of a demolition fragment, not a close
+  photograph: fine detail such as crack openings is often below the resolution of
+  the image. Answer "unknown" in that case. A confident guess is worse than no
+  answer, because a reader cannot tell the two apart.
 
 Taxonomy with subtype options (use ONLY these labels and subtypes):
 {taxonomy}
@@ -106,10 +120,27 @@ def _image_hash(image_path: Path) -> str:
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
 
+def _prompt_sig() -> str:
+    """Short hash of the question, so a changed question cannot return an old answer.
+
+    The key used to be the image alone. That meant the 2026-08-20 taxonomy
+    rebuild never reached this pass: the corpus run of 2026-08-24 replayed
+    answers cached before the rename and wrote `fracture_surface` and
+    `staining` into eleven of twelve records, ids that no longer exist. Only
+    FS-007, whose texture had been re-baked and so missed on image hash, made a
+    live call.
+
+    Region classification has carried a prompt signature since it was written
+    (`region_classification.py`); this pass was simply never given one.
+    """
+    return hashlib.md5(_USER_TEMPLATE.encode("utf-8")).hexdigest()[:6]
+
+
 def _cache_path(image_path: Path, provider: str, model: str, run: int) -> Path:
     h = _image_hash(image_path)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    return CACHE_DIR / f"{h}_{provider}_{model.replace('/', '-')}_run{run}.json"
+    return (CACHE_DIR /
+            f"{h}_{_prompt_sig()}_{provider}_{model.replace('/', '-')}_run{run}.json")
 
 
 def _load_cache(cache_path: Path) -> dict | None:
@@ -263,10 +294,18 @@ def _merge_runs(results: list[dict]) -> dict:
         k: round(sum(v) / len(v)) for k, v in coverage_sum.items()
     }
 
-    # Average crack coverage
-    crack_pcts = [r.get("cracks", {}).get("coverage_pct", 0) for r in valid]
+    # Average crack coverage over the runs that reported a crack.
+    #
+    # `present` became "yes|no|unknown" on 2026-08-25, so coverage_pct is null
+    # unless a run answered "yes". Averaging a null as zero would turn two runs
+    # of "unknown" and one of "30%" into 10%, a number nothing observed.
+    crack_pcts = [p for r in valid
+                  if str(r.get("cracks", {}).get("present")).lower() == "yes"
+                  for p in [r.get("cracks", {}).get("coverage_pct")]
+                  if isinstance(p, (int, float))]
     if "cracks" in merged:
-        merged["cracks"]["coverage_pct"] = round(sum(crack_pcts) / len(crack_pcts))
+        merged["cracks"]["coverage_pct"] = (
+            round(sum(crack_pcts) / len(crack_pcts)) if crack_pcts else None)
 
     # Merge label_details: majority vote on subtype, first-run notes
     merged_details: dict[str, dict] = {}
@@ -351,7 +390,11 @@ def classify_texture(image_path: Path, n_votes: int = 3) -> dict:
     merged["provider"]     = provider
     merged["model"]        = model
     merged["image_path"]   = str(image_path)
-    merged["data_status"]  = "computed"
+    # Not "computed". The geometry blocks carry that word and were recomputed
+    # from the mesh and matched exactly; this block is a vision model's answer
+    # that does not exceed a null baseline. Marking both the same collapses the
+    # distinction the record exists to preserve. Changed 2026-08-25.
+    merged["data_status"]  = "ai-annotated"
     return merged
 
 

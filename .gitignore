@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+env/venv/
 dist/
 build/
 
@@ -23,3 +24,43 @@ Thumbs.db
 
 # Blender temp
 *.blend1
+
+# Regenerated feature images - rebuilt by run_pipeline every run
+05_output/descriptors/*_feat_*.png
+05_output/descriptors/*_feature_map.png
+
+# ── Not for the public repo ────────────────────────────────────────────────
+# Manuscript. Lives with the paper, not the code.
+paper_draft/
+paper_study2_pipeline_draft.md
+
+# Working session artefacts: plans that were superseded or never implemented,
+# and the dated handover. The repo ships the pipeline, not the record of
+# building it. README.md, WORKFLOW.md, COMMANDS.md and CHANGELOG.md stay.
+PLAN_Study2.md
+PLAN_fixes_2026-08-20.md
+PLAN_query_layer.md
+PLAN_texture_quality.md
+HANDOVER.md
+
+# Dated validation notes. The protocols and results they document belong with
+# the paper; the released ground truth itself (05_output/test_set_labels*.csv,
+# 01_input/test_tiles*) stays in the repo so the evaluation is reproducible.
+06_validation/
+
+# Scratch crops from the exemplar searches. Regenerable, and not part of the
+# released set: the ground truth is 01_input/test_tiles*/ and
+# 05_output/test_set_labels*.csv.
+05_output/rust_candidates/
+05_output/rust_candidates2/
+05_output/efflorescence_candidates/
+
+# build_reference_set.py writes candidates here for hand-picking. The loader
+# ignores underscore folders, and these still carry retired label names.
+01_input/reference_surfaces/_candidates/
+
+# Regenerable caches and diagnostics
+01_input/test_tiles*/_texel_density.json
+05_output/binary_probe_misses.csv
+
+COMMIT_MESSAGE.txt

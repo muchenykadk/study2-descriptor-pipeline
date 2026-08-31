@@ -28,6 +28,7 @@ SELF_BAKE flag
 """
 
 import bpy
+import json
 import os
 
 # ── Configuration ──────────────────────────────────────────────────────────────
@@ -50,16 +51,23 @@ def set_active(obj):
     bpy.context.view_layer.objects.active = obj
 
 def smart_uv_project(obj):
-    """Apply Smart UV Project to all faces of obj."""
+    """Apply Smart UV Project to all faces of obj.
+
+    angle_limit=89 groups faces whose normals differ by up to 89° into the same
+    UV island. The default (66°) fragments rough voxel-remesh surfaces into
+    hundreds of tiny islands, causing the 8×8 grid classifier to produce
+    horizontal stripe artefacts. 89° keeps each contiguous surface region in
+    one island while still separating top/bottom/side faces (~90° apart).
+    """
     set_active(obj)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(island_margin=0.02)
+    bpy.ops.uv.smart_project(island_margin=0.02, angle_limit=89)
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def add_blank_image_node(mat, name, location=(0, 0)):
     """
-    Add an Image Texture node to mat with a new blank 4096×4096 image.
+    Add an Image Texture node to mat with a new blank image.
     The node is left unconnected but selected — Blender bakes into it.
     Returns (node, image).
     """
@@ -116,6 +124,12 @@ def set_bake_mode(selected_to_active):
         bake.cage_extrusion = EXTRUSION
 
 
+# ── Output dir ────────────────────────────────────────────────────────────────
+
+out_dir = os.path.join(REPO_ROOT, "01_input", "meshes", "processed", FRAG_ID)
+os.makedirs(out_dir, exist_ok=True)
+
+
 # ── 0: Validate active object ──────────────────────────────────────────────────
 
 obj = bpy.context.active_object
@@ -162,6 +176,56 @@ print(f"\n  ✓  Bake source: '{source.name}'  (hidden)")
 set_active(obj)
 obj.name = f"{FRAG_ID}_remesh"
 print(f"  ✓  Remesh target: '{obj.name}'")
+
+
+# ── 2.5: Write UNSCANNED sidecar (if vertex group present) ───────────────────
+# Before the voxel remesh destroys the original topology, record the normal and
+# centroid of the manually filled ground-contact face so scan_coverage.py can
+# flag the corresponding RANSAC plane as scan_reliable: false.
+#
+# Workflow: in Edit Mode, select the filled fake face(s), Object Data Properties
+# → Vertex Groups → + → name it "UNSCANNED" → Assign → run this script.
+# If the group is absent, this step is silently skipped.
+
+_vg = obj.vertex_groups.get("UNSCANNED")
+if _vg:
+    import mathutils
+    _vg_idx = _vg.index
+    _vg_normals, _vg_centers = [], []
+    for face in obj.data.polygons:
+        if any(any(g.group == _vg_idx for g in obj.data.vertices[v].groups)
+               for v in face.vertices):
+            _vg_normals.append(face.normal.copy())
+            _vg_centers.append(face.center.copy())
+
+    if _vg_normals:
+        # Convert to WORLD space so the sidecar matches GLB export coordinates.
+        # GLB uses world-space vertices (object transform applied on export).
+        # Local normals → world: multiply by the rotation part of matrix_world.
+        # Local centers → world: multiply by the full matrix_world.
+        _mw = obj.matrix_world
+        _mw_rot = _mw.to_3x3().normalized()  # rotation + scale, normalised cols
+        _vg_normals = [(_mw_rot @ n).normalized() for n in _vg_normals]
+        _vg_centers = [_mw @ c for c in _vg_centers]
+        _avg_n = (sum(_vg_normals, mathutils.Vector()) / len(_vg_normals)).normalized()
+        _avg_c =  sum(_vg_centers, mathutils.Vector()) / len(_vg_centers)
+        _sidecar = {
+            "has_unscanned_face": True,
+            "avg_normal":  [round(float(x), 4) for x in _avg_n],
+            "avg_center":  [round(float(x), 4) for x in _avg_c],
+            "face_count":  len(_vg_normals),
+            "detection_method": "manual_vertex_group",
+            "notes": "Ground-contact face manually closed and marked UNSCANNED.",
+        }
+        _sidecar_path = os.path.join(out_dir, f"{FRAG_ID}_scan_coverage.json")
+        with open(_sidecar_path, "w", encoding="utf-8") as _f:
+            json.dump(_sidecar, _f, indent=2)
+        print(f"  ✓  UNSCANNED sidecar written  ({len(_vg_normals)} faces, "
+              f"normal [{_avg_n.x:.3f}, {_avg_n.y:.3f}, {_avg_n.z:.3f}])")
+    else:
+        print(f"  ⚠  UNSCANNED vertex group found but contains no faces — skipped")
+else:
+    print(f"  (no UNSCANNED vertex group — sidecar skipped)")
 
 
 # ── 3: Voxel remesh ───────────────────────────────────────────────────────────
@@ -267,8 +331,6 @@ print(f"  ✓  Bake done")
 
 # ── 8: Save texture ───────────────────────────────────────────────────────────
 
-out_dir  = os.path.join(REPO_ROOT, "01_input", "meshes", "processed", FRAG_ID)
-os.makedirs(out_dir, exist_ok=True)
 tex_path = os.path.join(out_dir, f"{FRAG_ID}_texture.png")
 
 bake_img.file_format  = 'PNG'

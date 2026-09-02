@@ -5,8 +5,7 @@ structures them into one queryable record per fragment. Built for Study 2 of a P
 reuse of demolition concrete, and demonstrated on twelve scanned fragments from a built public
 installation.
 
-## The records, in a browser
-
+## Visual Interface with the test scans:
 **https://muchenykadk.github.io/study2-descriptor-pipeline/**
 
 The material inventory for all twelve fragments, with nothing to install and nothing to
@@ -19,9 +18,6 @@ browser, roughly 51 MB for the whole site. The full-resolution meshes stay in
 `05_output/descriptors/`. Rebuild the site with `python 03_src/build_web.py` after any pipeline
 run.
 
-Blender handles mesh cleaning, UV unwrap, texture bake and unscanned-face marking. Python does
-the geometry (trimesh, Open3D) and the surface classification (a vision-language model). An
-HTML and Three.js report renders each record.
 
 ## Read this before trusting the surface labels
 
@@ -45,16 +41,6 @@ every derived factor traces to measured values.
 regions cost twelve points of recall and seven of precision, roughly five times the variation
 between repeat runs. `01_input/reference_surfaces/` still holds the exemplars and
 `--no-references` is the default behaviour of the evaluation scripts.
-
-**`rebar_visible` is a detection floor, not a rate.** It is reported on 2 of 148 regions.
-Photogrammetry cannot reconstruct a bar thinner than its point spacing, so a protruding bar is
-missing from the mesh while visible in the source photographs; the classifier also missed the
-only two human-confirmed instances in the labelled sets. Treat a negative as absent evidence,
-never as evidence of absence.
-
-**Two design factors are held back.** `drill_zone` and `finishing_requirement` both read
-`rebar_visible`. Drilling guidance resting on an untested negative has no place in an output.
-`drill_zone` is absent from the records; `finishing_requirement` is written as `null`.
 
 Full evidence: `04_schema/CLASSIFIER_BEHAVIOUR.md`.
 

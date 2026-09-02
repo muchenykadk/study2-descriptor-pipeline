@@ -47,7 +47,7 @@ def load_taxonomy() -> list[dict]:
         # taxonomy file, or a checkout from before that date, still loads.
         labels = data.get("features") or data.get("labels") or _DEFAULTS
         if not labels:
-            print(f"  ⚠ taxonomy.json has no features — using defaults")
+            print("  ⚠ taxonomy.json has no features — using defaults")
             return _DEFAULTS
         return labels
     return _DEFAULTS
@@ -112,8 +112,8 @@ def _display_precedence() -> list[str]:
     missing = [f for f in ACTIVE if f not in order]
     if missing and order:
         print(f"  ⚠ taxonomy.json: {', '.join(missing)} missing from "
-              f"_display_precedence; appended last. Affects only which colour "
-              f"is drawn on top, not the labels themselves.")
+              "_display_precedence; appended last. Affects only which colour "
+              "is drawn on top, not the labels themselves.")
     return order + missing or list(ACTIVE)
 
 

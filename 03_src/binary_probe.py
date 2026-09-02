@@ -34,7 +34,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
-from PIL import Image                                              # noqa: E402
 import ai.region_classification as rc                              # noqa: E402
 from ai.taxonomy import ACTIVE, LABEL_RULES                        # noqa: E402
 from score_test_set import load_set, use_set, add_set_arg          # noqa: E402
@@ -54,13 +53,13 @@ def ask(feature: str, imgs: list, provider: str, model: str) -> list:
     rule = LABEL_RULES.get(feature, feature)
     prompt = (
         f"You are looking at {len(imgs)} numbered photographs of demolition "
-        f"concrete surfaces.\n\n"
-        f"For EACH image, answer ONE question:\n\n"
+        "concrete surfaces.\n\n"
+        "For EACH image, answer ONE question:\n\n"
         f"    Does this image show {feature.replace('_', ' ')}?\n\n"
         f"What counts as {feature.replace('_', ' ')}:\n  {rule}\n\n"
-        f"Answer only about what is VISIBLE in that image. Do not consider what "
-        f"is likely for demolition concrete in general, and do not let one image "
-        f"influence another.\n\n"
+        "Answer only about what is VISIBLE in that image. Do not consider what "
+        "is likely for demolition concrete in general, and do not let one image "
+        "influence another.\n\n"
         f'Return ONLY JSON: {{"1": true/false, "2": true/false, ...}} for images '
         f"1..{len(imgs)}."
     )
@@ -173,9 +172,9 @@ def main() -> None:
         print(f"    null model    recall {nTP/(nTP+nFN) if nTP+nFN else 0:.0%}  "
               f"precision {nTP/(nTP+nFP) if nTP+nFP else 0:.0%}"
               f"  (TP {nTP}, FP {nFP}, FN {nFN})")
-        print(f"\n  The question that matters is not the micro-average. It is "
-              f"whether any\n  distinctive feature moved off zero — those failed "
-              f"0 of 9 under multi-label.\n")
+        print("\n  The question that matters is not the micro-average. It is "
+              "whether any\n  distinctive feature moved off zero — those failed "
+              "0 of 9 under multi-label.\n")
 
 
 if __name__ == "__main__":

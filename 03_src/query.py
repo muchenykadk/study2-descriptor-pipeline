@@ -39,7 +39,6 @@ sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
 from descriptors.design_factors import (
     derive as derive_design_factors,
-    load_factors,
     usable_area_m2,
     SURFACE_FACE_KEYS,
 )

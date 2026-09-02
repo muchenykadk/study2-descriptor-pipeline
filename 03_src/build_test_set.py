@@ -197,7 +197,7 @@ def main() -> None:
         CSV_PATH = REPO_ROOT / "05_output" / f"test_set_labels_{s}.csv"
         n_avoid = sum(len(v) for v in avoid.values())
         print(f"\n  set '{s}' -> {OUT_DIR.name}/, avoiding {n_avoid} "
-              f"position(s) from earlier set(s)")
+              "position(s) from earlier set(s)")
 
     frags = sorted(d for d in INPUT_DIR.iterdir()
                    if d.is_dir() and (d / f"{d.name}_texture.png").exists()
@@ -275,10 +275,10 @@ def main() -> None:
           f"{len(tiles)} new)  -> {OUT_DIR.relative_to(REPO_ROOT)}")
     print(f"  contact sheet -> {(OUT_DIR / '_contact_sheet.png').relative_to(REPO_ROOT)}")
     print(f"  label them in -> {CSV_PATH.relative_to(REPO_ROOT)}")
-    print(f"\n  In `true_features`, list every feature you can see, comma "
-          f"separated, or `none`.")
-    print(f"  `none` matters: it is how the false-positive rate on plain "
-          f"concrete gets measured.\n")
+    print("\n  In `true_features`, list every feature you can see, comma "
+          "separated, or `none`.")
+    print("  `none` matters: it is how the false-positive rate on plain "
+          "concrete gets measured.\n")
 
 
 if __name__ == "__main__":

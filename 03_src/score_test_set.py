@@ -100,7 +100,7 @@ def load_set() -> list:
         why = ("RETIRED, not in the prompt" if lab in TAXONOMY
                else "not a taxonomy id, check the spelling")
         print(f"  ! '{lab}' on row(s) {', '.join(rows)}: {why}. "
-              f"It cannot be predicted, so it scores as a false negative.")
+              "It cannot be predicted, so it scores as a false negative.")
     if bad:
         print(f"  valid labels: {', '.join(ACTIVE)}, none, unusable\n")
     return out
@@ -165,7 +165,7 @@ def main() -> None:
         return TP, FP, FN
 
     if len(runs) > 1:
-        print(f"\n  each vote scored on its own:")
+        print("\n  each vote scored on its own:")
         for v, result in enumerate(runs, 1):
             preds = [{f["id"] for f in
                       rc._merge_votes([result], len(items))[i]["features"]}

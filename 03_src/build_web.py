@@ -18,8 +18,9 @@ assets by relative filename, so replacing them with smaller files of the same
 name is all that is required.
 
 The landing page is the pipeline's own Material Inventory, copied from
-05_output/descriptors/index.html with one note prepended. The published site and
-the local tool therefore show the same interface.
+05_output/descriptors/index.html. The published site and the local tool show the
+same interface; the only edit is to strip absolute local paths out of the
+records the page embeds.
 
 The full-resolution meshes and textures stay in 05_output/ as the research data.
 The site is a viewer, not the dataset.
@@ -31,9 +32,7 @@ The site is a viewer, not the dataset.
 import argparse
 import gc
 import re
-import os
 import shutil
-import sys
 import time
 from pathlib import Path
 
@@ -116,7 +115,7 @@ def publish_inventory() -> None:
     if not src.exists():
         raise SystemExit(
             f"\n  {src.relative_to(REPO_ROOT)} does not exist. Run the pipeline, or\n"
-            f"  python 03_src/refresh_factors.py --reports-only, to generate it.\n")
+            "  python 03_src/refresh_factors.py --reports-only, to generate it.\n")
 
     html = src.read_text(encoding="utf-8")
 
@@ -160,7 +159,6 @@ def main() -> None:
         if "skipped" in r:
             print(f"  [{i}/{len(frags)}] {f}: {r['skipped']}")
             continue
-
         rows.append(r)
         print(f"  [{i}/{len(frags)}] {f}: {r['faces_in']:,} → {r['faces_out']:,} faces, "
               f"{r['src_mb']} → {r['glb_mb']} MB  ({time.time()-t:.0f}s)")
@@ -169,7 +167,7 @@ def main() -> None:
     total = sum(p.stat().st_size for p in DOCS.rglob("*") if p.is_file())
     print(f"\n  {len(rows)} fragments -> {DOCS.relative_to(REPO_ROOT)}/  "
           f"{total/1e6:.0f} MB total, {time.time()-t0:.0f}s")
-    print(f"  index: docs/index.html")
+    print("  index: docs/index.html")
 
 
 if __name__ == "__main__":

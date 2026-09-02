@@ -24,7 +24,7 @@ import os
 from collections import Counter
 from pathlib import Path
 
-from .taxonomy import TAXONOMY, ACTIVE, LABEL_SUBTYPES  # noqa: F401 — re-exported for importers
+from .taxonomy import ACTIVE, LABEL_SUBTYPES
 
 CACHE_DIR = Path(__file__).resolve().parents[2] / "05_output" / "ai_cache"
 

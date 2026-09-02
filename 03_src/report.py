@@ -1357,7 +1357,6 @@ def _vision_section(vision: dict, texture_rel_path: str = "") -> str:
 
     dominant   = vision.get("dominant_label", "—")
     dom_color  = _LABEL_COLORS.get(dominant, "#b0b8d0")
-    labels     = vision.get("labels_present", [])
     coverage   = vision.get("label_coverage", {})
     cracks     = vision.get("cracks", {})
     aggregate  = vision.get("aggregate", {})

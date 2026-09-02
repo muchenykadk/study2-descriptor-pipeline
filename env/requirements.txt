@@ -2,9 +2,14 @@ numpy
 scipy
 trimesh
 open3d
-scikit-image
 Pillow
-anthropic
-openai
-python-dotenv
+fast-simplification
 jsonschema
+python-dotenv
+
+# Region classification, the default surface path, is implemented for OpenAI only.
+openai
+
+# Used by the legacy grid path (--grid-legacy) for its other providers.
+anthropic
+requests

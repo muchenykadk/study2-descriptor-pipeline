@@ -48,7 +48,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "03_src"))
 
 import trimesh
-import numpy as np
 from descriptors.regions import (segment_regions, unscanned_face_idx,
                                  link_adjacent_features)
 from scan_coverage import read_sidecar

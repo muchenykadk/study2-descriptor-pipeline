@@ -28,7 +28,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from .vision_client import TAXONOMY, CACHE_DIR, _load_dotenv
+from .vision_client import CACHE_DIR, _load_dotenv
+from .taxonomy import TAXONOMY
 
 GRID_N   = 16   # global grid (16×16 = 256 cells)
 QUAD     = 2    # split into QUAD×QUAD quadrant images

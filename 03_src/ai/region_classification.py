@@ -26,13 +26,15 @@ import hashlib
 import io
 import json
 import os
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from .vision_client import TAXONOMY, CACHE_DIR, _load_dotenv
+# TAXONOMY comes from .taxonomy below, which is the module that knows
+# which features are ACTIVE. vision_client re-exports an older copy;
+# importing both left the winner decided by line order.
+from .vision_client import CACHE_DIR, _load_dotenv
 from .taxonomy import (TAXONOMY, ACTIVE, LABEL_RULES, LOCALIZED,
                        DISPLAY_PRECEDENCE, features_by_group)
 
@@ -461,7 +463,7 @@ def build_region_crops(texture_img: Image.Image, mesh, regions: list) -> list:
         if fill < FILL_MIN:
             print(f"      region #{reg['region_id']} ({reg['kind']}): UV fill "
                   f"{fill:.0%} < {FILL_MIN:.0%}, the crop would be mostly mask "
-                  f"fill, not classified")
+                  "fill, not classified")
             out.append({"region_id": reg["region_id"], "image": None,
                         "bbox": None, "mask": mask, "coherence": round(coh, 3),
                         "uv_fill": round(fill, 3), "skipped": "sparse_uv"})
@@ -561,12 +563,12 @@ def load_reference_set() -> list:
             continue
         if d.name not in known:
             print(f"      ! reference folder '{d.name}' is not a taxonomy feature and is "
-                  f"being ignored. Add it to env/taxonomy.json first: an entry in "
-                  f"'features' with id, color, description, decision_rule and group.")
+                  "being ignored. Add it to env/taxonomy.json first: an entry in "
+                  "'features' with id, color, description, decision_rule and group.")
         elif d.name not in ACTIVE and any(
                 p.suffix.lower() in {".png", ".jpg", ".jpeg"} for p in d.iterdir()):
             print(f"      ! reference folder '{d.name}' belongs to a RETIRED feature "
-                  f"and is being ignored. Move it to _retired/ to silence this.")
+                  "and is being ignored. Move it to _retired/ to silence this.")
 
     # ACTIVE, not TAXONOMY. TAXONOMY keeps every id ever used, retired included,
     # because the index is the stored feature_id. Iterating it here sent the
@@ -631,48 +633,48 @@ def _call_vision(crops: list, provider: str, model: str) -> dict:
         # answer to one of them.
         ref_block = (
             f"First come {len(refs)} REFERENCE images from the same building as "
-            f"the fragments, each labelled below. Use them to calibrate what "
-            f"each feature looks like IN THIS MATERIAL, rather than concrete in "
-            f"general.\n"
+            "the fragments, each labelled below. Use them to calibrate what "
+            "each feature looks like IN THIS MATERIAL, rather than concrete in "
+            "general.\n"
             + "\n".join(f"  Reference {i}: {lab}"
                         for i, (lab, _) in enumerate(refs, 1))
-            + f"\n\nThey are a guide to appearance, NOT a menu to choose from. "
-            f"Recognising one feature from a reference does not exclude any "
-            f"other: a region that matches the tile reference may also be a "
-            f"fracture surface showing aggregate, and all of that must be "
-            f"reported. A feature with no reference image is not less likely — "
-            f"report it on the same evidence you would use for any other.\n\n"
+            + "\n\nThey are a guide to appearance, NOT a menu to choose from. "
+            "Recognising one feature from a reference does not exclude any "
+            "other: a region that matches the tile reference may also be a "
+            "fracture surface showing aggregate, and all of that must be "
+            "reported. A feature with no reference image is not less likely — "
+            "report it on the same evidence you would use for any other.\n\n"
             f"The {len(numbered)} images after them are the regions to label.\n\n")
 
     prompt = (
         ref_block +
         f"You receive {len(numbered)} numbered region images. Each is one coherent "
-        f"surface region of a single demolition concrete fragment, cut out of "
-        f"its texture atlas. Magenta areas are outside the region and are "
-        f"not part of the material: never report them as holes, voids or "
-        f"openings.\n\n"
-        + (f"For EACH image i return EVERY feature you can see in it:\n"
+        "surface region of a single demolition concrete fragment, cut out of "
+        "its texture atlas. Magenta areas are outside the region and are "
+        "not part of the material: never report them as holes, voids or "
+        "openings.\n\n"
+        + ("For EACH image i return EVERY feature you can see in it:\n"
            f'  "i": {{"features": [{{"id": <feature id>, '
            f'"box_pct": [x0,y0,x1,y1] or null}}, ...]}}\n\n'
-           f"About box_pct: give it ONLY if you can point at where the feature "
-           f"is. **null is a valid and preferred answer.** Use null whenever the "
-           f"feature is spread across the region, or you can see it but cannot "
-           f"say where, or you are unsure. A null costs nothing; a guessed box "
-           f"is worse than no box, because it will be read as a measurement. "
-           f"Do not produce round or centred coordinates to fill the field.\n\n"
+           "About box_pct: give it ONLY if you can point at where the feature "
+           "is. **null is a valid and preferred answer.** Use null whenever the "
+           "feature is spread across the region, or you can see it but cannot "
+           "say where, or you are unsure. A null costs nothing; a guessed box "
+           "is worse than no box, because it will be read as a measurement. "
+           "Do not produce round or centred coordinates to fill the field.\n\n"
            if ALLOW_LOCALISATION else
-           f"For EACH image i return EVERY feature you can see in it:\n"
+           "For EACH image i return EVERY feature you can see in it:\n"
            f'  "i": {{"features": [<feature id>, <feature id>, ...]}}\n\n')
-        + f"Judge each image on its own. Regions of one fragment may carry the "
-        f"same features or different ones; do not make them agree, and do not "
-        f"let one image set the reading for the rest.\n\n"
-        f"THESE FEATURES DO NOT COMPETE. Report all that apply. A broken face "
-        f"showing aggregate is BOTH broken_face AND exposed_aggregate. A "
-        f"formwork face with rust on it is BOTH formwork_face AND "
-        f"discolouration. "
-        f"Never leave one out because another fits better: there is no "
-        f"'best' answer, only a complete one. Return an empty list only if "
-        f"none applies.\n\n"
+        + "Judge each image on its own. Regions of one fragment may carry the "
+        "same features or different ones; do not make them agree, and do not "
+        "let one image set the reading for the rest.\n\n"
+        "THESE FEATURES DO NOT COMPETE. Report all that apply. A broken face "
+        "showing aggregate is BOTH broken_face AND exposed_aggregate. A "
+        "formwork face with rust on it is BOTH formwork_face AND "
+        "discolouration. "
+        "Never leave one out because another fits better: there is no "
+        "'best' answer, only a complete one. Return an empty list only if "
+        "none applies.\n\n"
         + "\n\n".join(
             f"{grp.upper()} — " + {
                 "formation":   "how this surface came to be",
@@ -690,9 +692,9 @@ def _call_vision(crops: list, provider: str, model: str) -> dict:
         # field whether or not it can locate anything, so the request was
         # manufacturing false precision. Asking for presence only is what it can
         # actually support.
-        + f"\n\nReport PRESENCE only. Do not give coordinates or describe "
-        f"position: naming a feature means it appears somewhere in this "
-        f"region.\n"
+        + "\n\nReport PRESENCE only. Do not give coordinates or describe "
+        "position: naming a feature means it appears somewhere in this "
+        "region.\n"
         f"Return ONLY a JSON object with keys 1..{len(numbered)}."
     )
     content = [{"type": "text", "text": prompt}]

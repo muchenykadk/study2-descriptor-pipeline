@@ -5,6 +5,20 @@ structures them into one queryable record per fragment. Built for Study 2 of a P
 reuse of demolition concrete, and demonstrated on twelve scanned fragments from a built public
 installation.
 
+## The records, in a browser
+
+**https://muchenykadk.github.io/study2-descriptor-pipeline/**
+
+The material inventory for all twelve fragments, with nothing to install and nothing to
+download. Each fragment opens a 3D viewer showing its regions and their surface features, the
+measured and derived values behind them, and the reason a region was set aside where one
+applies. It is the same interface the pipeline produces locally.
+
+Models on the site are decimated to about 45,000 faces with a 1024 px texture so they load in a
+browser, roughly 51 MB for the whole site. The full-resolution meshes stay in
+`05_output/descriptors/`. Rebuild the site with `python 03_src/build_web.py` after any pipeline
+run.
+
 Blender handles mesh cleaning, UV unwrap, texture bake and unscanned-face marking. Python does
 the geometry (trimesh, Open3D) and the surface classification (a vision-language model). An
 HTML and Three.js report renders each record.
@@ -44,20 +58,6 @@ never as evidence of absence.
 
 Full evidence: `04_schema/CLASSIFIER_BEHAVIOUR.md`.
 
-## Browse the records
-
-The twelve records are published as a static site, no install needed:
-
-**https://muchenykadk.github.io/study2-descriptor-pipeline/**
-
-Each fragment opens a 3D viewer with per-region surface features, measured and derived
-values on hover, and the reason a region was rejected where one applies.
-
-Those models are decimated to roughly 45,000 faces with a 1024 px texture so they load
-in a browser, about 51 MB for the whole site. The full-resolution meshes stay in
-`05_output/descriptors/`. Rebuild the site with `python 03_src/build_web.py` after any
-pipeline run.
-
 ## Install
 
 Python 3.10 or later.
@@ -77,6 +77,10 @@ OPENAI_API_KEY=sk-...
 VISION_PROVIDER=openai
 VISION_MODEL=gpt-4o
 ```
+
+Region classification, the default surface path, is implemented for OpenAI only; any other
+`VISION_PROVIDER` raises `NotImplementedError`. The legacy grid path (`--grid-legacy`) also
+accepts Anthropic and Google.
 
 Everything except classification runs without a key. Use `--geometry-only` to skip it.
 
@@ -101,6 +105,25 @@ python 03_src/query.py --list-uses
 
 `--geometry-only` on `query.py` withholds the surface descriptors, which is how the ablation in
 the paper was run.
+
+Repeat the evaluation, or rebuild the site:
+
+```bash
+# score the classifier against the hand-labelled tiles
+python 03_src/score_test_set.py --set b --votes 3 --no-references
+
+# per-feature true and false positives, written to 05_output/binary_probe_misses.csv
+python 03_src/binary_probe.py --set b --no-references
+
+# draw a fresh blind-sampled tile set to label yourself
+python 03_src/build_test_set.py --set c --n 40 --seed 7
+
+# regenerate docs/ for GitHub Pages
+python 03_src/build_web.py
+```
+
+Omit `--set` to use set A. `--no-references` is the reported configuration: sending labelled
+exemplars ahead of the regions made the result worse, as described above.
 
 Input meshes go in `01_input/meshes/processed/<FRAGMENT_ID>/`, prepared by the Blender scripts
 in `02_blender/`. See `WORKFLOW.md` for the capture and preparation steps and `COMMANDS.md` for

@@ -525,7 +525,6 @@ def derive(descriptors: dict, factors: dict | None = None) -> dict:
                               bounding.get("obb_dims_mm"), factors)
 
     faces = descriptors.get("planarity", []) or []
-    curv  = descriptors.get("curvature", {}) or {}
     for face in faces:
         assignment = design_assignment(face, factors)
         face["procedural"] = {

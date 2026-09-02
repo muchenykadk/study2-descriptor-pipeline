@@ -33,7 +33,6 @@ uncalibrated classifier.
 
 import argparse
 import collections
-import json
 import sys
 from pathlib import Path
 

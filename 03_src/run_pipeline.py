@@ -58,7 +58,8 @@ from ai.region_classification import (classify_regions, cells_from_regions,
                                       GRID_N as REGION_GRID_N)
 from ai.taxonomy import TAXONOMY as _TAXONOMY
 from descriptors.regions import (segment_regions, propagate_labels,
-                                 adjacent_faces)
+                                 unscanned_face_idx, link_adjacent_features,
+                                 UNSCANNED_ANGLE_DEG, UNSCANNED_Y_MARGIN)
 from descriptors.design_factors import derive as derive_design_factors
 from scan_coverage import read_sidecar, flag_unscanned_planes, ANGLE_THRESHOLD_DEG
 

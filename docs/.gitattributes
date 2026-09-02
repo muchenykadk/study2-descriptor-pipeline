@@ -1,0 +1,5 @@
+# GitHub Pages does not resolve Git LFS, so these must be plain files.
+*.glb -filter -diff -merge text=auto
+*.png -filter -diff -merge text=auto
+*.glb binary
+*.png binary

@@ -44,6 +44,20 @@ never as evidence of absence.
 
 Full evidence: `04_schema/CLASSIFIER_BEHAVIOUR.md`.
 
+## Browse the records
+
+The twelve records are published as a static site, no install needed:
+
+**https://muchenykadk.github.io/study2-descriptor-pipeline/**
+
+Each fragment opens a 3D viewer with per-region surface features, measured and derived
+values on hover, and the reason a region was rejected where one applies.
+
+Those models are decimated to roughly 45,000 faces with a 1024 px texture so they load
+in a browser, about 51 MB for the whole site. The full-resolution meshes stay in
+`05_output/descriptors/`. Rebuild the site with `python 03_src/build_web.py` after any
+pipeline run.
+
 ## Install
 
 Python 3.10 or later.
@@ -136,6 +150,21 @@ each fitted plane, and each region. Every field records the method that produced
 status, one of `measured`, `derived`, `provisional` or `proposed`. Schema in
 `04_schema/fragment_schema.json`, field-by-field description in
 `04_schema/descriptor_dictionary.md`.
+
+## Full-resolution meshes
+
+The twelve source meshes and their 4096 px textures, 1.27 GB, are archived separately:
+
+**Zenodo DOI: [PENDING — paste after publishing the deposit]**
+
+They are not in this repository because 2.7 GB of Git LFS content exceeds GitHub's free
+quota, and the same meshes were stored twice. Nothing here depends on them: the records,
+the ground truth, the evaluation and the web viewer all work from what is in the repo.
+Download them only to re-run the pipeline from scratch.
+
+Place them under `01_input/meshes/processed/<FRAGMENT_ID>/` and `python
+03_src/run_pipeline.py --batch` will pick them up. `zenodo/checksums.sha256` verifies a
+download against what the paper used.
 
 ## Released data
 

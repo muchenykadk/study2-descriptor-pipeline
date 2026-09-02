@@ -64,3 +64,16 @@ HANDOVER.md
 05_output/binary_probe_misses.csv
 
 COMMIT_MESSAGE.txt
+
+# ── Full-resolution meshes: archived on Zenodo, not in git ─────────────────
+# 2.7 GB of LFS content against GitHub's 1 GB free quota, and the same meshes
+# were stored twice (01_input and 05_output). The repo keeps the records, the
+# ground truth and the web-sized models in docs/. See README, "Full-resolution
+# meshes", for the DOI.
+01_input/meshes/processed/*/*.glb
+01_input/meshes/processed/*/*_texture.png
+05_output/descriptors/*.glb
+05_output/descriptors/*_texture.png
+
+# Working backups from the FS-001 re-bake
+*pre-retarget*

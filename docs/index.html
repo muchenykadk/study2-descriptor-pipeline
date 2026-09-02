@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fragment Descriptor Records</title>
+<style>
+ :root { --ink:#1a1a2e; --mut:#5b6478; --line:#dfe3ec; --bg:#fbfbfd; }
+ * { box-sizing:border-box }
+ body { margin:0; background:var(--bg); color:var(--ink);
+        font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif }
+ header { max-width:1100px; margin:0 auto; padding:48px 24px 8px }
+ h1 { font-size:26px; margin:0 0 6px }
+ .sub { color:var(--mut); max-width:70ch; margin:0 0 18px }
+ .warn { max-width:70ch; border-left:3px solid #c98a2e; background:#fdf7ec;
+          padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:#5a4a2e }
+ main { max-width:1100px; margin:0 auto; padding:16px 24px 64px;
+         display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)) }
+ .card { display:block; text-decoration:none; color:inherit; background:#fff;
+          border:1px solid var(--line); border-radius:10px; padding:18px 20px;
+          transition:border-color .15s, transform .15s }
+ .card:hover { border-color:#9aa8c8; transform:translateY(-2px) }
+ .card h2 { font-size:15px; margin:0 0 12px; letter-spacing:.02em }
+ dl { display:grid; grid-template-columns:auto 1fr; gap:2px 12px; margin:0 0 12px; font-size:13px }
+ dt { color:var(--mut) } dd { margin:0; text-align:right }
+ .feats { margin:0 0 10px; font-size:12px; line-height:1.9 }
+ .f { background:#eef2fb; border:1px solid #d8e0f2; border-radius:4px;
+       padding:2px 7px; margin-right:4px; white-space:nowrap }
+ .n { color:var(--mut); font-style:italic }
+ .sz { margin:0; font-size:12px; color:var(--mut) }
+ footer { max-width:1100px; margin:0 auto; padding:0 24px 64px;
+           color:var(--mut); font-size:13px; max-width:70ch }
+ code { background:#eef0f5; padding:1px 5px; border-radius:3px; font-size:12.5px }
+</style>
+<header>
+  <h1>Fragment descriptor records</h1>
+  <p class="sub">Twelve demolition concrete fragments from a built urban-furniture
+  commission, scanned and characterised into one queryable record each. Every field
+  carries the method that produced it and a data status. Open a fragment for the 3D
+  viewer, per-region surface features, and the derived actions and design implications.</p>
+  <p class="warn"><strong>Surface labels are provisional.</strong> The classifier does not
+  exceed a null model that answers the two commonest features and looks at nothing.
+  Geometry is computed deterministically and is verified. A <code>rebar_visible</code>
+  negative is absent evidence, not evidence of absence, and must not be read as drilling
+  guidance. See the repository README for the evaluation.</p>
+</header>
+<main>
+    <a class="card" href="FRAG-S1-FS-001_report.html">
+      <h2>FRAG-S1-FS-001</h2>
+      <dl>
+        <dt>bounding box</dt><dd>2882 × 1330 × 714 mm</dd>
+        <dt>mass (assumed density)</dt><dd>2668 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>biological_growth</span>, <span class=f>broken_face</span>, <span class=f>exposed_aggregate</span>, <span class=f>formwork_face</span>, <span class=f>paste_dominant</span></p>
+      <p class="sz">7.37 MB model · 272,628 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-002_report.html">
+      <h2>FRAG-S1-FS-002</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1630 × 934 × 706 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1529 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>brick_inclusion</span>, <span class=f>broken_face</span>, <span class=f>exposed_aggregate</span>, <span class=f>pipe_opening</span>, <span class=f>rebar_visible</span>, <span class=f>tile_remnant</span></p>
+      <p class="sz">2.61 MB model · 45,590 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-003_report.html">
+      <h2>FRAG-S1-FS-003</h2>
+      <dl>
+        <dt>bounding box</dt><dd>2012 × 702 × 645 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1564 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">2.76 MB model · 45,000 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-004_report.html">
+      <h2>FRAG-S1-FS-004</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1372 × 996 × 613 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1197 kg</dd>
+        <dt>fitted faces</dt><dd>6</dd>
+      </dl>
+      <p class="feats"><span class=f>brick_inclusion</span>, <span class=f>broken_face</span>, <span class=f>exposed_aggregate</span>, <span class=f>pipe_opening</span>, <span class=f>rebar_visible</span></p>
+      <p class="sz">3.02 MB model · 44,999 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-005_report.html">
+      <h2>FRAG-S1-FS-005</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1151 × 779 × 609 mm</dd>
+        <dt>mass (assumed density)</dt><dd>859 kg</dd>
+        <dt>fitted faces</dt><dd>5</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">2.22 MB model · 44,998 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-006_report.html">
+      <h2>FRAG-S1-FS-006</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1724 × 914 × 596 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1332 kg</dd>
+        <dt>fitted faces</dt><dd>6</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">3.04 MB model · 70,261 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-007_report.html">
+      <h2>FRAG-S1-FS-007</h2>
+      <dl>
+        <dt>bounding box</dt><dd>957 × 629 × 356 mm</dd>
+        <dt>mass (assumed density)</dt><dd>241 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">1.75 MB model · 44,999 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-008_report.html">
+      <h2>FRAG-S1-FS-008</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1332 × 1129 × 656 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1265 kg</dd>
+        <dt>fitted faces</dt><dd>6</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">2.25 MB model · 44,999 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-009_report.html">
+      <h2>FRAG-S1-FS-009</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1167 × 931 × 454 mm</dd>
+        <dt>mass (assumed density)</dt><dd>576 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>biological_growth</span>, <span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">1.83 MB model · 44,998 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-010_report.html">
+      <h2>FRAG-S1-FS-010</h2>
+      <dl>
+        <dt>bounding box</dt><dd>2051 × 1244 × 453 mm</dd>
+        <dt>mass (assumed density)</dt><dd>1282 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>brick_inclusion</span>, <span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">4.62 MB model · 150,432 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-011_report.html">
+      <h2>FRAG-S1-FS-011</h2>
+      <dl>
+        <dt>bounding box</dt><dd>1663 × 704 × 448 mm</dd>
+        <dt>mass (assumed density)</dt><dd>811 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span></p>
+      <p class="sz">2.56 MB model · 44,999 faces</p>
+    </a>
+    <a class="card" href="FRAG-S1-FS-012_report.html">
+      <h2>FRAG-S1-FS-012</h2>
+      <dl>
+        <dt>bounding box</dt><dd>737 × 637 × 432 mm</dd>
+        <dt>mass (assumed density)</dt><dd>181 kg</dd>
+        <dt>fitted faces</dt><dd>8</dd>
+      </dl>
+      <p class="feats"><span class=f>broken_face</span>, <span class=f>exposed_aggregate</span>, <span class=f>formwork_face</span>, <span class=f>paste_dominant</span>, <span class=f>tile_remnant</span></p>
+      <p class="sz">1.83 MB model · 44,999 faces</p>
+    </a>
+</main>
+<footer>
+  Models here are decimated to about 45,000 faces with a 1024 px
+  texture so they load in a browser. The full-resolution meshes are in the repository
+  under <code>05_output/descriptors/</code>. Built by <code>03_src/build_web.py</code>.
+</footer>
+</html>

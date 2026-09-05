@@ -44,6 +44,39 @@ TARGET_FACES = 45_000     # web-viewer fidelity; the source meshes run to ~1.9 M
 TEXTURE_MAX = 1024        # px on the long side
 
 
+def _web_material(src_mat, img, name):
+    """Rebuild the source material around the downscaled texture.
+
+    Passing `image=` to TextureVisuals and nothing else makes trimesh invent a
+    material, and the invented one is wrong in two ways that compound:
+
+      baseColorFactor defaults to 0.4 grey, and glTF multiplies the texture by it,
+      so every texel is rendered at 40% brightness.
+
+      metallicFactor is left unset, and the glTF default for it is 1.0, fully
+      metallic. A metal with no environment map to reflect renders near black
+      under ordinary directional lights.
+
+    Together they made the published viewer far darker than the local one even
+    though the report HTML is byte-identical. Anything the source material states
+    is carried over; the fallbacks are the glTF values for a plain matt surface.
+    """
+    import trimesh
+
+    def take(attr, fallback):
+        v = getattr(src_mat, attr, None) if src_mat is not None else None
+        return fallback if v is None else v
+
+    return trimesh.visual.material.PBRMaterial(
+        name=take("name", None) or f"{name}_material",
+        baseColorTexture=img,
+        baseColorFactor=take("baseColorFactor", [255, 255, 255, 255]),
+        metallicFactor=take("metallicFactor", 0.0),
+        roughnessFactor=take("roughnessFactor", 1.0),
+        doubleSided=bool(take("doubleSided", False)),
+    )
+
+
 def build_fragment(frag: str, target_faces: int, tex_max: int) -> dict:
     """Write one web-sized GLB + texture + report. Returns a summary dict."""
     import numpy as np
@@ -80,7 +113,9 @@ def build_fragment(frag: str, target_faces: int, tex_max: int) -> dict:
 
     out = trimesh.Trimesh(
         vertices=Vd, faces=Fd, process=False,
-        visual=trimesh.visual.TextureVisuals(uv=UVd, image=img))
+        visual=trimesh.visual.TextureVisuals(
+            uv=UVd, material=_web_material(
+                getattr(mesh.visual, "material", None), img, frag)))
     out.export(DOCS / f"{frag}.glb")
     img.save(DOCS / f"{frag}_texture.png", optimize=True)
     shutil.copy2(html_in, DOCS / f"{frag}_report.html")

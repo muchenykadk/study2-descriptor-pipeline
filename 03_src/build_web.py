@@ -40,8 +40,14 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC = REPO_ROOT / "05_output" / "descriptors"
 DOCS = REPO_ROOT / "docs"
 
-TARGET_FACES = 45_000     # web-viewer fidelity; the source meshes run to ~1.9 M
+TARGET_FACES = 45_000     # web-viewer fidelity; the source meshes run to ~5.7 M
 TEXTURE_MAX = 1024        # px on the long side
+CANDIDATE_TRIS = 12       # nearest source triangles tested per decimated vertex
+                          # when rebuilding UVs. Twelve is well past the point
+                          # where the winner stops changing.
+CENTROID_CHUNK = 500_000  # faces per pass when building the centroid array; the
+                          # largest fragment is 5.7 M faces and doing it at once
+                          # allocates 407 MB.
 
 
 def _web_material(src_mat, img, name):
@@ -82,6 +88,8 @@ def build_fragment(frag: str, target_faces: int, tex_max: int) -> dict:
     import numpy as np
     import trimesh
     import fast_simplification as fs
+    from trimesh import triangles as triangles_module
+    from trimesh.triangles import points_to_barycentric
     from scipy.spatial import cKDTree
     from PIL import Image
     Image.MAX_IMAGE_PIXELS = None
@@ -101,10 +109,48 @@ def build_fragment(frag: str, target_faces: int, tex_max: int) -> dict:
     reduction = max(0.0, min(0.99, 1.0 - target_faces / n_in))
     if reduction > 0.01:
         Vd, Fd = fs.simplify(V, F, target_reduction=reduction)
-        # UVs are per-vertex. Decimation makes new vertices, so each one takes
-        # the UV of the nearest original vertex. Approximate, and indetectable
-        # at this face count and texture size.
-        UVd = UV[cKDTree(V).query(Vd, k=1)[1]]
+        # UVs are per-vertex, and decimation creates vertices that did not exist
+        # before, so their UVs must be derived from the original surface.
+        #
+        # Taking the nearest original *vertex* is wrong. A new vertex sitting near
+        # a UV seam inherits a coordinate from the far side of the atlas, and the
+        # triangle then samples unrelated texture. Measured on FRAG-S1-FS-012,
+        # that put 5% of vertices more than 0.20 out in a 0..1 UV space and the
+        # worst 0.94 out, which shows as smeared facets across the model.
+        #
+        # Project each new vertex onto the original surface instead, and read the
+        # UV barycentrically from the triangle it lands in. Exact wherever the
+        # decimated vertex lies on the original surface, which is almost always.
+        #
+        # trimesh.proximity.closest_point would do this, but it builds an rtree
+        # over every triangle, which on the 5.7 M face fragment costs more than
+        # ten minutes. A KD-tree of triangle centroids gives the same answer in
+        # seconds: take the nearest few triangles as candidates, test those
+        # exactly, keep the closest.
+        #
+        # The centroids are built in chunks and kept in float32, and only the
+        # candidate triangles are ever materialised. Building the full V[F] array
+        # for this fragment is 407 MB and exhausted memory outright.
+        centroids = np.empty((len(F), 3), dtype=np.float32)
+        for s in range(0, len(F), CENTROID_CHUNK):
+            e = min(s + CENTROID_CHUNK, len(F))
+            centroids[s:e] = V[F[s:e]].mean(axis=1)
+        tree = cKDTree(centroids, balanced_tree=False, compact_nodes=False)
+        cand = tree.query(Vd, k=CANDIDATE_TRIS, workers=-1)[1]
+        del centroids, tree
+
+        best_d = np.full(len(Vd), np.inf)
+        best_pt = np.zeros((len(Vd), 3))
+        best_tid = np.zeros(len(Vd), dtype=np.int64)
+        for j in range(cand.shape[1]):
+            tid = cand[:, j]
+            pt = triangles_module.closest_point(V[F[tid]], Vd)
+            d = np.linalg.norm(pt - Vd, axis=1)
+            take = d < best_d
+            best_d[take], best_pt[take], best_tid[take] = d[take], pt[take], tid[take]
+        bary = points_to_barycentric(V[F[best_tid]], best_pt)
+        UVd = (UV[F[best_tid]] * bary[:, :, None]).sum(axis=1)
+        del cand, best_d, best_pt, best_tid
     else:
         Vd, Fd, UVd = V, F, UV
 

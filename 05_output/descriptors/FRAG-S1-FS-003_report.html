@@ -240,11 +240,6 @@ details.fold > summary:hover { color: var(--text); }
   </div>
 
   
-<div class="mesh-banner">
-  <strong>⚠ Open mesh — volume and mass are estimates</strong>
-  <span>Mesh has unclosed holes. Volume falls back to convex hull; convexity cannot be computed.
-  Close the mesh in Blender (Mesh &gt; Fill Holes) to get accurate values.</span>
-</div>
   
 <div class="section">
   <div class="section-title">Bounding &amp; Volume <span class="badge badge-computed">computed</span></div>
@@ -282,8 +277,8 @@ details.fold > summary:hover { color: var(--text); }
     <button id="color-toggle" style="display:none;position:absolute;top:8px;right:8px;background:#1e2030;border:1px solid #3d4455;color:#b0b8d0;font-size:10px;padding:4px 10px;border-radius:20px;cursor:pointer;z-index:10">Show Regions</button>
   </div>
   <div class="viewer-legend" id="viewer-legend" style="display:none"><div class="legend-item"><div class="legend-dot" style="background:#7c83fd"></div>Region 1 · 0.8641 m²</div><div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>Region 2 · 0.8579 m²</div><div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Region 3 · 0.8522 m²</div><div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Region 4 · 0.8516 m²</div><div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>Region 5 · 0.8165 m²</div><div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>Region 6 · 0.8144 m²</div><div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>Region 7 · 0.7800 m²</div><div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>Region 8 · 0.6507 m²</div><div class="legend-item"><div class="legend-dot" style="background:#3d4455"></div>Unclassified</div><div class="legend-row"><div class="legend-dot" style="background:#94a3b8"></div>Unscanned (ground contact)</div></div>
-  <div class="viewer-legend" id="feat-legend" style="display:none"><div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>formwork face</div><div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>broken face</div><div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>exposed aggregate</div><div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>rebar visible</div><div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>embedded metal</div><div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div>tile remnant</div><div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div>pipe opening</div><div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>brick inclusion</div><div class="legend-item"><div class="legend-dot" style="background:#cbd5e1"></div>paste dominant</div><div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>biological growth</div><div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>trowelled finish</div><div class="legend-item"><div class="legend-dot" style="background:#111318"></div>Unlabeled</div></div>
-  <div id="feat-chips" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px"><button onclick="window.activateFeature('all')" data-feat="all" style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">formation</span><span title="not detected — Original cast face; smooth, shows mould texture or release agent" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">formwork face</span><button onclick="window.activateFeature('broken_face')" data-feat="broken_face" title="Internal concrete exposed by demolition break; rough" style="background:#1e2030;border:1px solid #f87171;color:#f87171;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">broken face</button><span title="not detected — The finished top face of a slab, floated or power-floated rather than cast against formwork" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">trowelled finish</span><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">composition</span><button onclick="window.activateFeature('exposed_aggregate')" data-feat="exposed_aggregate" title="Coarse aggregate (gravel/stone) visible at surface" style="background:#1e2030;border:1px solid #fbbf24;color:#fbbf24;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">exposed aggregate</button><span title="not detected — cement paste, fines or a coating cover the surface and individual aggregate particles are largely hidden" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">paste dominant</span><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">inclusion</span><span title="not detected — Steel reinforcement bar exposed" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">rebar visible</span><span title="not detected — Steel that is not reinforcement: a fixing, angle, plate or c" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">embedded metal</span><span title="not detected — Adhered tile finish: tile itself, or the combed adhesive bed it left" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">tile remnant</span><span title="not detected — The region IS the inner surface of a former pipe or conduit " style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">pipe opening</span><span title="not detected — Brick or masonry units cast into the concrete and visible at" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">brick inclusion</span><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">colour</span><span title="not detected — moss, algae or lichen: green, grey-green or black organic film, usually where water sits or runs. Marks the face that was exposed to weather" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">biological growth</span></div>
+  <div class="viewer-legend" id="feat-legend" style="display:none"><div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>formwork face</div><div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>broken face</div><div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>exposed aggregate</div><div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>rebar visible</div><div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>embedded metal</div><div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div>tile remnant</div><div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div>pipe opening</div><div class="legend-item"><div class="legend-dot" style="background:#facc15"></div>brick inclusion</div><div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div>efflorescence</div><div class="legend-item"><div class="legend-dot" style="background:#b45309"></div>rust staining</div><div class="legend-item"><div class="legend-dot" style="background:#111318"></div>Unlabeled</div></div>
+  <div id="feat-chips" style="display:none;flex-wrap:wrap;gap:8px;margin-top:10px"><button onclick="window.activateFeature('all')" data-feat="all" style="background:#1e2030;border:1px solid #7c83fd;color:#7c83fd;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">All features</button><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">formation</span><span title="not detected — Original cast face; smooth, shows mould texture or release agent" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">formwork face</span><button onclick="window.activateFeature('broken_face')" data-feat="broken_face" title="Internal concrete exposed by demolition break; rough" style="background:#1e2030;border:1px solid #f87171;color:#f87171;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">broken face</button><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">composition</span><button onclick="window.activateFeature('exposed_aggregate')" data-feat="exposed_aggregate" title="Coarse aggregate (gravel/stone) visible at surface" style="background:#1e2030;border:1px solid #fbbf24;color:#fbbf24;font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer">exposed aggregate</button><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">inclusion</span><span title="not detected — Steel reinforcement bar exposed" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">rebar visible</span><span title="not detected — Steel that is not reinforcement: a fixing, angle, plate or c" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">embedded metal</span><span title="not detected — Adhered tile finish: tile itself, or the combed adhesive bed it left" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">tile remnant</span><span title="not detected — The region IS the inner surface of a former pipe or conduit " style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">pipe opening</span><span title="not detected — Brick or masonry units cast into the concrete and visible at" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">brick inclusion</span><div style="flex-basis:100%;height:0"></div><span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;align-self:center;margin-right:4px">colour</span><span title="not detected — white salt bloom deposited on the surface where water moved through the concrete and evaporated" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">efflorescence</span><span title="not detected — orange-brown ferrous stain running or bleeding from a point or a line; marks steel behind a face that is otherwise unbroken" style="background:#13151f;border:1px solid #252836;color:#3d4455;font-size:11px;padding:4px 12px;border-radius:20px;cursor:default;text-decoration:line-through">rust staining</span></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -294,7 +289,7 @@ details.fold > summary:hover { color: var(--text); }
   var HAS_SCAN     = true;
   var HAS_FEATURES = true;
   var COLORS       = ["#7c83fd", "#4ade80", "#fbbf24", "#f87171", "#60a5fa", "#c084fc", "#fb923c", "#34d399"];
-  var FEAT_COLORS  = ["#60a5fa", "#f87171", "#fbbf24", "#f97316", "#a3e635", "#c084fc", "#34d399", "#94a3b8", "#f472b6", "#2dd4bf", "#facc15", "#cbd5e1", "#fdba74", "#fb7185", "#4ade80", "#e2e8f0", "#38bdf8"];
+  var FEAT_COLORS  = ["#60a5fa", "#f87171", "#fbbf24", "#f97316", "#a3e635", "#c084fc", "#34d399", "#94a3b8", "#f472b6", "#2dd4bf", "#facc15", "#cbd5e1", "#fdba74", "#fb7185", "#4ade80", "#e2e8f0", "#38bdf8", "#b45309"];
   var UNCLASSIFIED = '#3d4455';
   var curMode      = 'scan';
 
@@ -567,7 +562,7 @@ details.fold > summary:hover { color: var(--text); }
   // (GRID_N × GRID_N global grid, quadrant-classified with majority voting).
   var GRID_CELLS     = [[null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [null, null, null, null, null, null, "exposed_aggregate", null, null, null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], [null, null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", null, null, "exposed_aggregate", "exposed_aggregate", null, null, "exposed_aggregate", "exposed_aggregate", null, null, null, null, null, null, null], ["exposed_aggregate", null, null, "exposed_aggregate", "exposed_aggregate", null, null, "exposed_aggregate", "exposed_aggregate", null, null, null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate"], ["exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", null, null, "exposed_aggregate", "exposed_aggregate", null, null, null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate"], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate"], ["exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", null, null, null, null, "exposed_aggregate", "exposed_aggregate", "exposed_aggregate", "exposed_aggregate"]];
   var GRID_N         = 16;
-  var TAXONOMY_INDEX = {"formwork_face": 0, "broken_face": 1, "exposed_aggregate": 2, "rebar_visible": 3, "weathered": 4, "discolouration": 5, "original_finish": 6, "embedded_metal": 7, "tile_remnant": 8, "pipe_opening": 9, "brick_inclusion": 10, "paste_dominant": 11, "spalling": 12, "crack": 13, "biological_growth": 14, "efflorescence": 15, "trowelled_finish": 16};
+  var TAXONOMY_INDEX = {"formwork_face": 0, "broken_face": 1, "exposed_aggregate": 2, "rebar_visible": 3, "weathered": 4, "discolouration": 5, "original_finish": 6, "embedded_metal": 7, "tile_remnant": 8, "pipe_opening": 9, "brick_inclusion": 10, "paste_dominant": 11, "spalling": 12, "crack": 13, "biological_growth": 14, "efflorescence": 15, "trowelled_finish": 16, "rust_staining": 17};
   // UNSCANNED patch test in mesh-local space: {normal, cos_angle, y_max}
   var UNSC_3D        = {"normal": [0.0644, -0.9978, 0.0175], "cos_angle": 0.9397, "y_frac": 0.1137};
 
@@ -592,7 +587,44 @@ details.fold > summary:hover { color: var(--text); }
     });
   })();
 
-  // ── Feature overlay (per-vertex UV → grid cell → label) ──────────────────
+  // ── Feature overlay, preferred: the feature textures ─────────────────────
+  //
+  // build_feature_textures() paints the atlas from the region masks: exact per
+  // pixel, and one highlight per feature, so a region carrying several features
+  // shows under each chip. They share the GLB's atlas, so showing one is a
+  // swap of the material's map, and the result does not depend on how finely
+  // the mesh is triangulated.
+  //
+  // The grid lookup below is only the fallback, for records with no feature
+  // textures (--grid-legacy, point clouds). It reads a 256 px quantisation of
+  // the same masks, which on FS-002 put another region's label, or a label on
+  // a region left unclassified, on about a third of the faces it coloured.
+  var FEAT_TEX = {"broken_face": "FRAG-S1-FS-003_feat_broken_face.png", "exposed_aggregate": "FRAG-S1-FS-003_feat_exposed_aggregate.png", "all": "FRAG-S1-FS-003_feature_map.png"};
+  var _featTex = {};
+
+  function _applyFeatureTexture(label) {
+    var url = FEAT_TEX[label];
+    if (!meshGroup || !url) return false;
+    var tex = _featTex[label];
+    if (!tex) {
+      tex = new THREE.TextureLoader().load(url);
+      tex.flipY    = false;                 // glTF uv convention, like the GLB's own map
+      tex.encoding = THREE.sRGBEncoding;
+      _featTex[label] = tex;
+    }
+    meshGroup.traverse(function (child) {
+      if (!child.isMesh || !child.material) return;
+      var mat = child.material;
+      if (mat._origMap === undefined) mat._origMap = mat.map;
+      if (mat._origVC  === undefined) mat._origVC  = mat.vertexColors;
+      mat.map          = tex;
+      mat.vertexColors = false;
+      mat.needsUpdate  = true;
+    });
+    return true;
+  }
+
+  // ── Feature overlay, fallback (per-vertex UV → grid cell → label) ────────
   //
   // Each vertex looks up its own UV coordinate in the GRID_N × GRID_N
   // classification grid and takes that cell's label. Labels therefore sit
@@ -630,7 +662,10 @@ details.fold > summary:hover { color: var(--text); }
       if (!child.isMesh) return;
       var geo     = child.geometry;
       var posAttr = geo.attributes.position;
-      var uvAttr  = geo.attributes.uv;
+      // The web GLB has its own atlas, so GRID_CELLS (laid over the source
+      // atlas) is read through _feature_uv, the source-atlas coordinate of each
+      // vertex. The full-resolution GLB has no such attribute and uses its uv.
+      var uvAttr  = geo.attributes._feature_uv || geo.attributes.uv;
       var nrmAttr = geo.attributes.normal;
       if (!posAttr || !uvAttr) return;
       var mat = child.material;
@@ -686,7 +721,7 @@ details.fold > summary:hover { color: var(--text); }
   // ── Feature chip activation ───────────────────────────────────────────────
   window.activateFeature = function (label) {
     activeFeat = label;
-    _applyFeatureVertexColors(label);
+    if (!_applyFeatureTexture(label)) _applyFeatureVertexColors(label);
     document.querySelectorAll('#feat-chips button').forEach(function (b) {
       var isActive = b.dataset.feat === label;
       b.style.background = isActive ? '#2d3250' : '#1e2030';

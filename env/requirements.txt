@@ -3,7 +3,6 @@ scipy
 trimesh
 open3d
 Pillow
-fast-simplification
 jsonschema
 python-dotenv
 

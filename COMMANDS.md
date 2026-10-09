@@ -44,8 +44,9 @@ pip install -r env/requirements.txt
 
 ## Pre-flight
 
-Validates a Blender export before the pipeline spends time or API credit on it. Runs
-**automatically** at the start of every `run_pipeline.py` run and stops on a failure.
+Validates a Blender export before the pipeline spends time or API credit on it. Run it by
+hand when a new scan arrives: `run_pipeline.py` no longer calls it (the gate was removed on
+2026-08-25), and `build_reference_set.py` uses it to skip fragments with an unusable texture.
 
 ```powershell
 python 03_src/preflight.py FRAG-S1-FS-007    # check one export
@@ -67,7 +68,7 @@ Checks, each added after something got through without it:
 | UNSCANNED located | the group present but covering the wrong faces |
 | same mesh as another fragment | one mesh under two IDs, either a duplicate export or `FRAG_ID` left unchanged in the Blender script |
 
-To process a known-bad mesh anyway: `python 03_src/run_pipeline.py FRAG-S1-FS-003 --skip-preflight`
+A failed check does not block `run_pipeline.py`; fix the export before running it.
 
 ---
 

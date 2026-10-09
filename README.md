@@ -16,10 +16,12 @@ download. Each fragment opens a 3D viewer showing its regions and their surface 
 measured and derived values behind them, and the reason a region was set aside where one
 applies. It is the same interface the pipeline produces locally.
 
-Models on the site are decimated to about 45,000 faces with a 1024 px texture so they load in a
-browser, roughly 51 MB for the whole site. The full-resolution meshes stay in
-`05_output/descriptors/`. Rebuild the site with `python 03_src/build_web.py` after any pipeline
-run.
+Models on the site are re-meshed to 45,000 faces, with colour and normal maps at 2048 px baked
+from the full-resolution scan, so they load in a browser and still shade like the local model:
+78 MB for the whole site, every web surface within 0.04% of its fragment's size of the source.
+The full-resolution meshes stay in `05_output/descriptors/`. Rebuild the site with
+`python 03_src/build_web.py` after any pipeline run; all twelve take about 40 minutes, and
+`--only FRAG-S1-FS-002` rebuilds one.
 
 Blender handles mesh cleaning, UV unwrap, texture bake and unscanned-face marking. Python does
 the geometry (trimesh, Open3D) and the surface classification (a vision-language model). An

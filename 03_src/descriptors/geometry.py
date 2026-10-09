@@ -120,7 +120,11 @@ def bounding_descriptors(mesh: trimesh.Trimesh) -> dict:
     from there into the handling class.
     """
     mesh = _center_mesh(mesh)
-    mesh.merge_vertices()          # rejoin the UV seam splits before judging closure
+    # Rejoin the UV seam splits before judging closure. trimesh will not merge
+    # two vertices whose uv or normal differ unless told to, and along a seam
+    # they always differ, so the default call left every seam open and all
+    # twelve fragments read as not watertight.
+    mesh.merge_vertices(merge_tex=True, merge_norm=True)
     obb = mesh.bounding_box_oriented
     watertight = bool(mesh.is_watertight)
     hull_vol = float(mesh.convex_hull.volume)

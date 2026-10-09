@@ -5,6 +5,47 @@ Versions: `v0.x` = pre-release development, `v1.0` = first full fragment process
 
 ---
 
+## [v2.0.7] 2026-10-09 — The published viewer showed a broken mesh and the wrong features
+
+**The web meshes were torn and smeared.** `build_web.py` decimated each scan with
+`fast_simplification` and kept its UV atlas. Two things failed together. The atlases are
+fragmented, 300 to 3,000 UV islands per fragment and 172,685 on FS-001, and decimating the
+seam-split mesh tore every seam open: FS-002, watertight once welded, came out with 3,669 open
+edges and 7.8% of its triangles spanning across the atlas. And on the welded mesh the decimator
+reached its face target only by building triangles up to 81% of the fragment long, centimetres
+off the surface. The exported GLB also had no vertex normals, so GLTFLoader shaded every
+triangle flat, and the feature overlay's unscanned-face cut-out, which reads the normal, was
+skipped.
+
+The web mesh is now made the way photogrammetry LODs are: weld, decimate with Open3D's quadric
+decimation, unwrap a new atlas with UVAtlas, and bake colour and a normal map from the
+full-resolution source by projecting every texel onto it. On FS-002 the web surface sits within
+0.025% of the fragment's size of the source at p99, and renders like the local model. The GLB is
+written field by field with explicit normals and material. A build of all twelve takes about
+40 minutes; `--only` rebuilds one.
+
+**The mesh Feature Map was drawn from the wrong data.** It coloured each vertex from the 16x16
+grid over the atlas, the lookup `build_viewer_data` had already stopped using for the point cloud
+because it mislabels about a third of faces. The exact region-based textures,
+`_feature_map.png` and `_feat_<feature>.png`, were generated every run and linked from the report,
+but never shown. The viewer now puts them on the mesh in place of its colour map, so a region
+carrying several features shows under each chip; the grid remains only as the fallback for records
+without them. `build_web.py` re-bakes them into the web atlas under the same names.
+
+**Every report warned that the volume was a convex hull, and none was.** All twelve records use
+the mesh integral (`mesh_nearly_closed`); the banner keyed on `watertight` alone. It now keys on
+`volume_source`. `watertight` itself was false everywhere because `merge_vertices()` will not
+merge seam vertices whose uv differs; `bounding_descriptors` now passes `merge_tex=True,
+merge_norm=True`, which closes all of them. Volumes are unchanged; the flag updates on the next
+geometry run.
+
+Also: reports regenerated against the 2026-08-30 taxonomy (the published ones predated it);
+`image_path` written relative to the repository instead of as an absolute local path;
+`fast-simplification` dropped from the requirements; COMMANDS.md no longer describes the
+removed pre-flight gate or its `--skip-preflight` flag.
+
+---
+
 ## [v2.0.6] 2026-08-27 — Face area is now a surface, not a hull
 
 **Every area rule was reading a number that overstated the surface by a median factor of

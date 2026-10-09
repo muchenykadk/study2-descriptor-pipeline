@@ -389,7 +389,13 @@ def classify_texture(image_path: Path, n_votes: int = 3) -> dict:
     merged = _merge_runs(run_results)
     merged["provider"]     = provider
     merged["model"]        = model
-    merged["image_path"]   = str(image_path)
+    # Relative to the repository. The record is published, and an absolute
+    # path names the machine and home directory that ran the pipeline.
+    _root = Path(__file__).resolve().parents[2]
+    try:
+        merged["image_path"] = Path(image_path).resolve().relative_to(_root).as_posix()
+    except ValueError:
+        merged["image_path"] = Path(image_path).name
     # Not "computed". The geometry blocks carry that word and were recomputed
     # from the mesh and matched exactly; this block is a vision model's answer
     # that does not exceed a null baseline. Marking both the same collapses the

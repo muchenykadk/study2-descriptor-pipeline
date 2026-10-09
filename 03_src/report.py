@@ -329,7 +329,10 @@ def _fmt(val, digits=3, unit=""):
 # ── Section builders ──────────────────────────────────────────────────────────
 
 def _mesh_banner(b: dict) -> str:
-    if b.get("watertight"):
+    # Warn only when the volume really is the hull. A mesh_nearly_closed volume
+    # is the mesh integral, and the banner below would misstate it.
+    source = b.get("volume_source") or ("mesh" if b.get("watertight") else "convex_hull")
+    if source != "convex_hull":
         return ""
     return """
 <div class="mesh-banner">
@@ -576,6 +579,7 @@ def _viewer_section(regions: list, viewer_data: dict,
             grid_cells_js   = "null"
             grid_n_js       = "8"
         taxonomy_idx_js = json.dumps({lbl: i for i, lbl in enumerate(TAXONOMY)})
+        feat_tex_js     = json.dumps(feat_tex_rels)
         # UNSCANNED 3D test parameters (mesh-local space) — authoritative
         # opt-out of the reconstructed bottom face in the feature overlay.
         unsc_3d_js = json.dumps(viewer_data.get("unscanned_3d"))
@@ -627,7 +631,44 @@ def _viewer_section(regions: list, viewer_data: dict,
     }});
   }})();
 
-  // ── Feature overlay (per-vertex UV → grid cell → label) ──────────────────
+  // ── Feature overlay, preferred: the feature textures ─────────────────────
+  //
+  // build_feature_textures() paints the atlas from the region masks: exact per
+  // pixel, and one highlight per feature, so a region carrying several features
+  // shows under each chip. They share the GLB's atlas, so showing one is a
+  // swap of the material's map, and the result does not depend on how finely
+  // the mesh is triangulated.
+  //
+  // The grid lookup below is only the fallback, for records with no feature
+  // textures (--grid-legacy, point clouds). It reads a 256 px quantisation of
+  // the same masks, which on FS-002 put another region's label, or a label on
+  // a region left unclassified, on about a third of the faces it coloured.
+  var FEAT_TEX = {feat_tex_js};
+  var _featTex = {{}};
+
+  function _applyFeatureTexture(label) {{
+    var url = FEAT_TEX[label];
+    if (!meshGroup || !url) return false;
+    var tex = _featTex[label];
+    if (!tex) {{
+      tex = new THREE.TextureLoader().load(url);
+      tex.flipY    = false;                 // glTF uv convention, like the GLB's own map
+      tex.encoding = THREE.sRGBEncoding;
+      _featTex[label] = tex;
+    }}
+    meshGroup.traverse(function (child) {{
+      if (!child.isMesh || !child.material) return;
+      var mat = child.material;
+      if (mat._origMap === undefined) mat._origMap = mat.map;
+      if (mat._origVC  === undefined) mat._origVC  = mat.vertexColors;
+      mat.map          = tex;
+      mat.vertexColors = false;
+      mat.needsUpdate  = true;
+    }});
+    return true;
+  }}
+
+  // ── Feature overlay, fallback (per-vertex UV → grid cell → label) ────────
   //
   // Each vertex looks up its own UV coordinate in the GRID_N × GRID_N
   // classification grid and takes that cell's label. Labels therefore sit
@@ -665,7 +706,10 @@ def _viewer_section(regions: list, viewer_data: dict,
       if (!child.isMesh) return;
       var geo     = child.geometry;
       var posAttr = geo.attributes.position;
-      var uvAttr  = geo.attributes.uv;
+      // The web GLB has its own atlas, so GRID_CELLS (laid over the source
+      // atlas) is read through _feature_uv, the source-atlas coordinate of each
+      // vertex. The full-resolution GLB has no such attribute and uses its uv.
+      var uvAttr  = geo.attributes._feature_uv || geo.attributes.uv;
       var nrmAttr = geo.attributes.normal;
       if (!posAttr || !uvAttr) return;
       var mat = child.material;
@@ -721,7 +765,7 @@ def _viewer_section(regions: list, viewer_data: dict,
   // ── Feature chip activation ───────────────────────────────────────────────
   window.activateFeature = function (label) {{
     activeFeat = label;
-    _applyFeatureVertexColors(label);
+    if (!_applyFeatureTexture(label)) _applyFeatureVertexColors(label);
     document.querySelectorAll('#feat-chips button').forEach(function (b) {{
       var isActive = b.dataset.feat === label;
       b.style.background = isActive ? '#2d3250' : '#1e2030';

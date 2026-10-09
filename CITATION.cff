@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: >-
+  If you use this pipeline, cite the software entry below. If you use the fragment
+  scans, cite the Zenodo dataset under references as well.
+title: Fragment Descriptor Pipeline
+abstract: >-
+  Extracts geometric and surface descriptors from 3D scans of demolition concrete
+  fragments and structures them into one queryable record per fragment. Geometric
+  descriptors are computed deterministically and verified; surface feature labels
+  come from a vision-language model and are reported as provisional, having been
+  scored against two hand-labelled tile sets without exceeding a null baseline.
+type: software
+authors:
+  - family-names: Yan
+    given-names: Muchen
+    affiliation: University of Innsbruck
+license: MIT
+repository-code: https://github.com/muchenykadk/study2-descriptor-pipeline
+url: https://muchenykadk.github.io/study2-descriptor-pipeline/
+keywords:
+  - demolition concrete
+  - structural reuse
+  - photogrammetry
+  - computational design
+  - circular construction
+references:
+  - type: dataset
+    title: "Twelve scanned demolition concrete fragments: meshes and textures"
+    doi: 10.5281/zenodo.22280103
+    year: 2026
+    license: CC-BY-4.0
+    authors:
+      - family-names: Yan
+        given-names: Muchen
+        affiliation: University of Innsbruck

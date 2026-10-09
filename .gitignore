@@ -28,6 +28,12 @@ Thumbs.db
 # Regenerated feature images - rebuilt by run_pipeline every run
 05_output/descriptors/*_feat_*.png
 05_output/descriptors/*_feature_map.png
+# highlight images for retired features; _archive/README.md stays tracked so the
+# reason they were set aside is in the repo, the images themselves do not.
+05_output/descriptors/_archive/*.png
+
+# staging folder for the Zenodo deposit, built by hand and deleted after upload
+zenodo/upload/
 
 # ── Not for the public repo ────────────────────────────────────────────────
 # Manuscript. Lives with the paper, not the code.

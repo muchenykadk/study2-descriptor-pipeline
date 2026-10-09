@@ -1,5 +1,7 @@
 # Fragment Descriptor Pipeline
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22280103.svg)](https://doi.org/10.5281/zenodo.22280103)
+
 Extracts geometric and surface descriptors from 3D scans of demolition concrete fragments and
 structures them into one queryable record per fragment. Built for Study 2 of a PhD on cascading
 reuse of demolition concrete, and demonstrated on twelve scanned fragments from a built public
@@ -178,7 +180,7 @@ status, one of `measured`, `derived`, `provisional` or `proposed`. Schema in
 
 The twelve source meshes and their 4096 px textures, 1.27 GB, are archived separately:
 
-**Zenodo DOI: [PENDING — paste after publishing the deposit]**
+**https://doi.org/10.5281/zenodo.22280103**
 
 They are not in this repository because 2.7 GB of Git LFS content exceeds GitHub's free
 quota, and the same meshes were stored twice. Nothing here depends on them: the records,
@@ -191,10 +193,12 @@ download against what the paper used.
 
 ## Released data
 
-`01_input/meshes/processed/` holds twelve fragment scans. `01_input/test_tiles/` and
-`01_input/test_tiles_b/` hold the two blind-sampled tile sets, with hand labels in
-`05_output/test_set_labels.csv` and `05_output/test_set_labels_b.csv`. Both sets and the
-labelling protocol are released so the evaluation can be repeated.
+`01_input/test_tiles/` and `01_input/test_tiles_b/` hold the two blind-sampled tile sets, with
+hand labels in `05_output/test_set_labels.csv` and `05_output/test_set_labels_b.csv`. Both sets
+and the labelling protocol are released so the evaluation can be repeated without the meshes.
+
+The twelve scans themselves are not in this repository. They are in the Zenodo record above,
+and `01_input/meshes/processed/<FRAGMENT_ID>/` is where a download goes.
 
 Attributes that resist scan-based measurement, concrete strength, reinforcement layout and
 centre of mass, are carried as flagged provisional entries or are out of scope.
@@ -213,5 +217,11 @@ env/          taxonomy, design rules, requirements
 ## Citing
 
 Study 1, the built installation this pipeline serves, is reported separately. Cite that paper
-for the design work and this repository for the pipeline. See `CHANGELOG.md` for version
-history.
+for the design work, this repository for the pipeline, and the Zenodo record
+(`10.5281/zenodo.22280103`) for the scans. `CITATION.cff` carries both in machine-readable
+form. See `CHANGELOG.md` for version history.
+
+## Licence
+
+Code and documentation in this repository: MIT, see `LICENSE`. The fragment scans in the
+Zenodo record: CC BY 4.0. Attribution is requested for both.
